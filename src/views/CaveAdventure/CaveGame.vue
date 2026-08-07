@@ -711,7 +711,7 @@ canvas{
 
 </style>
 
-<style>
+<style scoped>
 *{box-sizing:border-box}
 body{
 margin:0;font-family:sans-serif;height:100vh;

@@ -1,57 +1,50 @@
 <template>
-    <div class="min-h-screen bg-sky-100 flex items-center justify-center px-4">
-        <div class="max-w-xl w-full bg-white rounded-2xl shadow-lg p-10 text-center">
+    <!-- Intro Video -->
+    <div v-if="showVideo" class="fixed inset-0 bg-black flex flex-col items-center justify-center">
+        <div id="player"></div>
 
-            <h1 class="text-4xl font-bold text-sky-700 mb-6">
-                ようこそ！
-            </h1>
+        <p class="mt-6 text-white text-2xl">
+            あと {{ remaining }} 秒
+        </p>
+    </div>
 
-            <p class="text-xl text-gray-700 mb-3">
-                いまからぼうけんがはじまるよ✨
+    <div v-else class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black flex items-center justify-center px-4">
+        <div class="max-w-xl w-full bg-slate-900/90 backdrop-blur rounded-2xl border border-slate-700 shadow-2xl shadow-cyan-500/10 p-10 text-center">
+
+            <div class="flex gap2 justify-center items-center gap-4 mb-6">
+                <div class="w-40 aspect-square " v-html="avatarSvg"></div> 
+                <h1 class="text-2xl font-bold text-cyan-300 mb-6">
+                    {{ playerName }}さん、<br>
+                    ようこそ！
+                </h1>
+            </div>
+
+            <p class="text-xl text-slate-200 mb-3">
+                いまからぼうけんがはじまるよ✨<br>
+                <strong class="text-red-500">{{ totalPlayers }}</strong>人のぼうけんしゃがあつまっています！
             </p>
 
-            <p class="text-lg text-gray-600 mb-10">
+            <p class="text-lg text-slate-400 mb-10">
                 まずは自分のチームを決めよう！<br>
-                <span class="font-semibold">
+                <span class="font-semibold text-cyan-300">
                     風・土・水
                 </span>
                 のどれになるかな？
             </p>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <button
-                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 rounded-xl transition"
-                >
-                    🌿 風
-                </button>
-
-                <button
-                    class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-xl transition"
-                >
-                    🪨 土
-                </button>
-
-                <button
-                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-xl transition"
-                >
-                    💧 水
-                </button>
-            </div>
-
             <div class="mt-10 flex flex-col items-center">
 
-                <div
-                    ref="wheel"
-                    class="w-72 h-72 rounded-full bg-center bg-cover transition-transform duration-[3000ms] ease-out"
-                    style="background-image: url('/images/madoka_wheel.png');"
-                ></div>
-
+                <!-- <div
+                    class="w-72 h-72 rounded-full bg-center bg-cover border-4 border-cyan-400 shadow-[0_0_40px_rgba(34,211,238,0.4)] transition-transform duration-[3000ms] ease-out"
+                    style="background-image:url('/images/madoka_wheel.png')"
+                ></div> -->
+                <div ref="wheel" class="w-72 h-72 rounded-full bg-center bg-cover transition-transform duration-[3000ms] ease-out" style="background-image: url('/images/madoka_wheel.png');" ></div>
                 <button
+                    class="mt-8 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-700 text-white font-bold px-8 py-3 rounded-xl transition shadow-lg hover:shadow-cyan-500/50"
                     @click="spinWheel"
                     :disabled="spinning"
-                    class="mt-8 bg-sky-600 hover:bg-sky-700 disabled:bg-gray-400 text-white font-bold px-8 py-3 rounded-xl"
                 >
-                    まわす
+                    運命を決める
                 </button>
 
                 <p
@@ -68,101 +61,280 @@
 </template>
 
 <script>
-export default {
-    name: "IntroView",
+    // import db from './../../firebase.js';
+    // import { arrayUnion } from "firebase/firestore";
+    import db, { firebase } from './../../firebase.js';
 
-    data() {
-        return {
-            spinning: false,
-            result: "",
+    export default {
+        name: "IntroView",
+        
 
-            teams: [],
-            index: 0
-        };
-    },
+        data() {
+            return {
+                spinning: false,
+                result: "",
 
-    mounted() {
-        this.resetTeams();
-    },
+                teams: [],
+                index: 0,
 
-    methods: {
-        resetTeams() {
-            this.teams = this.shuffle([
-                "water",
-                "earth",
-                "air"
-            ]);
+                // showVideo: true,
+                showVideo: false,
 
-            this.index = 0;
+                remaining: 0,
+                duration: 0,
+                timer: null,
+
+                playerName: "",
+                cenId: null,
+                avatar: null,
+                avatarSvg: "",
+
+                potentialTeam: "",
+                totalPlayers: null,
+            };
         },
 
-        shuffle(array) {
-            return [...array].sort(() => Math.random() - 0.5);
+        mounted() {
+            console.clear();
+            this.playerName = this.$route.query.name;
+            this.avatar = JSON.parse(this.$route.query.avatar);
+            this.avatarSvg = this.$buildAvatar(this.avatar);
+            this.cenId = this.$route.query.cenId;
+
+            this.getTeamCounts().then(counts => {
+                console.log("Team counts:", counts);
+            });
+
+            this.resetTeams();
+            this.loadYoutube();
+
         },
 
-        spinWheel() {
+        methods: {
 
-            if (this.spinning) {
-                return;
-            }
+            resetTeams() {
 
-            this.spinning = true;
-            this.result = "";
+                this.teams = this.shuffle([
+                    "water",
+                    "earth",
+                    "air"
+                ]);
 
-            const team = this.teams[this.index];
+                this.index = 0;
 
-            this.index++;
+            },
 
-            if (this.index >= this.teams.length) {
-                this.resetTeams();
-            }
+            shuffle(array) {
 
-            const randomSpin = Math.floor(Math.random() * 4) + 4;
+                return [...array].sort(() => Math.random() - 0.5);
 
-            let offset = 0;
+            },
 
-            switch (team) {
-                case "water":
-                    offset = 0;
-                    break;
+            loadYoutube() {
 
-                case "earth":
-                    offset = 120;
-                    break;
+                window.onYouTubeIframeAPIReady = () => {
 
-                case "air":
-                    offset = 240;
-                    break;
-            }
+                    this.player = new window.YT.Player("player", {
 
-            const angle = offset + randomSpin * 360;
+                        width: "960",
+                        height: "540",
 
-            this.$refs.wheel.style.transform =
-                `rotate(${angle}deg)`;
+                        videoId: "xpT411XKhUg",
 
-            setTimeout(() => {
+                        playerVars: {
+                            autoplay: 1,
+                            controls: 0,
+                            rel: 0,
+                            modestbranding: 1
+                        },
 
-                localStorage.setItem("myTeam", team);
+                        events: {
+                            onStateChange: this.onPlayerStateChange
+                        }
 
-                const routes = {
-                    water: "/team/water",
-                    earth: "/team/earth",
-                    air: "/team/air"
+                    });
+
                 };
 
-                const teamNames = {
-                    water: "🌊 水チーム",
-                    earth: "🌱 土チーム",
-                    air: "🍃 風チーム"
-                };
+                if (!window.YT) {
 
-                this.result = teamNames[team];
+                    const tag = document.createElement("script");
+                    tag.src = "https://www.youtube.com/iframe_api";
+                    document.body.appendChild(tag);
 
-                this.$router.push(routes[team]);
+                } else {
 
-            }, 3000);
+                    window.onYouTubeIframeAPIReady();
+
+                }
+
+            },
+
+            onPlayerStateChange(event) {
+
+                // Video started playing
+                if (event.data === window.YT.PlayerState.PLAYING) {
+
+                    this.duration = Math.ceil(this.player.getDuration());
+
+                    clearInterval(this.timer);
+
+                    this.timer = setInterval(() => {
+
+                        const current = this.player.getCurrentTime();
+
+                        this.remaining = Math.max(
+                            0,
+                            Math.ceil(this.duration - current)
+                        );
+
+                    }, 200);
+
+                }
+
+                // Video ended
+                if (event.data === window.YT.PlayerState.ENDED) {
+
+                    clearInterval(this.timer);
+
+                    this.showVideo = false;
+
+                }
+
+            },
+
+            spinWheel() {
+                this.createAccount();
+
+                if (this.spinning) {
+                    return;
+                }
+
+                this.spinning = true;
+                this.result = "";
+
+                // const team = this.teams[this.index];
+
+                this.index++;
+
+                if (this.index >= this.teams.length) {
+                    this.resetTeams();
+                }
+
+                const randomSpin = Math.floor(Math.random() * 4) + 4;
+
+                let offset = 0;
+
+                // switch (team) {
+
+                //     case "water":
+                //         offset = 0;
+                //         break;
+
+                //     case "earth":
+                //         offset = 120;
+                //         break;
+
+                //     case "air":
+                //         offset = 240;
+                //         break;
+
+                // }
+
+                const angle = offset + randomSpin * 360;
+
+                this.$refs.wheel.style.transform = `rotate(${angle}deg)`;
+
+                setTimeout(() => {
+
+                    localStorage.setItem("myTeam", this.potentialTeam);
+
+                    const routes = {
+                        water: "/team/water",
+                        earth: "/team/earth",
+                        air: "/team/air"
+                    };
+
+                    const teamNames = {
+                        water: "🌊 水チーム",
+                        earth: "🌱 土チーム",
+                        air: "🍃 風チーム"
+                    };
+
+                    this.result = teamNames[this.potentialTeam];
+
+                    this.$router.push(routes[this.potentialTeam]);
+
+                }, 3000);
+
+            },
+            
+            async createAccount(){
+                const uid = Date.now().toString();
+
+                await db.collection("users").doc(uid).set({
+                    uid,
+                    name: this.playerName,
+                    avatar: this.avatar,
+                    team: this.potentialTeam,
+                    cards: [],
+                    level: 1,
+                    coins: 0,
+                    createdAt: new Date(),
+                    cenId: this.cenId
+                });
+
+                 await db.collection("teams")
+                    .doc(this.potentialTeam)
+                    .update({
+                        members: firebase.firestore.FieldValue.arrayUnion(uid)
+                    });
+
+                localStorage.setItem("playerUid", uid);
+
+                console.log("Account created:", uid);
+
+            },
+
+            async getTeamCounts(){
+
+                const snapshot = await db
+                    .collection("teams")
+                    .get();
+
+                const counts = {};
+                let total = 0;
+
+                snapshot.forEach(doc=>{
+
+                    const count = doc.data().members.length;
+
+                    counts[doc.id] = count;
+
+                    total += count;
+
+                });
+
+
+                const min = Math.min(...Object.values(counts));
+
+                const potentialTeams = Object.keys(counts)
+                    .filter(team => counts[team] === min);
+
+
+                this.potentialTeam = potentialTeams[
+                    Math.floor(Math.random() * potentialTeams.length)
+                ];
+
+
+                this.totalPlayers = total;
+
+
+                return counts;
+            }
+
+
 
         }
-    }
-};
+    };
 </script>

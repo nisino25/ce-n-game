@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 
-import Login from "@/views/Login/Login.vue";
+import LoginPage from "@/views/LoginPage/LoginPage.vue";
 
 import Intro from "@/views/IntroView/IntroView.vue";
 import TeamAir from "@/views/Team/TeamAir.vue";
@@ -13,15 +13,17 @@ import CaveEntrance from "@/views/CaveAdventure/CaveEntrance.vue"
 import CaveGame from "@/views/CaveAdventure/CaveGame.vue"
 import CaveEnd from "@/views/CaveAdventure/CaveEnd.vue"
 
+import ErrorView from "@/views/ErrorView/ErrorView.vue";
+
 const routes = [
     {
         path: "/",
-        redirect: "/login"
+        redirect: "/loginPage"
     },
     {
-        path: "/login",
-        name: "Login",
-        component: Login
+        path: "/loginPage",
+        name: "LoginPage",
+        component: LoginPage
     },
 
     {
@@ -62,6 +64,12 @@ const routes = [
         path: "/cave-adventure/cave-end",
         name: "CaveEnd",
         component: CaveEnd
+    },
+
+    {
+        path: "/error",
+        name: "Error",
+        component: ErrorView
     },
     
 ];
