@@ -70,12 +70,12 @@
                     <div class="text-center">
 
                         <div class="font-bold">
-                            {{ teamEmoji }}
-                            {{ teamName }}
+                            {{ playerName }}さん、<br>
+                            ようこそ、{{ teamName }}へ
                         </div>
 
                         <div class="text-sm mt-2">
-                            チーム人数：8名
+                            チーム人数：{{ teamMembers.length }}名
                         </div>
 
                         <div class="text-sm">
@@ -171,6 +171,8 @@
     </div>
 </template>
 <script>
+import db from './../../firebase.js';
+
 export default {
     name: "MonitorRoom",
 
@@ -179,7 +181,8 @@ export default {
             status: "監視システム正常",
             isTransitioning: false,
 
-            myTeam: "earth",
+            myTeam: null,
+            playerName: null,
             // earth
             // water
             // air
@@ -218,7 +221,9 @@ export default {
 
             showBeluga: false,
 
-            belugaMessage: ""
+            belugaMessage: "",
+
+            teamMembers: [],
         };
     },
 
@@ -280,12 +285,10 @@ export default {
         }
     },
 
-    mounted() {
-        const team = localStorage.getItem("myTeam");
+    async mounted() {
+        this.myTeam = localStorage.getItem("myTeam");
 
-        if (team) {
-            this.myTeam = team;
-        }
+        this.playerName = localStorage.getItem("playerName");
 
         if (
             this.collection.length >= 2 &&
@@ -297,6 +300,10 @@ export default {
 
             // localStorage.removeItem("showBeluga");
         }
+
+        this.teamMembers = await this.getTeamMembers();
+
+        console.log("Team Members:", this.teamMembers);
     },
 
     methods: {
@@ -344,6 +351,14 @@ export default {
                 this.isTransitioning = false;
                 this.$router.push(`/${mode}`);
             }, 1500); // 1秒後に遷移
+        },
+        async getTeamMembers() {
+            const snapshot = await db
+                .collection("users")
+                .where("team", "==", this.myTeam)
+                .get();
+
+            return snapshot.docs.map(doc => doc.data());
         }
     }
 };
@@ -353,7 +368,8 @@ export default {
     position:relative;
     width:min(260px,20vw);
     min-width:120px;
-    height:min(140px,12vw);
+    /* height:min(140px,12vw); */
+    height: auto;
     min-height:70px;
 
     border:4px solid #0ff;

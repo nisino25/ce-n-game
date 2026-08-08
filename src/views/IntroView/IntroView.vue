@@ -225,22 +225,6 @@
 
                 let offset = 0;
 
-                // switch (team) {
-
-                //     case "water":
-                //         offset = 0;
-                //         break;
-
-                //     case "earth":
-                //         offset = 120;
-                //         break;
-
-                //     case "air":
-                //         offset = 240;
-                //         break;
-
-                // }
-
                 const angle = offset + randomSpin * 360;
 
                 this.$refs.wheel.style.transform = `rotate(${angle}deg)`;
@@ -248,6 +232,7 @@
                 setTimeout(() => {
 
                     localStorage.setItem("myTeam", this.potentialTeam);
+                    localStorage.setItem("playerName", this.playerName);
 
                     const routes = {
                         water: "/team/water",
