@@ -9,6 +9,8 @@ import TeamEarth from "@/views/Team/TeamEarth.vue";
 
 import MonitorRoom from "@/views/MonitorRoom/MonitorRoom.vue";
 
+import DominationGame from "@/views/DominationGame/DominationGame.vue";
+
 import CaveEntrance from "@/views/CaveAdventure/CaveEntrance.vue"
 import CaveGame from "@/views/CaveAdventure/CaveGame.vue"
 import CaveEnd from "@/views/CaveAdventure/CaveEnd.vue"
@@ -64,6 +66,12 @@ const routes = [
         path: "/cave-adventure/cave-end",
         name: "CaveEnd",
         component: CaveEnd
+    },
+
+    {
+        path: "/dominationGame",
+        name: "DominationGame",
+        component: DominationGame
     },
 
     {

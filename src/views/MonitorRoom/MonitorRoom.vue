@@ -51,11 +51,17 @@
             </button>
 
             <!-- Repair -->
-            <button
+            <!-- <button
                 class="monitor offline"
                 @click="goRepair"
                 >
                 生きもの修復
+            </button> -->
+            <button
+                class="monitor"
+                @click="changeMode('dominationGame')"
+            >
+                洞窟探検
             </button>
     
             <!-- Team -->
