@@ -34,9 +34,7 @@
             <!-- Planet -->
             <div class="monitor">
                 <div class="flex flex-col items-center">
-                    <div class="text-6xl animate-bounce">
-                        🌍
-                    </div>
+                    <div class="text-6xl animate-bounce my-4">🌍</div>
 
                     <div class="text-xs">
                         🌱95% 💧90% 🌬98%
@@ -70,7 +68,7 @@
                     <div class="text-center">
 
                         <div class="font-bold">
-                            {{ playerName }}さん、<br>
+                            {{ currentPlayerName }}さん、<br>
                             ようこそ、{{ teamName }}へ
                         </div>
 
@@ -133,39 +131,27 @@
             </div>
 
             <!-- Workers -->
-            <div
-                v-for="worker in workers"
-                :key="worker.id"
-                class="absolute text-3xl"
-                :style="{
-                    left: worker.x + 'px',
-                    top: worker.y + 'px'
-                }"
-            >
-                {{ worker.icon }}
+            <div class="absolute top-[80%] w-full">
+              <div
+                  class="w-[80px] aspect-square mx-auto absolute left-[-20%]
+                  rounded-full
+                  border-4 border-yellow-400
+                  ring-4 ring-blue-500
+                  shadow-[0_0_10px_rgba(59,130,246,1),0_0_25px_rgba(59,130,246,0.8)]
+                  animate-pulse"
+                  v-html="avatarSvg"
+              ></div>
+              <template v-for="(member, index) in teamMembers" :key="member.uid">
+                <div
+                  v-if="member.uid !== currentPlayerData.uid && member.isOnline"
+                  class="w-[60px] aspect-square absolute rounded-full border-2 border-blue-400"
+                  :style="{
+                      left: (10 + index * 10) + '%'
+                  }"
+                  v-html="member.avatarSvg"
+              ></div>
+              </template>
             </div>
-        </div>
-
-
-
-
-        <!-- Beluga Event -->
-        <div
-            v-if="showBeluga"
-            class="absolute inset-0 pointer-events-none"
-        >
-
-            <!-- <img
-                src="@/assets/beluga.png"
-                class="absolute left-60 top-24 w-80"
-            > -->
-
-            <div
-                class="absolute right-52 top-72 bg-white rounded-2xl p-4 max-w-xs text-sm"
-            >
-                {{ belugaMessage }}
-            </div>
-
         </div>
 
     </div>
@@ -182,48 +168,19 @@ export default {
             isTransitioning: false,
 
             myTeam: null,
-            playerName: null,
-            // earth
-            // water
-            // air
-            // null
+            currentPlayerName: null,
+            currentPlayerData: null,
 
-            workers: [
-                {
-                    id: 1,
-                    icon: "👨‍💻",
-                    x: 220,
-                    y: 390
-                },
-                {
-                    id: 2,
-                    icon: "👩‍💻",
-                    x: 280,
-                    y: 390
-                },
-                {
-                    id: 3,
-                    icon: "👨‍💻",
-                    x: window.innerWidth - 280,
-                    y: 390
-                },
-                {
-                    id: 4,
-                    icon: "👩‍💻",
-                    x: window.innerWidth - 220,
-                    y: 390
-                }
-            ],
 
             collection: JSON.parse(
                 localStorage.getItem("collection") || "[]"
             ),
 
-            showBeluga: false,
 
             belugaMessage: "",
 
             teamMembers: [],
+            avatarSvg: null
         };
     },
 
@@ -288,18 +245,10 @@ export default {
     async mounted() {
         this.myTeam = localStorage.getItem("myTeam");
 
-        this.playerName = localStorage.getItem("playerName");
-
-        if (
-            this.collection.length >= 2 &&
-            localStorage.getItem("showBeluga") === "true"
-        ) {
-            // this.showBeluga = true;
-
-            // this.belugaMessage = "生きものカードが集まったので、\n早く陣地に戻そう！";
-
-            // localStorage.removeItem("showBeluga");
-        }
+        this.currentPlayerName = localStorage.getItem("playerName");
+        this.currentPlayerData = JSON.parse(localStorage.getItem("playerData"));
+        this.currentPlayerAvatar = this.currentPlayerData.avatar;
+        this.avatarSvg = this.$buildAvatar(this.currentPlayerData.avatar);
 
         this.teamMembers = await this.getTeamMembers();
 
@@ -358,7 +307,17 @@ export default {
                 .where("team", "==", this.myTeam)
                 .get();
 
-            return snapshot.docs.map(doc => doc.data());
+            return snapshot.docs.map(doc => {
+                const user = doc.data();
+                const enteredAt = user.enteredMonitorRoomAt?.seconds * 1000;
+                const isOnline = enteredAt && Date.now() - enteredAt <= 10 * 60 * 1000; 
+
+                return {
+                    ...user,
+                    avatarSvg: this.$buildAvatar(user.avatar),
+                    isOnline
+                };
+            });
         }
     }
 };
@@ -387,6 +346,7 @@ export default {
     font-weight:bold;
     text-shadow:0 0 5px #0ff,0 0 15px #0ff;
     text-align:center;
+    padding:0.5em 0;
 }
 .monitor::before {
     content: "";

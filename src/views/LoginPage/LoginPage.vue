@@ -10,6 +10,7 @@
                 <!-- Left Panel -->
                 <div class="bg-white rounded-xl shadow p-6 flex gap-2 items-center">
                     <div class="w-60 aspect-square mx-auto" v-html="avatarSvg"></div> 
+                    <span>{{ avatar }}</span>
                     <div>
                         <input type="text" placeholder="ぼうけんしゃの名前" class="border-gray-800 w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-400" v-model="playerName">
                         <button class="my-3 p-3 bg-sky-600 text-white rounded-lg mr-2" @click="randomAll">🎲 シャッフル</button>
@@ -37,7 +38,7 @@
 </template>
 
 <script>
-import db from './../../firebase.js';
+import db, { firebase } from './../../firebase.js';
 export default {
 
     data(){
@@ -135,18 +136,17 @@ export default {
             }
             
             
-            const user = snapshot.docs[0].data();
+            // const user = snapshot.docs[0].data();
+            const userDoc = snapshot.docs[0];
+            const user = userDoc.data();
+            const uid = userDoc.id;
             
             console.log("User found:", user);
 
             if(user && user.cenId){
                 localStorage.setItem("myTeam", this.potentialTeam);
-
-                // const routes = {
-                //     water: "/team/water",
-                //     earth: "/team/earth",
-                //     air: "/team/air"
-                // };
+                localStorage.setItem("playerName", user.name);
+                localStorage.setItem("playerData", JSON.stringify(user));
 
                 const teamNames = {
                     water: "🌊 水チーム",
@@ -159,7 +159,9 @@ export default {
 
                 this.$router.push("/monitor-room");
 
-                // this.$router.push(routes[user.team]);
+                await db.collection("users").doc(uid).update({
+                    enteredMonitorRoomAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
             }
                 
             this.hasInitialized = true;

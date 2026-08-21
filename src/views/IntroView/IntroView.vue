@@ -266,7 +266,8 @@
                     level: 1,
                     coins: 0,
                     createdAt: new Date(),
-                    cenId: this.cenId
+                    cenId: this.cenId,
+                    enteredMonitorRoomAt: firebase.firestore.Timestamp.now()
                 });
 
                  await db.collection("teams")
