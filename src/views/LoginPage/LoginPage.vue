@@ -9,8 +9,7 @@
             <div class="grid lg:grid-cols-[350px_1fr] gap-8">
                 <!-- Left Panel -->
                 <div class="bg-white rounded-xl shadow p-6 flex gap-2 items-center">
-                    <div class="w-60 aspect-square mx-auto" v-html="avatarSvg"></div> 
-                    <span>{{ avatar }}</span>
+                    <div class="w-60 aspect-square mx-auto" v-html="avatarSvg"></div>
                     <div>
                         <input type="text" placeholder="ぼうけんしゃの名前" class="border-gray-800 w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-400" v-model="playerName">
                         <button class="my-3 p-3 bg-sky-600 text-white rounded-lg mr-2" @click="randomAll">🎲 シャッフル</button>
