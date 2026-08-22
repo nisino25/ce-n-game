@@ -61,7 +61,7 @@
                 class="monitor"
                 @click="changeMode('dominationGame')"
             >
-                洞窟探検
+                陣取りゲーム
             </button>
     
             <!-- Team -->
