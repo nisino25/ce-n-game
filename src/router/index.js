@@ -17,6 +17,8 @@ import CaveEnd from "@/views/CaveAdventure/CaveEnd.vue"
 
 import ErrorView from "@/views/ErrorView/ErrorView.vue";
 
+import ProfileEditor from "@/views/Settings/ProfileEditor.vue";
+
 const routes = [
     {
         path: "/",
@@ -72,6 +74,12 @@ const routes = [
         path: "/dominationGame",
         name: "DominationGame",
         component: DominationGame
+    },
+
+    {
+        path: "/settings/profile-editor",
+        name: "ProfileEditor",
+        component: ProfileEditor
     },
 
     {

@@ -232,7 +232,6 @@
                 setTimeout(() => {
 
                     localStorage.setItem("myTeam", this.potentialTeam);
-                    localStorage.setItem("playerName", this.playerName);
 
                     const routes = {
                         water: "/team/water",
@@ -257,7 +256,7 @@
             async createAccount(){
                 const uid = Date.now().toString();
 
-                await db.collection("users").doc(uid).set({
+                const userData = {
                     uid,
                     name: this.playerName,
                     avatar: this.avatar,
@@ -268,6 +267,10 @@
                     createdAt: new Date(),
                     cenId: this.cenId,
                     enteredMonitorRoomAt: firebase.firestore.Timestamp.now()
+                };
+
+                await db.collection("users").doc(uid).set({
+                    ...userData
                 });
 
                  await db.collection("teams")
@@ -277,6 +280,7 @@
                     });
 
                 localStorage.setItem("playerUid", uid);
+                localStorage.setItem("playerData", JSON.stringify(  userData));
 
                 console.log("Account created:", uid);
 

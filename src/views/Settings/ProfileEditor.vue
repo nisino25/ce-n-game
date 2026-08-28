@@ -13,7 +13,7 @@
                     <div>
                         <input type="text" placeholder="ぼうけんしゃの名前" class="border-gray-800 w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-400" v-model="playerName">
                         <button class="my-3 p-3 bg-sky-600 text-white rounded-lg mr-2" @click="randomAll">🎲 シャッフル</button>
-                        <button @click="goNext()" class="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg">▶ 次にすすむ</button>
+                        <button @click="goNext()" class="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg">編集する</button>
                     </div>
                 </div>
 
@@ -37,7 +37,7 @@
 </template>
 
 <script>
-import db, { firebase } from './../../firebase.js';
+import db from './../../firebase.js';
 export default {
 
     data(){
@@ -59,10 +59,13 @@ export default {
                 { key:"eyes", label:"目" },
                 { key:"top", label:"かみ" }
             ],
-            playerName:"てすと",
+            playerName:"",
 
             cenId: null,
             hasInitialized: false,
+            uid: null,
+
+            currentUser: null,
         }
     },
 
@@ -70,7 +73,7 @@ export default {
         console.clear()
         this.cenId = new URLSearchParams(location.search).get("cenId");
         this.initialCheck()
-        this.randomAll();
+        // this.randomAll();
     },
 
     methods:{
@@ -95,20 +98,23 @@ export default {
 
             this.avatarSvg = this.$buildAvatar(this.avatar);
         },
-        goNext(){
+        async goNext(){
             if(this.playerName.trim() === ""){
                 alert("名前を入力してください");
                 return;
             }
 
-            this.$router.push({
-                name: "Intro",
-                query: {
-                    name: this.playerName,
-                    avatar: JSON.stringify(this.avatar),
-                    cenId: this.cenId
-                }
+            if (!confirm("プロフィールを変更しますか？")) return;
+            this.currentUser.name = this.playerName;
+            this.currentUser.avatar = this.avatar;
+
+            await db.collection("users").doc(this.uid).update({
+                ...this.currentUser
             });
+
+            localStorage.setItem("playerData", JSON.stringify(this.currentUser));
+
+            this.$router.push({name: "MonitorRoom"});
         },
         async initialCheck(){
             if(!this.cenId || this.cenId.trim() === ""){
@@ -128,7 +134,6 @@ export default {
             
             
             if(snapshot.empty){
-
                 this.hasInitialized = true;
                 console.log("No user found with cenId:", this.cenId);
                 return false;
@@ -138,33 +143,28 @@ export default {
             // const user = snapshot.docs[0].data();
             const userDoc = snapshot.docs[0];
             const user = userDoc.data();
-            const uid = userDoc.id;
-            
+
+            this.playerName = user.name || "";
             console.log("User found:", user);
+            // const uid = userDoc.id;
+            this.uid = userDoc.id;
 
-            if(user && user.cenId){
-                localStorage.setItem("myTeam", this.potentialTeam);
-                localStorage.setItem("playerData", JSON.stringify(user));
+            this.avatar = {
+                env: user.avatar.env,
+                clo: user.avatar.clo,
+                head: user.avatar.head,
+                mouth: user.avatar.mouth,
+                eyes: user.avatar.eyes,
+                top: user.avatar.top
+            };
 
-                const teamNames = {
-                    water: "🌊 水チーム",
-                    earth: "🌱 土チーム",
-                    air: "🍃 風チーム"
-                };
+            this.avatarSvg = this.$buildAvatar(this.avatar);
 
-                this.result = teamNames[user.team];
-                localStorage.setItem("myTeam", user.team);
-
-                this.$router.push("/monitor-room");
-
-                await db.collection("users").doc(uid).update({
-                    enteredMonitorRoomAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
+            console.log("Avatar loaded:", this.avatar);
                 
             this.hasInitialized = true;
 
-            return user;
+            this.currentUser = user;
 
         }
     }

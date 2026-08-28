@@ -144,18 +144,20 @@
                   border-4 border-yellow-400
                   ring-4 ring-blue-500
                   shadow-[0_0_10px_rgba(59,130,246,1),0_0_25px_rgba(59,130,246,0.8)]
-                  animate-pulse"
+                  animate-pulse cursor-pointer"
                   v-html="avatarSvg"
+                  @click="editProfile()"
               ></div>
               <template v-for="(member, index) in teamMembers" :key="member.uid">
-                <div
-                  v-if="member.uid !== currentPlayerData.uid && member.isOnline"
-                  class="w-[60px] aspect-square absolute rounded-full border-2 border-blue-400"
-                  :style="{
-                      left: (10 + index * 10) + '%'
-                  }"
-                  v-html="member.avatarSvg"
-              ></div>
+                <template v-if="member.uid !== currentPlayerData.uid && member.isOnline">
+                    <div
+                      class="w-[60px] aspect-square absolute rounded-full border-2 border-blue-400"
+                      :style="{left: (10 + index * 10) + '%'}"
+                      v-html="member.avatarSvg"
+                    >
+                    </div>
+                </template>
+              
               </template>
             </div>
         </div>
@@ -251,8 +253,8 @@ export default {
     async mounted() {
         this.myTeam = localStorage.getItem("myTeam");
 
-        this.currentPlayerName = localStorage.getItem("playerName");
         this.currentPlayerData = JSON.parse(localStorage.getItem("playerData"));
+        this.currentPlayerName = this.currentPlayerData.name;
         this.currentPlayerAvatar = this.currentPlayerData.avatar;
         this.avatarSvg = this.$buildAvatar(this.currentPlayerData.avatar);
 
@@ -324,117 +326,125 @@ export default {
                     isOnline
                 };
             });
+        },
+        editProfile() {
+          // confirm 
+          if (!confirm("プロフィールを変更しますか？")) return;
+            this.$router.push({
+                name: "ProfileEditor",
+                query: {cenId: this.currentPlayerData.cenId}
+            });
         }
     }
 };
 </script>
 <style scoped>
-.monitor{
-    position:relative;
-    width:min(260px,20vw);
-    min-width:120px;
-    /* height:min(140px,12vw); */
-    height: auto;
-    min-height:70px;
+  .monitor{
+      position:relative;
+      width:min(260px,20vw);
+      min-width:120px;
+      /* height:min(140px,12vw); */
+      height: auto;
+      min-height:70px;
 
-    border:4px solid #0ff;
-    background:#001d24;
-    box-shadow:0 0 20px #0ff;
-    cursor:pointer;
-    overflow:hidden;
+      border:4px solid #0ff;
+      background:#001d24;
+      box-shadow:0 0 20px #0ff;
+      cursor:pointer;
+      overflow:hidden;
 
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    white-space:nowrap;
-    color:#00ffff;
-    font-size:clamp(12px,1.5vw,24px);
-    font-weight:bold;
-    text-shadow:0 0 5px #0ff,0 0 15px #0ff;
-    text-align:center;
-    padding:0.5em 0;
-}
-.monitor::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        repeating-linear-gradient(
-            to bottom,
-            transparent 0px,
-            transparent 3px,
-            rgba(255,255,255,.04) 4px
-        );
-    pointer-events: none;
-}
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      white-space:nowrap;
+      color:#00ffff;
+      font-size:clamp(12px,1.5vw,24px);
+      font-weight:bold;
+      text-shadow:0 0 5px #0ff,0 0 15px #0ff;
+      text-align:center;
+      padding:0.5em 0;
+  }
+  .monitor::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+          repeating-linear-gradient(
+              to bottom,
+              transparent 0px,
+              transparent 3px,
+              rgba(255,255,255,.04) 4px
+          );
+      pointer-events: none;
+  }
 
-.monitor::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    width: 100%;
-    height: 4px;
-    background: rgba(0,255,255,.9);
-    box-shadow: 0 0 15px #0ff;
-    animation: scan 2s linear infinite;
-}
+  .monitor::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(0,255,255,.9);
+      box-shadow: 0 0 15px #0ff;
+      animation: scan 2s linear infinite;
+  }
 
-@keyframes scan {
-    from {
-        top: -4px;
-    }
+  @keyframes scan {
+      from {
+          top: -4px;
+      }
 
-    to {
-        top: calc(100% + 4px);
-    }
-    
-}
-.monitor.offline {
-    position: relative;
-    overflow: hidden;
-    background: #050505;
-    border: 2px solid #444;
-    color: #666;
-}
+      to {
+          top: calc(100% + 4px);
+      }
+      
+  }
+  .monitor.offline {
+      position: relative;
+      overflow: hidden;
+      background: #050505;
+      border: 2px solid #444;
+      color: #666;
+  }
 
-.monitor.offline::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        linear-gradient(
-            135deg,
-            transparent 46%,
-            rgba(255,255,255,.25) 47%,
-            transparent 48%
-        ),
-        linear-gradient(
-            40deg,
-            transparent 70%,
-            rgba(255,255,255,.15) 71%,
-            transparent 72%
-        );
-    pointer-events: none;
-}
+  .monitor.offline::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+          linear-gradient(
+              135deg,
+              transparent 46%,
+              rgba(255,255,255,.25) 47%,
+              transparent 48%
+          ),
+          linear-gradient(
+              40deg,
+              transparent 70%,
+              rgba(255,255,255,.15) 71%,
+              transparent 72%
+          );
+      pointer-events: none;
+  }
 
-.monitor.offline::after {
-    content: "NO SIGNAL";
-    position: absolute;
-    bottom: 0 !important;
-    top: unset !important;
-    height: 30%;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: monospace;
-    color: #ff4444;
-    letter-spacing: 2px;
-    animation: flicker 1.5s infinite;
-}
+  .monitor.offline::after {
+      content: "NO SIGNAL";
+      position: absolute;
+      bottom: 0 !important;
+      top: unset !important;
+      height: 30%;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      color: #ff4444;
+      letter-spacing: 2px;
+      animation: flicker 1.5s infinite;
+  }
 
-@keyframes flicker {
-    0%,100% { opacity: 1; }
-    50% { opacity: .4; }
-}
+  @keyframes flicker {
+      0%,100% { opacity: 1; }
+      50% { opacity: .4; }
+  }
 </style>
