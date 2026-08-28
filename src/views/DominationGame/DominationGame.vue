@@ -3,85 +3,127 @@
     <template v-if="dominationMode == 'standard'">
         <div class="tiles-app p-5">
             <!--  --- Right side Area --- -->
-                <div class="flex justify-between gap-4 mb-6">
+                <div class="grid grid-cols-[30%_1fr] gap-4 mb-6 items-start">
                     <div>
-                        <!-- 色の説明 -->
-                        <h3>色の説明</h3>
-                        <div>
-                            <div class="grid grid-cols-4 gap-2">
-                                <template v-for="(item,index) in terrainList" :key="item.key">
-                                    <div   
-                                        class="flex items-center gap-1"
-                                        :class="{ 'col-span-2': index === terrainList.length - 1 }"
-                                    >
-                                        <div
-                                            class="w-4 h-4 rounded-full"
-                                            :style="{ background: areaColors[item.key] }"
-                                        ></div>
-                                        <span class="text-xs whitespace-nowrap">{{ item.label }}</span>
-                                    </div>
+                        <template v-if="isShowingTuorial">
 
-                                </template>
+                            <!-- 色の説明 -->
+                            <div>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <template v-for="(item,index) in terrainList" :key="item.key">
+                                        <div   
+                                            class="flex items-center gap-1"
+                                            :class="{ 'col-span-2': index === terrainList.length - 1 }"
+                                        >
+                                            <div
+                                                class="w-4 h-4 rounded-full"
+                                                :style="{ background: areaColors[item.key] }"
+                                            ></div>
+                                            <span class="text-xs whitespace-nowrap">{{ item.label }}</span>
+                                        </div>
+        
+                                    </template>
+                                </div>
+        
                             </div>
-
-                        </div>
-
-                        <!-- レベルの説明 -->
-                        <div>
-                            <h3 class="text-sm font-medium mb-3">レベルとポイントの説明</h3>
-                            <div class="flex justify-between items-center items-stretch">
-                                <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="text-center bg-gray-300 rounded block p-2">
-                                    <div
-                                        v-if="tier !== 1 && tier !== 4"
-                                        class="mx-auto mb-2"
-                                        :class="tierShapeClass(tier)"
-                                        :style="tierShapeStyle(tier,'#555')"
-                                        style="background: black; border-color: black"
-                                    ></div>
-                                    <span class="text-xs">
-                                        <strong v-if="tier === 1" class="text-xl">&#9650;<br></strong>
-                                        <strong v-if="tier === 4" class="text-xl">★<br></strong>
-                                        <strong>Lv{{ tier }}</strong><br>
-                                        <small class="whitespace-nowrap text-center">{{ getScoreForTile(tier) }}点</small>
-                                    </span>
+        
+                            <!-- レベルの説明 -->
+                            <div>
+                                <h3 class="text-sm font-medium mb-3">レベルとポイントの説明</h3>
+                                <div class="flex justify-between items-center items-stretch">
+                                    <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="text-center bg-gray-300 rounded block p-2">
+                                        <div
+                                            v-if="tier !== 1 && tier !== 4"
+                                            class="mx-auto mb-2"
+                                            :class="tierShapeClass(tier)"
+                                            :style="tierShapeStyle(tier,'#555')"
+                                            style="background: black; border-color: black"
+                                        ></div>
+                                        <span class="text-xs">
+                                            <strong v-if="tier === 1" class="text-xl">&#9650;<br></strong>
+                                            <strong v-if="tier === 4" class="text-xl">★<br></strong>
+                                            <strong>Lv{{ tier }}</strong><br>
+                                            <small class="whitespace-nowrap text-center">{{ getScoreForTile(tier) }}点</small>
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-
+        
+                            
+                        </template>
                         <!-- アクションボタン -->
-                        <h3>アクションボタン</h3>
-                        <div class="w-full">
+                        <div class="my-4 w-full">
                             <div class="grid grid-cols-2 gap-2 w-full">
-                            <button 
-                                @click="selectedCard = null" 
-                                :disabled="!selectedCard"
-                                class="px-1 py-2 rounded-md border text-sm"
-                                :class="[
-                                    selectedCard
-                                        ? 'bg-gray-200 hover:bg-gray-300'
-                                        : 'bg-gray-200 opacity-[0.4] cursor-not-allowed'
-                                ]">
-                                キャンセル
-                            </button>
-                            <button
-                                class="px-1 py-2 rounded-md border bg-blue-200 text-sm"
-                                @click="confirmSkip()"
-                            >
-                                スキップ
-                            </button>
-                            <button
-                                class="px-1 py-2 rounded-md border bg-green-200 text-sm"
-                                @click="confirmFinish()"
-                            >
-                                ゲーム終了
-                            </button>
-                            <button
-                                class="px-1 py-2 rounded-md border bg-red-200 text-sm"
-                                @click="backToMonitorRoom()"
-                            >
-                              戻る
-                            </button>
-													</div>
+                                <button 
+                                    @click="selectedCard = null" 
+                                    :disabled="!selectedCard"
+                                    class="px-1 py-2 rounded-md border text-sm"
+                                    :class="[
+                                        selectedCard
+                                            ? 'bg-gray-200 hover:bg-gray-300'
+                                            : 'bg-gray-200 opacity-[0.4] cursor-not-allowed'
+                                    ]">
+                                    キャンセル
+                                </button>
+                                <button
+                                    class="px-1 py-2 rounded-md border bg-blue-200 text-sm"
+                                    @click="confirmSkip()"
+                                >
+                                    スキップ
+                                </button>
+                                <button
+                                    class="px-1 py-2 rounded-md border bg-green-200 text-sm"
+                                    @click="confirmFinish()"
+                                >
+                                    ゲーム終了
+                                </button>
+                                <button
+                                    class="px-1 py-2 rounded-md border bg-red-200 text-sm"
+                                    @click="backToMonitorRoom()"
+                                >
+                                    戻る
+                                </button>
+                            </div>
+                        </div>
+                        <div
+                          class="p-3 border rounded-md flex flex-col gap-2 relative"
+                          style="background:#FFC72C;"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div class="w-7 h-7 rounded-md" :style="{ background: currentPlayer?.color }"></div>
+                                <div class="flex-1 text-sm">
+                                <span class="font-medium">{{ currentPlayer?.name }}: {{ currentPlayer?.score }}点</span>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <template
+                                    v-for="(group, index) in groupHandByTier(hands[currentPlayerId])"
+                                    :key="group.tier"
+                                >
+                                <div
+                                    class="w-full pb-2"
+                                    :class="{ 'border-b border-color-slate-300': index !== groupHandByTier(hands[currentPlayerId]).length - 1 }"
+                                    >
+        
+                                    
+                                    <div class="flex flex-wrap gap-2 items-center">
+                                        <div class="mb-1">
+                                            <span class="text-xs text-slate-400 mb-1">Lv{{ group.tier }}:</span> 
+                                        </div>
+                                        <div
+                                            v-for="card in group.cards"
+                                            :key="card.id"
+                                            class="inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium border cursor-pointer"
+                                            :class="areaBadgeClass(card, currentPlayerId)"
+                                            @click="previewCard(card, currentPlayerId)"
+                                        >
+                                            <span>{{ card.label }}</span>
+                                            <span class="text-slate-500">×{{ card.holdingCount }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                </template>
+                            </div>
                         </div>
                     </div>
                     <!-- Tiles Area -->
@@ -190,50 +232,6 @@
                         <button class="mt-4 px-4 py-2 bg-green-500 text-white rounded-md" @click="resetTiles()">もう一回遊ぶ</button>
                       </div>
                     </div>
-                  </div>
-                  <div class="grid grid-cols-3 gap-3">
-                      <div
-                          v-for="player in players"
-                          :key="player.id"
-                          class="p-3 border rounded-md flex flex-col gap-2 relative"
-                          :style="{ background: currentPlayerId === player.id ? '#FFC72C' : '' }"
-                        >
-                        <div class="flex items-center gap-3">
-                            <div class="w-7 h-7 rounded-md" :style="{ background: player.color }"></div>
-                            <div class="flex-1 text-sm">
-                              <span class="font-medium">{{ player.name }}: {{ player.score }}点</span>
-                            </div>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <template
-                                v-for="(group, index) in groupHandByTier(hands[player.id])"
-                                :key="group.tier"
-                            >
-                              <div
-                                class="w-full pb-2"
-                                :class="{ 'border-b border-color-slate-300': index !== groupHandByTier(hands[player.id]).length - 1 }"
-                                >
-    
-                                
-                                <div class="flex flex-wrap gap-2 items-center">
-                                    <div class="mb-1">
-                                        <span class="text-xs text-slate-400 mb-1">Lv{{ group.tier }}:</span> 
-                                    </div>
-                                    <div
-                                        v-for="card in group.cards"
-                                        :key="card.id"
-                                        class="inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium border cursor-pointer"
-                                        :class="areaBadgeClass(card, player.id)"
-                                        @click="previewCard(card, player.id)"
-                                    >
-                                        <span>{{ card.label }}</span>
-                                        <span class="text-slate-500">×{{ card.holdingCount }}</span>
-                                    </div>
-                                </div>
-                              </div>
-                            </template>
-                        </div>
-                      </div>
                   </div>
                 </div>
             </div>
@@ -382,9 +380,9 @@ export default {
 
         skipCount: 0,
 
-        gameState: 'playing' // 'playing' or 'finished'
+        gameState: 'playing', // 'playing' or 'finished'
 
-
+        isShowingTuorial: false
       }
     },
     methods: {
