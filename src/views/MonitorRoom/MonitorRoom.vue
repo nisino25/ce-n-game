@@ -59,7 +59,7 @@
             </button> -->
             <button
                 class="monitor"
-                @click="changeMode('dominationGame')"
+                @click="changeMode('dominationMap')"
             >
                 陣取りゲーム
             </button>

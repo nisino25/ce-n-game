@@ -77,9 +77,9 @@
                             </button>
                             <button
                                 class="px-1 py-2 rounded-md border bg-red-200 text-sm"
-                                @click="resetTiles"
+                                @click="backToMonitorRoom()"
                             >
-                              リセット
+                              戻る
                             </button>
 													</div>
                         </div>
@@ -388,6 +388,9 @@ export default {
       }
     },
     methods: {
+        backToMonitorRoom() {
+            this.$router.push({ name: 'MonitorRoom' });
+        },
         onTileClick(tile, event) {
           console.log(tile)
           if(tile.placedCard) {
