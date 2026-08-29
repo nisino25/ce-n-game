@@ -77,8 +77,8 @@
                 teams: [],
                 index: 0,
 
-                // showVideo: true,
-                showVideo: false,
+                showVideo: true,
+                // showVideo: false,
 
                 remaining: 0,
                 duration: 0,
