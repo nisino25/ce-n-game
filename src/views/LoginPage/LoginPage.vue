@@ -59,7 +59,7 @@ export default {
                 { key:"eyes", label:"目" },
                 { key:"top", label:"かみ" }
             ],
-            playerName:"てすと",
+            playerName:"",
 
             cenId: null,
             hasInitialized: false,
