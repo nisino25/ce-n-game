@@ -9,17 +9,17 @@
             <div class="grid lg:grid-cols-[350px_1fr] gap-8">
                 <!-- Left Panel -->
                 <div class="bg-white rounded-xl shadow p-6 flex gap-2 items-center">
-                    <div class="w-60 aspect-square mx-auto" v-html="avatarSvg"></div>
+                    <div class="w-40 aspect-square mx-auto" v-html="avatarSvg"></div>
                     <div>
                         <input type="text" placeholder="ぼうけんしゃの名前" class="border-gray-800 w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-400" v-model="playerName">
                         <button class="my-3 p-3 bg-sky-600 text-white rounded-lg mr-2" @click="randomAll">🎲 シャッフル</button>
-                        <button @click="goNext()" class="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg">編集する</button>
+                        <button @click="goNext()" class="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg">モニタールームに進む</button>
                     </div>
                 </div>
 
                 <!-- Right Panel -->
-                <div class="bg-white rounded-xl shadow p-6">
-                    <div v-for="part in parts" :key="part.key" class="mb-4">
+                <div class="bg-white rounded-xl shadow p-6 grid grid-cols-2 gap-4">
+                    <div v-for="part in parts" :key="part.key" class="mb-2">
                         <div class="flex items-center gap-3">
                             <span class="font-semibold w-[70px] text-left">{{ part.label }}</span>
                             <button class="p-1 bg-gray-200 rounded" @click="change(part.key,-1)">◀</button>
@@ -61,7 +61,7 @@ export default {
             ],
             playerName:"",
 
-            cenId: null,
+            loginCenId: null,
             hasInitialized: false,
             uid: null,
 
@@ -71,7 +71,7 @@ export default {
 
     mounted(){
         console.clear()
-        this.cenId = new URLSearchParams(location.search).get("cenId");
+        this.loginCenId = localStorage.getItem("loginCenId");
         this.initialCheck()
         // this.randomAll();
     },
@@ -104,7 +104,7 @@ export default {
                 return;
             }
 
-            if (!confirm("プロフィールを変更しますか？")) return;
+            if (!confirm("モニタールームに進みますか？")) return;
             this.currentUser.name = this.playerName;
             this.currentUser.avatar = this.avatar;
 
@@ -114,14 +114,10 @@ export default {
 
             localStorage.setItem("playerData", JSON.stringify(this.currentUser));
 
-            this.$router.push({name: "MonitorRoom"});
+            // go to home
+            this.$router.push({ name: "Home" });
         },
         async initialCheck(){
-            if(!this.cenId || this.cenId.trim() === ""){
-                alert("cenIdが取得できませんでした。");
-                this.$router.push("/error");
-                return;
-            }
 
             // const snapshot = await db.collection("users")
             // .get();
@@ -129,13 +125,13 @@ export default {
             // // console.log("All users:", snapshot.docs.map(doc => doc.data()));
             
             const snapshot = await db.collection("users")
-                .where("cenId","==",this.cenId)
+                .where("cenId","==",this.loginCenId)
                 .get();
             
             
             if(snapshot.empty){
                 this.hasInitialized = true;
-                console.log("No user found with cenId:", this.cenId);
+                console.log("No user found with cenId:", this.loginCenId);
                 return false;
             }
             
@@ -149,15 +145,25 @@ export default {
             // const uid = userDoc.id;
             this.uid = userDoc.id;
 
-            this.avatar = {
-                env: user.avatar.env,
-                clo: user.avatar.clo,
-                head: user.avatar.head,
-                mouth: user.avatar.mouth,
-                eyes: user.avatar.eyes,
-                top: user.avatar.top
-            };
-
+            if(user.avatar) {
+                this.avatar = {
+                    env: user.avatar.env || 0,
+                    clo: user.avatar.clo || 0,
+                    head: user.avatar.head || 0,
+                    mouth: user.avatar.mouth || 0,
+                    eyes: user.avatar.eyes || 0,
+                    top: user.avatar.top || 0
+                };
+            } else {
+                this.avatar = {
+                    env: 0,
+                    clo: 0,
+                    head: 0,
+                    mouth: 0,
+                    eyes: 0,
+                    top: 0
+                };
+            }
             this.avatarSvg = this.$buildAvatar(this.avatar);
 
             console.log("Avatar loaded:", this.avatar);

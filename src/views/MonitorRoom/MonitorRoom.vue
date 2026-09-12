@@ -139,15 +139,47 @@
             <!-- Workers -->
             <div class="absolute top-[80%] w-full">
               <div
-                  class="w-[80px] aspect-square mx-auto absolute left-[-20%]
-                  rounded-full
-                  border-4 border-yellow-400
-                  ring-4 ring-blue-500
-                  shadow-[0_0_10px_rgba(59,130,246,1),0_0_25px_rgba(59,130,246,0.8)]
-                  animate-pulse cursor-pointer"
-                  v-html="avatarSvg"
-                  @click="editProfile()"
-              ></div>
+									class="w-[80px] aspect-square mx-auto absolute left-[-20%]
+									rounded-full border-4 border-yellow-400 ring-4 ring-blue-500
+									shadow-[0_0_10px_rgba(59,130,246,1),0_0_25px_rgba(59,130,246,0.8)]
+									animate-pulse cursor-pointer"
+									v-html="avatarSvg"
+									@click="showProfileModal = true"
+							></div>
+
+							<!-- Profile Modal -->
+							<div
+									v-if="showProfileModal"
+									class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+									@click.self="showProfileModal = false"
+							>
+									<div class="bg-white rounded-xl shadow-xl p-6 w-[300px]">
+											<h2 class="text-xl font-bold text-center mb-5">
+													メニュー
+											</h2>
+
+											<button
+													class="w-full p-3 mb-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
+													@click="editProfile"
+											>
+													プロフィール編集
+											</button>
+
+											<button
+													class="w-full p-3 mb-3 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+													@click="logout"
+											>
+													ログアウト
+											</button>
+
+											<button
+													class="w-full p-3 bg-gray-300 hover:bg-gray-400 rounded-lg"
+													@click="showProfileModal = false"
+											>
+													閉じる
+											</button>
+									</div>
+							</div>
               <template v-for="(member, index) in teamMembers" :key="member.uid">
                 <template v-if="member.uid !== currentPlayerData.uid && member.isOnline">
                     <div
@@ -188,7 +220,9 @@ export default {
             belugaMessage: "",
 
             teamMembers: [],
-            avatarSvg: null
+            avatarSvg: null,
+
+						showProfileModal: false
         };
     },
 
@@ -328,13 +362,18 @@ export default {
             });
         },
         editProfile() {
-          // confirm 
-          if (!confirm("プロフィールを変更しますか？")) return;
-            this.$router.push({
-                name: "ProfileEditor",
-                query: {cenId: this.currentPlayerData.cenId}
-            });
-        }
+					this.$router.push({
+							name: "ProfileEditor",
+							query: {cenId: this.currentPlayerData.cenId}
+					});
+        },
+				logout() {
+					localStorage.removeItem("playerUid");
+					localStorage.removeItem("playerData");
+					localStorage.removeItem("myTeam");
+					localStorage.removeItem("loginCenId");
+					this.$router.push({ name: "LoginPage" });
+				}
     }
 };
 </script>
