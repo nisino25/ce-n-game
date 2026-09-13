@@ -13,13 +13,6 @@
             SECRET BASE CONTROL ROOM
         </h1>
 
-        <!-- Status -->
-        <!-- <div
-            class="absolute top-16 left-1/2 -translate-x-1/2 text-cyan-300 text-xl"
-        >
-            {{ status }}
-        </div> -->
-
         <!-- Floor -->
         <!-- <div
             id="roomFloor"
@@ -28,9 +21,7 @@
         ></div> -->
 
         <!-- Top Monitors -->
-        <div
-            class="flex justify-evenly items-center"
-        >
+        <div class="flex justify-evenly items-center">
             <!-- Planet -->
             <div class="monitor">
                 <div class="flex flex-col items-center">
@@ -63,6 +54,14 @@
             >
                 陣取りゲーム
             </button>
+
+            <button
+							class="monitor offline"
+							style="padding: 1.5em 0 !important;"
+            >
+                生き物スキャン
+            </button>
+    
     
             <!-- Team -->
             <button
@@ -113,6 +112,7 @@
             <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center z-10 bg-gray-800 bg-opacity-80 px-4 py-2 rounded-lg shadow-lg text-cyan-300 text-lg font-bold">
                 <span class="">出動中</span>
             </div>
+						
         </div>
 
         <!-- Console -->
@@ -136,60 +136,57 @@
                 </div>
             </div>
 
-            <!-- Workers -->
-            <div class="absolute top-[80%] w-full">
-              <div
-									class="w-[80px] aspect-square mx-auto absolute left-[-20%]
-									rounded-full border-4 border-yellow-400 ring-4 ring-blue-500
-									shadow-[0_0_10px_rgba(59,130,246,1),0_0_25px_rgba(59,130,246,0.8)]
-									animate-pulse cursor-pointer"
-									v-html="avatarSvg"
-									@click="showProfileModal = true"
-							></div>
+						<div
+							class="w-[80px] aspect-square mx-auto fixed left-[15%] bottom-[10%] z-[500] transform -translate-x-1/2
+							rounded-full border-4 border-yellow-400 ring-4 ring-blue-500
+							shadow-[0_0_10px_rgba(59,130,246,1),0_0_25px_rgba(59,130,246,0.8)]
+							animate-pulse cursor-pointer transition-all duration-1000"
+							v-html="avatarSvg"
+							@click="showProfileModal = true"
+							:class="isTransitioning? 'left-[50%]' : ''"
+						></div>
 
-							<!-- Profile Modal -->
-							<div
-									v-if="showProfileModal"
-									class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-									@click.self="showProfileModal = false"
+						<!-- Profile Modal -->
+						<div
+								v-if="showProfileModal"
+								class="fixed inset-0 z-[500] flex items-center justify-center bg-black/50"
+								@click.self="showProfileModal = false"
 							>
-									<div class="bg-white rounded-xl shadow-xl p-6 w-[300px]">
-											<h2 class="text-xl font-bold text-center mb-5">
-													メニュー
-											</h2>
+							<div class="bg-white rounded-xl shadow-xl p-6 w-[300px]">
+									<h2 class="text-xl font-bold text-center mb-5">
+											メニュー
+									</h2>
 
-											<button
-													class="w-full p-3 mb-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
-													@click="editProfile"
-											>
-													プロフィール編集
-											</button>
+									<button
+											class="w-full p-3 mb-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
+											@click="editProfile"
+									>
+											プロフィール編集
+									</button>
 
-											<button
-													class="w-full p-3 mb-3 bg-red-500 hover:bg-red-600 text-white rounded-lg"
-													@click="logout"
-											>
-													ログアウト
-											</button>
-
-											<button
-													class="w-full p-3 bg-gray-300 hover:bg-gray-400 rounded-lg"
-													@click="showProfileModal = false"
-											>
-													閉じる
-											</button>
-									</div>
+									<button
+											class="w-full p-3 mb-3 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+											@click="logout"
+									>
+											ログアウト
+									</button>
+									<button
+											class="w-full p-3 bg-gray-300 hover:bg-gray-400 rounded-lg"
+											@click="showProfileModal = false"
+									>
+											閉じる
+									</button>
 							</div>
-              <template v-for="(member, index) in teamMembers" :key="member.uid">
-                <template v-if="member.uid !== currentPlayerData.uid && member.isOnline">
-                    <div
-                      class="w-[60px] aspect-square absolute rounded-full border-2 border-blue-400"
-                      :style="{left: (10 + index * 10) + '%'}"
-                      v-html="member.avatarSvg"
-                    >
-                    </div>
-                </template>
-              
+						</div>
+
+            <!-- Workers -->
+            <div class="absolute bottom-[5%] right-[5%] grid grid-cols-5 gap-2">
+              <template v-for="(member) in onlineTeamMembers" :key="member.uid">
+								<div
+									class="w-[50px] aspect-square rounded-full border-2 border-blue-400"
+									v-html="member.avatarSvg"
+								>
+								</div>
               </template>
             </div>
         </div>
@@ -201,29 +198,34 @@ import db from './../../firebase.js';
 
 export default {
     name: "MonitorRoom",
-
+		
     data() {
-        return {
-            status: "監視システム正常",
-            isTransitioning: false,
+			const myTeam = localStorage.getItem("myTeam");
+			const currentPlayerData = JSON.parse(localStorage.getItem("playerData"));
+			const currentPlayerName = currentPlayerData?.name;
+			const avatarSvg = this.$buildAvatar(currentPlayerData?.avatar);
+		
+			return {
+				status: "監視システム正常",
+				isTransitioning: false,
 
-            myTeam: null,
-            currentPlayerName: null,
-            currentPlayerData: null,
+				myTeam,
+				currentPlayerName,
+				currentPlayerData,
+				avatarSvg,
 
 
-            collection: JSON.parse(
-                localStorage.getItem("collection") || "[]"
-            ),
+				collection: JSON.parse(
+						localStorage.getItem("collection") || "[]"
+				),
 
 
-            belugaMessage: "",
+				belugaMessage: "",
 
-            teamMembers: [],
-            avatarSvg: null,
+				teamMembers: [],
 
-						showProfileModal: false
-        };
+				showProfileModal: false
+			};
     },
 
     computed: {
@@ -281,20 +283,28 @@ export default {
                 default:
                     return "";
             }
-        }
+        },
+
+				onlineTeamMembers() {
+						// also cannot be same id as me
+						// cenId cannot be same as currentPlayerData.cenId
+
+						// return this.teamMembers.filter(member => member.isOnline);
+						return this.teamMembers.filter(member => member.isOnline && member.uid !== this.currentPlayerData.uid && member.cenId !== this.currentPlayerData.cenId);
+				}
     },
 
     async mounted() {
-        this.myTeam = localStorage.getItem("myTeam");
 
-        this.currentPlayerData = JSON.parse(localStorage.getItem("playerData"));
-        this.currentPlayerName = this.currentPlayerData.name;
-        this.currentPlayerAvatar = this.currentPlayerData.avatar;
-        this.avatarSvg = this.$buildAvatar(this.currentPlayerData.avatar);
 
         this.teamMembers = await this.getTeamMembers();
+				// console.log("Current Player Data:", this.currentPlayerData);
+				// console.log("My Team:", this.myTeam);
+				// console.log("Current Player Name:", this.currentPlayerName);
+				// console.log("Current Player Avatar:", this.currentPlayerAvatar);	
 
         console.log("Team Members:", this.teamMembers);
+				console.log("Online Team Members:", this.onlineTeamMembers);
     },
 
     methods: {
@@ -353,6 +363,7 @@ export default {
                 const user = doc.data();
                 const enteredAt = user.enteredMonitorRoomAt?.seconds * 1000;
                 const isOnline = enteredAt && Date.now() - enteredAt <= 10 * 60 * 1000; 
+                // const isOnline = enteredAt && Date.now() - enteredAt <= 200 * 60 * 60 * 1000; 
 
                 return {
                     ...user,
@@ -380,7 +391,7 @@ export default {
 <style scoped>
   .monitor{
       position:relative;
-      width:min(260px,20vw);
+      width:min(260px,17.5vw);
       min-width:120px;
       /* height:min(140px,12vw); */
       height: auto;

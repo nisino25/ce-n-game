@@ -63,6 +63,8 @@ export default {
 
                 if (!snapshot.empty) {
                     localStorage.setItem("loginCenId", cenId);
+                    localStorage.setItem("playerData", JSON.stringify(snapshot.docs[0].data()));
+                    localStorage.setItem("myTeam", snapshot.docs[0].data().team);
                     this.$router.push({ name: "Home" });
                     return;
                 }

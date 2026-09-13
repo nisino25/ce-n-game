@@ -116,6 +116,9 @@ const router = createRouter({
 
 router.beforeEach((to) => {
     const loginCenId = localStorage.getItem("loginCenId");
+
+    // how do i use these globally
+
     const publicRoutes = ["LoginPage", "Intro"];
 
     if (publicRoutes.includes(to.name)) {
