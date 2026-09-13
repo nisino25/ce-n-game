@@ -1,25 +1,32 @@
 <template>
-    <div class="wrap-whole-page ">
-        <div id="returnGate" @click="activateGate" class="cursor-pointer rounded-lg bg-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-300">戻る</div>
-    
-        <div ref="warp" class="warpEffect"></div>
+  <div class="wrap-whole-page">
+
+    <!-- ■訂正：ダンジョン出口 -->
+      <div id="returnGate" @click="activateGate">
+        ◉
+        <div>ダンジョン出口</div>
+      </div>
+     <!-- ■削除：<div id="returnGate" @click="activateGate" class="cursor-pointer rounded-lg bg-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-300">戻る</div> -->    
+
+        <!-- <div ref="warp" class="warpEffect"></div> -->
+        <div ref="warp" class="warpEffect" id="warpEffect"></div>
     
         <div id="result">のこりのカギ：{{ remainKeys }}本</div>
     
         <div class="chest" :class="{ open: chestOpen }" @click="openChest">
     
             <div class="lid">
-                <div class="lidBand lb1"></div>
-                <div class="lidBand lb2"></div>
-                <div class="lidBand lb3"></div>
-                <div class="lidBand lb4"></div>
+                <!-- ■削除：<div class="lidBand lb1"></div> -->
+                <!-- ■削除：<div class="lidBand lb2"></div> -->
+                <!-- ■削除：<div class="lidBand lb3"></div> -->
+                <!-- ■削除：<div class="lidBand lb4"></div> -->
             </div>
     
             <div class="base">
-                <div class="baseBand bb1"></div>
-                <div class="baseBand bb2"></div>
-                <div class="baseBand bb3"></div>
-                <div class="baseBand bb4"></div>
+                <!-- ■削除：<div class="baseBand bb1"></div> -->
+                <!-- ■削除：<div class="baseBand bb2"></div> -->
+                <!-- ■削除：<div class="baseBand bb3"></div> -->
+                <!-- ■削除：<div class="baseBand bb4"></div> -->
             </div>
     
             <div class="lock"></div>
@@ -131,6 +138,8 @@ export default {
                 time: new Date().toISOString()
             });
             localStorage.setItem("collection",JSON.stringify(collection));
+           // ■追加：
+            this.collection = collection;
         },
 
         closeCard() {
@@ -158,7 +167,9 @@ export default {
             warp.style.width = "300vmax";
             warp.style.height = "300vmax";
             setTimeout(() => {
-                this.$router.back();
+                this.$router.push("/cave-adventure/cave-entrance");
+                // ■単なる戻るでなく、入り口まで飛ばす
+                // this.$router.back();
             }, 600);
         }
 }
@@ -199,10 +210,11 @@ export default {
     background:repeating-linear-gradient(90deg,#5a341c 0,#734624 20px,#5a341c 40px);
     }
 
-    .lidBand,.baseBand{
-    position:absolute;width:14px;
-    background:linear-gradient(90deg,#8b6518,#f5df85,#8b6518);
-    }
+    .lidBand,
+    .baseBand{
+      position:absolute;width:14px;
+      background:linear-gradient(90deg,#8b6518,#f5df85,#8b6518);
+      }
     .lidBand{top:0;height:98px}
     .baseBand{top:0;height:128px}
     .lb1,.bb1{left:58px}
@@ -254,4 +266,36 @@ export default {
     .bookPanel{
     width:95%;height:80%;background:white;border-radius:16px;padding:16px;
     }
+
+/* ■追加：帰還ゲート対応 */
+#returnGate {
+    position: fixed; left: 30px; top: 30px; width: 100px; height: 100px;
+      border-radius: 50%; border: 4px solid #00ff00; color: #00ff00;
+      background: rgba(0, 255, 0, 0.1);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.2;
+      cursor: pointer;
+      box-shadow:
+        0 0 20px #00ff00,
+        inset 0 0 20px #00ff00;
+      animation: pulse 2s infinite;
+      z-index: 1000;
+   }
+  @keyframes pulse {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.1); }
+    100% { transform: scale(1); }
+   }
+
+/* ■追加：ワープ演出 */
+#warpEffect {
+  position: fixed; left: 50%; top: 50%; width: 0; height: 0;
+    border-radius: 50%; background: black;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    pointer-events: none;
+    transition: width 1.5s ease, height 1.5s ease;
+  }
 </style>

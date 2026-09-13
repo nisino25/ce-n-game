@@ -1,5 +1,14 @@
 <template>
+    <!-- ■追加：帰還ゲート -->
+    <div id="returnGate" @click="returnHome">
+        ◉
+        <div>帰還ゲート</div>
+    </div>
+    <div class="keyCount absolute top-4 right-4 text-white text-lg font-bold z-10">
+      ゲットしたカギ：{{ keyCount }}本
+    </div>
 
+ 
     <!-- Warp -->
     <div ref="warp"></div>
 
@@ -43,7 +52,11 @@ export default {
             player: null,
 
             enemyAppeared: false,
-            enemyMoveCounter: 0
+            enemyMoveCounter: 0,
+
+            // ■追加：木処理
+            stage: "cave",
+            forestGate: {}
 
         };
 
@@ -112,8 +125,13 @@ export default {
         },
 
         resetGame() {
+            // ■追加：洞窟・森・水・空気からランダムにステージを選択
+            const dungeons = ["cave", "forest", "water", "air"];
+            this.stage = dungeons[Math.floor(Math.random() * dungeons.length)];
+            // ----------
 
             this.createMaze();
+            this.createForestGate();
 
             this.createItems();
 
@@ -185,6 +203,22 @@ export default {
             dig(1, 1);
 
         },
+        // ■追加：ステージ間ゲート変更
+        createForestGate() {
+            let r, c;
+
+            do {
+                r = Math.floor(Math.random() * this.ROWS);
+                c = Math.floor(Math.random() * this.COLS);
+            } while (
+                this.maze[r][c] ||
+                (r === 1 && c === 1) ||
+                (r === this.goal.r && c === this.goal.c)
+            );
+
+            this.forestGate = { r, c };
+        },
+        //  -----
 
         createItems() {
 
@@ -400,6 +434,16 @@ export default {
                 c: nc
             };
 
+            // ■追加：木ゲートから別ステージへワープ
+            if (
+                this.player.r === this.forestGate.r &&
+                this.player.c === this.forestGate.c
+            ) {
+                this.warpToNextDungeon();
+                return;
+            }
+            // ------------
+
             if (
                 this.player.r === this.home.r &&
                 this.player.c === this.home.c
@@ -464,11 +508,11 @@ export default {
 
                 );
 
-                const keyCount =
-                    this.items.filter(i => i.get).length;
+                // const keyCount =
+                //     this.items.filter(i => i.get).length;
 
                 this.$router.push(
-                    `./cave-end?keys=${keyCount}`
+                    `./cave-end?keys=${this.keyCount}`
                 );
 
                 return;
@@ -478,6 +522,53 @@ export default {
             this.draw();
 
         },
+
+       // ■追加：ステージ間ワープ
+        warpToNextDungeon() {
+            const warp = this.$refs.warp;
+
+            if (warp) {
+                warp.style.width = "300vmax";
+                warp.style.height = "300vmax";
+            }
+
+            setTimeout(() => {
+
+                const dungeonData = [
+                    { stage: "cave",   r: 18, c: 3 },
+                    { stage: "forest", r: 10, c: 8 },
+                    { stage: "water",  r: 18, c: 3 },
+                    { stage: "air",    r: 12, c: 5 }
+                ];
+
+                const next =
+                    dungeonData[
+                        Math.floor(Math.random() * dungeonData.length)
+                    ];
+
+                this.createMaze();
+                this.createForestGate();
+                this.createItems();
+
+                this.enemies = [];
+                this.enemyAppeared = false;
+                this.enemyMoveCounter = 0;
+
+                this.stage = next.stage;
+                this.player.r = next.r;
+                this.player.c = next.c;
+
+                if (warp) {
+                    warp.style.width = "0";
+                    warp.style.height = "0";
+                }
+
+                this.draw();
+
+            }, 700);
+        },
+        // -----------
+
         handlePointerMove(e) {
             const rect = this.canvas.getBoundingClientRect();
             this.moveTo( e.clientX - rect.left, e.clientY - rect.top);
@@ -491,8 +582,36 @@ export default {
             for (let r = 0; r < this.ROWS; r++) {
 
                 for (let c = 0; c < this.COLS; c++) {
-                    this.ctx.fillStyle = this.maze[r][c] ? "#555" : "#111";
-                    this.ctx.fillRect(c * this.CELL, r * this.CELL, this.CELL, this.CELL);
+                    // ■追加：4ステージ色
+                    let wall;
+                    let floor;
+
+                    if (this.stage === "cave") {
+                        wall = "#555";
+                        floor = "#111";
+                    } else if (this.stage === "forest") {
+                        wall = "#2f6b2f";
+                        floor = "#8fd15b";
+                    } else if (this.stage === "water") {
+                        wall = "#0d5fb8";
+                        floor = "#9fdcff";
+                    } else {
+                        wall = "#8EA8C7";
+                        floor = "#DFF5FF";
+                    }
+
+                    this.ctx.fillStyle =
+                        this.maze[r][c] ? wall : floor;
+
+                    this.ctx.fillRect(
+                        c * this.CELL,
+                        r * this.CELL,
+                        this.CELL,
+                        this.CELL
+                    );
+                    // -------------
+                    // this.ctx.fillStyle = this.maze[r][c] ? "#555" : "#111";
+                    // this.ctx.fillRect(c * this.CELL, r * this.CELL, this.CELL, this.CELL);
                 }
 
             }
@@ -506,6 +625,18 @@ export default {
             this.ctx.textBaseline = "middle";
 
             this.ctx.fillText("🏛️",homeX, homeY);
+
+            // ■追加：木ステージゲート
+            if (this.forestGate.r !== undefined) {
+                const gateX =
+                    this.forestGate.c * this.CELL + this.CELL / 2;
+                const gateY =
+                    this.forestGate.r * this.CELL + this.CELL / 2;
+
+                this.ctx.font = `${this.CELL * 0.8}px serif`;
+                this.ctx.fillText("🌳", gateX, gateY);
+            }
+            // ---------
 
             // Goal
             const goalX = this.goal.c * this.CELL + this.CELL / 2;
@@ -616,7 +747,13 @@ export default {
         },
 
 
-    }
+    },
+
+    computed: {
+        keyCount() {
+            return this.items.filter(item => item.get).length;
+        }
+    },
 
 };
 </script>
