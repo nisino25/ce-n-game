@@ -1,6 +1,11 @@
 <template>
     <div class="relative h-screen w-full">
 
+        <div id="returnGate" @click="returnHome">
+        ◉
+            <div>帰還ゲート</div>
+        </div>
+        <div id="warpEffect"></div>
         <!-- Start Message -->
         <div
             v-if="showStartScreen"
@@ -18,10 +23,20 @@
         </div>
 
         <!-- Leaflet Map -->
-        <div
+        <!-- <div
             ref="map"
             class="h-screen w-full"
-        ></div>
+        >
+        </div> -->
+        <!-- Leaflet Map -->
+        <div class="relative h-screen w-full">
+            <div
+                ref="map"
+                class="h-screen w-full"
+            ></div>
+
+            <div class="map-vignette"></div>
+        </div>
 
     </div>
 </template>
@@ -59,18 +74,92 @@ export default {
             5
         );
 
-        L.tileLayer(
-            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            {
-                attribution: "© OpenStreetMap"
-            }
-        ).addTo(this.map);
+        // L.tileLayer(
+        //     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        //     {
+        //         attribution: "© OpenStreetMap"
+        //     }
+        // ).addTo(this.map);
+//         L.tileLayer(
+//     "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+//     {
+//         attribution: "© OpenStreetMap © CARTO"
+//     }
+// ).addTo(this.map);
+// L.tileLayer(
+//     "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+//     {
+//         attribution: "© OpenStreetMap © CARTO"
+//     }
+// ).addTo(this.map);
+// L.tileLayer(
+//     "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+//     {
+//         attribution: "© OpenStreetMap contributors, SRTM | OpenTopoMap"
+//     }
+// ).addTo(this.map);
+// L.tileLayer(
+//     "https://tiles.stadiamaps.com/tiles/stamen_toner/{z}/{x}/{y}{r}.png",
+//     {
+//         maxZoom: 20,
+//         attribution: "© Stadia Maps © Stamen Design © OpenStreetMap"
+//     }
+// ).addTo(this.map);
 
+
+
+// L.tileLayer(
+//     "https://tiles.stadiamaps.com/tiles/stamen_toner_lite/{z}/{x}/{y}{r}.png",
+//     {
+//         maxZoom: 20,
+//         attribution: "© Stadia Maps © Stamen Design © OpenStreetMap"
+//     }
+// ).addTo(this.map);
+
+// L.tileLayer(
+//     "https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png",
+//     {
+//         maxZoom: 20,
+//         attribution: "© Stadia Maps © Stamen Design © OpenStreetMap"
+//     }
+// ).addTo(this.map);
+// L.tileLayer(
+//     "https://tiles.stadiamaps.com/tiles/stamen_watercolor/{z}/{x}/{y}.jpg",
+//     {
+//         maxZoom: 16,
+//         attribution: "© Stadia Maps © Stamen Design © OpenStreetMap"
+//     }
+// ).addTo(this.map);
+// L.tileLayer(
+//     "https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png",
+//     {
+//         maxZoom: 20,
+//         attribution: "© Stadia Maps © OpenMapTiles © OpenStreetMap"
+//     }
+// ).addTo(this.map);
+L.tileLayer(
+    "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png",
+    {
+        maxZoom: 20,
+        attribution: "© Stadia Maps © OpenMapTiles © OpenStreetMap"
+    }
+).addTo(this.map);
         this.createStartMarkers();
 
     },
 
     methods: {
+        returnHome() {
+            const warp = document.getElementById("warpEffect");
+            if (warp) {
+                warp.style.width = "300vmax";
+                warp.style.height = "300vmax";
+            }
+
+            setTimeout(() => {
+                this.$router.push("/");
+            }, 800);
+        },
 
         createStartMarkers() {
 
@@ -257,3 +346,100 @@ export default {
 
 };
 </script>
+
+<style scoped>
+
+
+#returnGate {
+    position: fixed;
+    left: 7.5%;
+    top: 30px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 4px solid #00ffff;
+    color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
+    cursor: pointer;
+    box-shadow:
+        0 0 20px #00ffff,
+        inset 0 0 20px #00ffff;
+    animation: pulse 2s infinite;
+    z-index: 1000;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+#warpEffect {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: white;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    pointer-events: none;
+    transition: width 1.2s ease, height 1.2s ease;
+}
+
+/* .map-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 500;
+
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.9) 0%,
+            rgba(255, 255, 255, 0.55) 8%,
+            rgba(255, 255, 255, 0.15) 18%,
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at center,
+            transparent 0%,
+            rgba(0, 0, 0, 0.25) 20%,
+            rgba(0, 0, 0, 0.65) 45%,
+            rgba(0, 0, 0, 0.9) 70%,
+            rgba(0, 0, 0, 0.98) 100%
+        );
+} */
+
+.map-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 500;
+
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(255, 255, 255, 0.45) 0%,
+            rgba(255, 255, 255, 0.25) 8%,
+            rgba(255, 255, 255, 0.08) 18%,
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at center,
+            transparent 0%,
+            rgba(0, 0, 0, 0.25) 20%,
+            rgba(0, 0, 0, 0.65) 45%,
+            rgba(0, 0, 0, 0.9) 70%,
+            rgba(0, 0, 0, 0.98) 100%
+        );
+}
+
+</style>

@@ -681,13 +681,45 @@ export default {
             });
 
             // Player
-            const playerX = this.player.c * this.CELL + this.CELL / 2;
+            // const playerX = this.player.c * this.CELL + this.CELL / 2;
 
+            // const playerY = this.player.r * this.CELL + this.CELL / 2;
+
+            // this.ctx.font = `${this.CELL * 0.8}px serif`;
+
+            // this.ctx.fillText("😀", playerX, playerY );
+
+            // Player
+            const playerX = this.player.c * this.CELL + this.CELL / 2;
             const playerY = this.player.r * this.CELL + this.CELL / 2;
 
-            this.ctx.font = `${this.CELL * 0.8}px serif`;
+            const currentPlayerData = JSON.parse(localStorage.getItem("playerData"));
+            const avatarSvg = this.$buildAvatar(currentPlayerData?.avatar);
 
-            this.ctx.fillText("😀", playerX, playerY );
+            const avatarImg = new Image();
+
+            avatarImg.onload = () => {
+                const size = this.CELL * 0.9;
+
+                this.ctx.imageSmoothingEnabled = true;
+                this.ctx.imageSmoothingQuality = "high";
+
+                this.ctx.drawImage(
+                    avatarImg,
+                    playerX - size / 2,
+                    playerY - size / 2,
+                    size,
+                    size
+                );
+            };
+
+            const highResSvg = avatarSvg.replace(
+                "<svg",
+                '<svg width="300" height="300"'
+            );
+
+            avatarImg.src =
+                `data:image/svg+xml;charset=utf-8,${encodeURIComponent(highResSvg)}`;
 
         },
         getProtectedTarget() {

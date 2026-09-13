@@ -35,7 +35,7 @@
     
         <div class="flex gap-2 mt-4">
             <button @click="showCollection" class="px-3 py-1 bg-gray-200 rounded">カード一式</button>
-            <button @click="resetCollection" class="px-3 py-1 bg-gray-200 rounded">リセット(仮)</button>
+            <!-- <button @click="resetCollection" class="px-3 py-1 bg-gray-200 rounded">リセット(仮)</button> -->
         </div>
     
         <!-- Card -->
