@@ -1,9 +1,15 @@
 <template>
-    <!-- ■追加：帰還ゲート -->
+    <!-- ■追加：出口ゲート -->
     <div id="returnGate" @click="returnHome">
         ◉
-        <div>帰還ゲート</div>
+        <div>ダンジョン出口</div>
     </div>
+    <!-- ■追加：他洞窟へのワープ -->
+    <div id="forestWarpGate" @click="warpToNextDungeon">
+        ◉
+        <div>他洞窟へのワープ</div>
+    </div>
+
     <div class="keyCount absolute top-4 right-4 text-white text-lg font-bold z-10">
       ゲットしたカギ：{{ keyCount }}本
     </div>
@@ -53,11 +59,34 @@ export default {
 
             enemyAppeared: false,
             enemyMoveCounter: 0,
-
+            
             // ■追加：木処理
             stage: "cave",
-            forestGate: {}
+            forestGate: {},
 
+            // ■追加：ステージの色設定と対応アイコン
+            stageData: {
+                cave: { 
+                    wall: "#555",
+                    floor: "#111",
+                    gateIcon: "🪙"
+                },
+                forest: {
+                    wall: "#2f6b2f",
+                    floor: "#8fd15b",
+                    gateIcon: "🌳"
+                },
+                water: { 
+                    wall: "#0d5fb8",
+                    floor: "#9fdcff",
+                    gateIcon: "🐟"
+                },
+                air: { 
+                    wall: "#8EA8C7",
+                    floor: "#DFF5FF",
+                    gateIcon: "🐦"
+                }
+            }
         };
 
     },
@@ -102,13 +131,15 @@ export default {
         returnHome() {
 
             const warp = this.$refs.warp;
-
-            warp.style.width = "300vmax";
-            warp.style.height = "300vmax";
+            if (warp) {
+                warp.style.width = "300vmax";
+                warp.style.height = "300vmax";
+            }
 
             setTimeout(() => {
-                this.$router.push("/monitor-room");
-            }, 800);
+                this.$router.back();
+                // this.$router.push("/cave-entrance");
+            }, 600);
 
         },
 
@@ -577,31 +608,16 @@ export default {
         draw() {
 
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            // 現在のステージ設定を取得
+            const currentStageInfo = this.stageData[this.stage] || this.stageData.cave;
 
             // Maze
             for (let r = 0; r < this.ROWS; r++) {
 
-                for (let c = 0; c < this.COLS; c++) {
-                    // ■追加：4ステージ色
-                    let wall;
-                    let floor;
-
-                    if (this.stage === "cave") {
-                        wall = "#555";
-                        floor = "#111";
-                    } else if (this.stage === "forest") {
-                        wall = "#2f6b2f";
-                        floor = "#8fd15b";
-                    } else if (this.stage === "water") {
-                        wall = "#0d5fb8";
-                        floor = "#9fdcff";
-                    } else {
-                        wall = "#8EA8C7";
-                        floor = "#DFF5FF";
-                    }
+                for (let c = 0; c < this.COLS; c++) {    
 
                     this.ctx.fillStyle =
-                        this.maze[r][c] ? wall : floor;
+                        this.maze[r][c] ? currentStageInfo.wall : currentStageInfo.floor;
 
                     this.ctx.fillRect(
                         c * this.CELL,
@@ -626,7 +642,7 @@ export default {
 
             this.ctx.fillText("🏛️",homeX, homeY);
 
-            // ■追加：木ステージゲート
+            // ■修正：ワープゲート
             if (this.forestGate.r !== undefined) {
                 const gateX =
                     this.forestGate.c * this.CELL + this.CELL / 2;
@@ -634,7 +650,7 @@ export default {
                     this.forestGate.r * this.CELL + this.CELL / 2;
 
                 this.ctx.font = `${this.CELL * 0.8}px serif`;
-                this.ctx.fillText("🌳", gateX, gateY);
+                this.ctx.fillText(currentStageInfo.gateIcon, gateX, gateY);
             }
             // ---------
 
@@ -676,7 +692,7 @@ export default {
 
                 this.ctx.font = `${this.CELL * 0.8}px serif`;
 
-                this.ctx.fillText("💣", x, y);
+                this.ctx.fillText("🎃", x, y);
 
             });
 
@@ -903,6 +919,33 @@ width:95%;height:80%;background:white;border-radius:16px;padding:16px;
   animation: pulse 2s infinite;
   z-index: 1000;
 }
+
+/* ■追加：他洞窟へのワープボタンデザイン */
+#forestWarpGate {
+  position: fixed;
+  left: 30px;
+  top: 140px;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid #ff00ff;
+  color: #ff00ff;
+  background: rgba(255,0,255,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow:
+    0 0 20px #ff00ff,
+    inset 0 0 20px #ff00ff;
+  animation: pulse 2s infinite;
+  z-index: 1000;
+}
+
 @keyframes pulse {
   0%   { transform: scale(1); }
   50%  { transform: scale(1.1); }
