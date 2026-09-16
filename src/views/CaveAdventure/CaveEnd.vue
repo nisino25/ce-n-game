@@ -1,17 +1,19 @@
 <template>
   <div class="wrap-whole-page">
 
-    <!-- ■訂正：ダンジョン出口 -->
-      <div id="returnGate" @click="activateGate">
+    <div class="top-info absolute top-8 left-8 text-white text-lg font-bold z-10">
+        <!-- ■訂正：ダンジョン出口 -->
+        <div id="returnGate" @click="activateGate">
         ◉
         <div>ダンジョン出口</div>
-      </div>
-
-    <!-- ■追加：他洞窟へのワープ -->
-      <div id="forestWarpGate" @click="warpDungeon">
+        </div>
+    
+        <!-- ■追加：他洞窟へのワープ -->
+        <div id="forestWarpGate" @click="warpDungeon">
         ◉
         <div>他洞窟へのワープ</div>
-      </div>
+        </div>
+    </div>
 
 
      <!-- ■削除：<div id="returnGate" @click="activateGate" class="cursor-pointer rounded-lg bg-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-300">戻る</div> -->    
@@ -285,7 +287,8 @@ export default {
 
 /* ■追加：帰還ゲート対応 */
 #returnGate {
-    position: fixed; left: 30px; top: 30px; width: 100px; height: 100px;
+    width: 100px;
+    height: 100px;
       border-radius: 50%; border: 4px solid #00ff00; color: #00ff00;
       background: rgba(0, 255, 0, 0.1);
       display: flex; flex-direction: column; align-items: center;
@@ -298,12 +301,11 @@ export default {
         inset 0 0 20px #00ff00;
       animation: pulse 2s infinite;
       z-index: 1000;
+      margin-bottom: 30px; /* 下に余白を追加 */
    }
 /* 他洞窟へのワープボタンデザイン */
 #forestWarpGate {
-  position: fixed;
-  left: 30px;
-  top: 140px;
+
   width: 100px;
   height: 100px;
   border-radius: 50%;
