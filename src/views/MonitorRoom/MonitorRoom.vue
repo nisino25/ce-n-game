@@ -52,7 +52,7 @@
                 class="monitor"
                 @click="changeMode('dominationMap')"
             >
-                陣取りゲーム
+                野生にもどそう！
             </button>
 
             <button

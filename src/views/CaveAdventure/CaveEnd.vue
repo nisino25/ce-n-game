@@ -1,11 +1,21 @@
 <template>
   <div class="wrap-whole-page">
 
-    <!-- ■訂正：ダンジョン出口 -->
-      <div id="returnGate" @click="activateGate">
+    <div class="top-info absolute top-8 left-8 text-white text-lg font-bold z-10">
+        <!-- ■訂正：ダンジョン出口 -->
+        <div id="returnGate" @click="activateGate">
         ◉
         <div>ダンジョン出口</div>
-      </div>
+        </div>
+    
+        <!-- ■追加：他洞窟へのワープ -->
+        <div id="forestWarpGate" @click="warpDungeon">
+        ◉
+        <div>他洞窟へのワープ</div>
+        </div>
+    </div>
+
+
      <!-- ■削除：<div id="returnGate" @click="activateGate" class="cursor-pointer rounded-lg bg-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-300">戻る</div> -->    
 
         <!-- <div ref="warp" class="warpEffect"></div> -->
@@ -171,6 +181,14 @@ export default {
                 // ■単なる戻るでなく、入り口まで飛ばす
                 // this.$router.back();
             }, 600);
+        },
+        warpDungeon() {
+            const warp = this.$refs.warp;
+            warp.style.width = "300vmax";
+            warp.style.height = "300vmax";
+            setTimeout(() => {
+                this.$router.back();
+            }, 600);
         }
 }
 
@@ -269,7 +287,8 @@ export default {
 
 /* ■追加：帰還ゲート対応 */
 #returnGate {
-    position: fixed; left: 30px; top: 30px; width: 100px; height: 100px;
+    width: 100px;
+    height: 100px;
       border-radius: 50%; border: 4px solid #00ff00; color: #00ff00;
       background: rgba(0, 255, 0, 0.1);
       display: flex; flex-direction: column; align-items: center;
@@ -282,7 +301,32 @@ export default {
         inset 0 0 20px #00ff00;
       animation: pulse 2s infinite;
       z-index: 1000;
+      margin-bottom: 30px; /* 下に余白を追加 */
    }
+/* 他洞窟へのワープボタンデザイン */
+#forestWarpGate {
+
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid #ff00ff;
+  color: #ff00ff;
+  background: rgba(255,0,255,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow:
+    0 0 20px #ff00ff,
+    inset 0 0 20px #ff00ff;
+  animation: pulse 2s infinite;
+  z-index: 1000;
+}
+
   @keyframes pulse {
     0%   { transform: scale(1); }
     50%  { transform: scale(1.1); }

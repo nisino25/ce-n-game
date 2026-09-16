@@ -1,16 +1,24 @@
 <template>
-    <!-- ■追加：帰還ゲート -->
+  <div class="top-info absolute top-8 left-8 text-white text-lg font-bold z-10">
+    <!-- ■追加：出口ゲート -->
     <div id="returnGate" @click="returnHome">
         ◉
-        <div>帰還ゲート</div>
+        <div>ダンジョン出口</div>
     </div>
+    <!-- ■追加：他洞窟へのワープ -->
+    <div id="forestWarpGate" @click="warpToNextDungeon">
+        ◉
+        <div>他洞窟への<br>ワープ</div>
+    </div>
+  </div>
+
     <div class="keyCount absolute top-4 right-4 text-white text-lg font-bold z-10">
       ゲットしたカギ：{{ keyCount }}本
     </div>
 
  
     <!-- Warp -->
-    <div ref="warp"></div>
+    <div ref="warp" id="warpEffect"></div>
 
     <!-- wrap all page -->
     <div class="bg-[#111] w-full h-auto">
@@ -53,11 +61,35 @@ export default {
 
             enemyAppeared: false,
             enemyMoveCounter: 0,
-
+            
             // ■追加：木処理
             stage: "cave",
-            forestGate: {}
+            forestGate: {},
 
+            // ■追加：ステージの色設定と対応アイコン
+            stageData: {
+                cave: { 
+                    wall: "#555",
+                    floor: "#111",
+                    gateIcon: "🪙"
+                },
+                forest: {
+                    wall: "#2f6b2f",
+                    floor: "#8fd15b",
+                    gateIcon: "🌳"
+                },
+                water: { 
+                    wall: "#0d5fb8",
+                    floor: "#9fdcff",
+                    gateIcon: "🐟"
+                },
+                air: { 
+                    wall: "#8EA8C7",
+                    floor: "#DFF5FF",
+                    gateIcon: "🐦"
+                }
+            },
+            playerMoveCounter: 0,
         };
 
     },
@@ -102,13 +134,15 @@ export default {
         returnHome() {
 
             const warp = this.$refs.warp;
-
-            warp.style.width = "300vmax";
-            warp.style.height = "300vmax";
+            if (warp) {
+                warp.style.width = "300vmax";
+                warp.style.height = "300vmax";
+            }
 
             setTimeout(() => {
-                this.$router.push("/monitor-room");
-            }, 800);
+                // this.$router.back();
+                this.$router.push({ name: 'CaveEntrance' });
+            }, 600);
 
         },
 
@@ -145,6 +179,7 @@ export default {
                 r: 1,
                 c: 1
             };
+            this.playerMoveCounter = 0;
 
             this.draw();
 
@@ -309,7 +344,6 @@ export default {
         },
 
         moveEnemies() {
-
             this.enemyMoveCounter++;
 
             if (this.enemyMoveCounter % 3 !== 0) {
@@ -393,392 +427,374 @@ export default {
 
             });
 
-        },
-        moveTo(x, y) {
+      },
+      moveTo(x, y) {
 
-            const targetCol = Math.floor(x / this.CELL);
-            const targetRow = Math.floor(y / this.CELL);
+          const targetCol = Math.floor(x / this.CELL);
+          const targetRow = Math.floor(y / this.CELL);
 
-            let dc = targetCol - this.player.c;
-            let dr = targetRow - this.player.r;
+          let dc = targetCol - this.player.c;
+          let dr = targetRow - this.player.r;
 
-            if (Math.abs(dc) > Math.abs(dr)) {
+          if (Math.abs(dc) > Math.abs(dr)) {
 
-                dc = Math.sign(dc);
-                dr = 0;
+              dc = Math.sign(dc);
+              dr = 0;
 
-            } else {
+          } else {
 
-                dr = Math.sign(dr);
-                dc = 0;
+              dr = Math.sign(dr);
+              dc = 0;
 
-            }
+          }
 
-            const nr = this.player.r + dr;
-            const nc = this.player.c + dc;
+          const nr = this.player.r + dr;
+          const nc = this.player.c + dc;
 
-            if (this.maze[nr]?.[nc]) {
-                return;
-            }
+          if (this.maze[nr]?.[nc]) {
+              return;
+          }
 
-            if (
-                nr === this.goal.r &&
-                nc === this.goal.c &&
-                this.items.filter(i => i.get).length === 0
-            ) {
-                return;
-            }
+          // プレイヤーが別のマスに移動していない場合は処理しない
+          if (nr === this.player.r && nc === this.player.c) {
+              return;
+          }
 
-            this.player = {
-                r: nr,
-                c: nc
-            };
+          if (
+              nr === this.goal.r &&
+              nc === this.goal.c &&
+              this.items.filter(i => i.get).length === 0
+          ) {
+              return;
+          }
 
-            // ■追加：木ゲートから別ステージへワープ
-            if (
-                this.player.r === this.forestGate.r &&
-                this.player.c === this.forestGate.c
-            ) {
-                this.warpToNextDungeon();
-                return;
-            }
-            // ------------
+          this.player = {
+              r: nr,
+              c: nc
+          };
 
-            if (
-                this.player.r === this.home.r &&
-                this.player.c === this.home.c
-            ) {
+          this.playerMoveCounter++;
 
-                this.returnHome();
+          // ■追加：木ゲートから別ステージへワープ
+          if (
+              this.player.r === this.forestGate.r &&
+              this.player.c === this.forestGate.c
+          ) {
+              this.warpToNextDungeon();
+              return;
+          }
+          // ------------
 
-                this.resetGame();
+          if (
+              this.playerMoveCounter > 1 &&
+              this.player.r === this.home.r &&
+              this.player.c === this.home.c
+          ) {
 
-                return;
+              this.returnHome();
 
-            }
+              // this.resetGame();
 
-            this.items.forEach(item => {
+              return;
 
-                if (
-                    !item.get &&
-                    item.r === nr &&
-                    item.c === nc
-                ) {
+          }
 
-                    item.get = true;
+          this.items.forEach(item => {
 
-                    if (
-                        this.items.filter(i => i.get).length === 2 &&
-                        !this.enemyAppeared
-                    ) {
+              if (
+                  !item.get &&
+                  item.r === nr &&
+                  item.c === nc
+              ) {
 
-                        this.enemyAppeared = true;
+                  item.get = true;
 
-                        this.spawnEnemy();
+                  if (
+                      this.items.filter(i => i.get).length === 2 &&
+                      !this.enemyAppeared
+                  ) {
 
-                    }
+                      this.enemyAppeared = true;
 
-                }
+                      this.spawnEnemy();
 
-            });
+                  }
 
-            if (this.enemyAppeared) {
+              }
 
-                this.moveEnemies();
+          });
 
-            }
+          if (this.enemyAppeared) {
 
-            if (
-                this.player.r === this.goal.r &&
-                this.player.c === this.goal.c
-            ) {
+              this.moveEnemies();
 
-                sessionStorage.setItem(
+          }
 
-                    "gameState",
+          if (
+              this.player.r === this.goal.r &&
+              this.player.c === this.goal.c
+          ) {
 
-                    JSON.stringify({
-                        player: this.player,
-                        items: this.items,
-                        enemies: this.enemies,
-                        enemyAppeared: this.enemyAppeared,
-                        enemyMoveCounter: this.enemyMoveCounter
+              sessionStorage.setItem(
 
-                    })
+                  "gameState",
 
-                );
+                  JSON.stringify({
+                      player: this.player,
+                      items: this.items,
+                      enemies: this.enemies,
+                      enemyAppeared: this.enemyAppeared,
+                      enemyMoveCounter: this.enemyMoveCounter
 
-                // const keyCount =
-                //     this.items.filter(i => i.get).length;
-
-                this.$router.push(
-                    `./cave-end?keys=${this.keyCount}`
-                );
-
-                return;
+                  })
 
-            }
-
-            this.draw();
+              );
 
-        },
-
-       // ■追加：ステージ間ワープ
-        warpToNextDungeon() {
-            const warp = this.$refs.warp;
+              // const keyCount =
+              //     this.items.filter(i => i.get).length;
 
-            if (warp) {
-                warp.style.width = "300vmax";
-                warp.style.height = "300vmax";
-            }
-
-            setTimeout(() => {
+              this.$router.push(
+                  `./cave-end?keys=${this.keyCount}`
+              );
 
-                const dungeonData = [
-                    { stage: "cave",   r: 18, c: 3 },
-                    { stage: "forest", r: 10, c: 8 },
-                    { stage: "water",  r: 18, c: 3 },
-                    { stage: "air",    r: 12, c: 5 }
-                ];
-
-                const next =
-                    dungeonData[
-                        Math.floor(Math.random() * dungeonData.length)
-                    ];
+              return;
 
-                this.createMaze();
-                this.createForestGate();
-                this.createItems();
-
-                this.enemies = [];
-                this.enemyAppeared = false;
-                this.enemyMoveCounter = 0;
-
-                this.stage = next.stage;
-                this.player.r = next.r;
-                this.player.c = next.c;
-
-                if (warp) {
-                    warp.style.width = "0";
-                    warp.style.height = "0";
-                }
-
-                this.draw();
+          }
 
-            }, 700);
-        },
-        // -----------
+          this.draw();
 
-        handlePointerMove(e) {
-            const rect = this.canvas.getBoundingClientRect();
-            this.moveTo( e.clientX - rect.left, e.clientY - rect.top);
-        },
+      },
 
-        draw() {
+      // ■追加：ステージ間ワープ
+      warpToNextDungeon() {
+          const warp = this.$refs.warp;
 
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          if (warp) {
+              warp.style.width = "300vmax";
+              warp.style.height = "300vmax";
+          }
 
-            // Maze
-            for (let r = 0; r < this.ROWS; r++) {
+          setTimeout(() => {
 
-                for (let c = 0; c < this.COLS; c++) {
-                    // ■追加：4ステージ色
-                    let wall;
-                    let floor;
+              const dungeonData = [
+                  { stage: "cave",   r: 18, c: 3 },
+                  { stage: "forest", r: 10, c: 8 },
+                  { stage: "water",  r: 18, c: 3 },
+                  { stage: "air",    r: 12, c: 5 }
+              ];
 
-                    if (this.stage === "cave") {
-                        wall = "#555";
-                        floor = "#111";
-                    } else if (this.stage === "forest") {
-                        wall = "#2f6b2f";
-                        floor = "#8fd15b";
-                    } else if (this.stage === "water") {
-                        wall = "#0d5fb8";
-                        floor = "#9fdcff";
-                    } else {
-                        wall = "#8EA8C7";
-                        floor = "#DFF5FF";
-                    }
+              const next =
+                  dungeonData[
+                      Math.floor(Math.random() * dungeonData.length)
+                  ];
 
-                    this.ctx.fillStyle =
-                        this.maze[r][c] ? wall : floor;
+              this.createMaze();
+              this.createForestGate();
+              this.createItems();
 
-                    this.ctx.fillRect(
-                        c * this.CELL,
-                        r * this.CELL,
-                        this.CELL,
-                        this.CELL
-                    );
-                    // -------------
-                    // this.ctx.fillStyle = this.maze[r][c] ? "#555" : "#111";
-                    // this.ctx.fillRect(c * this.CELL, r * this.CELL, this.CELL, this.CELL);
-                }
+              this.enemies = [];
+              this.enemyAppeared = false;
+              this.enemyMoveCounter = 0;
 
-            }
+              this.stage = next.stage;
+              this.player.r = next.r;
+              this.player.c = next.c;
 
-            // Home
-            const homeX =this.home.c * this.CELL + this.CELL / 2;
-            const homeY =this.home.r * this.CELL + this.CELL / 2;
+              if (warp) {
+                  warp.style.width = "0";
+                  warp.style.height = "0";
+              }
 
-            this.ctx.font = `${this.CELL * 0.8}px serif`;
-            this.ctx.textAlign = "center";
-            this.ctx.textBaseline = "middle";
+              this.draw();
 
-            this.ctx.fillText("🏛️",homeX, homeY);
+          }, 700);
+      },
+      // -----------
 
-            // ■追加：木ステージゲート
-            if (this.forestGate.r !== undefined) {
-                const gateX =
-                    this.forestGate.c * this.CELL + this.CELL / 2;
-                const gateY =
-                    this.forestGate.r * this.CELL + this.CELL / 2;
+      handlePointerMove(e) {
+          const rect = this.canvas.getBoundingClientRect();
+          this.moveTo( e.clientX - rect.left, e.clientY - rect.top);
+      },
 
-                this.ctx.font = `${this.CELL * 0.8}px serif`;
-                this.ctx.fillText("🌳", gateX, gateY);
-            }
-            // ---------
+      draw() {
 
-            // Goal
-            const goalX = this.goal.c * this.CELL + this.CELL / 2;
-            const goalY = this.goal.r * this.CELL + this.CELL / 2;
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          // 現在のステージ設定を取得
+          const currentStageInfo = this.stageData[this.stage] || this.stageData.cave;
 
-            this.ctx.font = `${this.CELL * 0.9}px serif`;
+          // Maze
+          for (let r = 0; r < this.ROWS; r++) {
 
-            if (
-                this.items.filter(item => item.get).length >= 1
-            ) {
-                this.ctx.fillText("🎁", goalX, goalY);
-            } else {
-                this.ctx.fillText("🔒", goalX,goalY);
-            }
+              for (let c = 0; c < this.COLS; c++) {    
 
-            // Keys
-            this.items.forEach(item => {
+                  this.ctx.fillStyle =
+                      this.maze[r][c] ? currentStageInfo.wall : currentStageInfo.floor;
 
-                if (item.get) {
-                    return;
-                }
+                  this.ctx.fillRect(
+                      c * this.CELL,
+                      r * this.CELL,
+                      this.CELL,
+                      this.CELL
+                  );
+                  // -------------
+                  // this.ctx.fillStyle = this.maze[r][c] ? "#555" : "#111";
+                  // this.ctx.fillRect(c * this.CELL, r * this.CELL, this.CELL, this.CELL);
+              }
 
-                const x = item.c * this.CELL + this.CELL / 2;
+          }
 
-                const y = item.r * this.CELL + this.CELL / 2;
+          // Home
+          const homeX =this.home.c * this.CELL + this.CELL / 2;
+          const homeY =this.home.r * this.CELL + this.CELL / 2;
 
-                this.ctx.font = `${this.CELL * 0.75}px serif`;
+          this.ctx.font = `${this.CELL * 0.8}px serif`;
+          this.ctx.textAlign = "center";
+          this.ctx.textBaseline = "middle";
 
-                this.ctx.fillText( "🔑", x, y);
+          this.ctx.fillText("🏛️",homeX, homeY);
 
-            });
+          // ■修正：ワープゲート
+          if (this.forestGate.r !== undefined) {
+              const gateX =
+                  this.forestGate.c * this.CELL + this.CELL / 2;
+              const gateY =
+                  this.forestGate.r * this.CELL + this.CELL / 2;
 
-            // Enemies
-            this.enemies.forEach(enemy => {
-                const x = enemy.c * this.CELL + this.CELL / 2;
-                const y = enemy.r * this.CELL + this.CELL / 2;
+              this.ctx.font = `${this.CELL * 0.8}px serif`;
+              this.ctx.fillText(currentStageInfo.gateIcon, gateX, gateY);
+          }
+          // ---------
 
-                this.ctx.font = `${this.CELL * 0.8}px serif`;
+          // Goal
+          const goalX = this.goal.c * this.CELL + this.CELL / 2;
+          const goalY = this.goal.r * this.CELL + this.CELL / 2;
 
-                this.ctx.fillText("💣", x, y);
+          this.ctx.font = `${this.CELL * 0.9}px serif`;
 
-            });
+          if (
+              this.items.filter(item => item.get).length >= 1
+          ) {
+              this.ctx.fillText("🎁", goalX, goalY);
+          } else {
+              this.ctx.fillText("🔒", goalX,goalY);
+          }
 
-            // Player
-            // const playerX = this.player.c * this.CELL + this.CELL / 2;
+          // Keys
+          this.items.forEach(item => {
 
-            // const playerY = this.player.r * this.CELL + this.CELL / 2;
+              if (item.get) {
+                  return;
+              }
 
-            // this.ctx.font = `${this.CELL * 0.8}px serif`;
+              const x = item.c * this.CELL + this.CELL / 2;
 
-            // this.ctx.fillText("😀", playerX, playerY );
+              const y = item.r * this.CELL + this.CELL / 2;
 
-            // Player
-            const playerX = this.player.c * this.CELL + this.CELL / 2;
-            const playerY = this.player.r * this.CELL + this.CELL / 2;
+              this.ctx.font = `${this.CELL * 0.75}px serif`;
 
-            const currentPlayerData = JSON.parse(localStorage.getItem("playerData"));
-            const avatarSvg = this.$buildAvatar(currentPlayerData?.avatar);
+              this.ctx.fillText( "🔑", x, y);
 
-            const avatarImg = new Image();
+          });
 
-            avatarImg.onload = () => {
-                const size = this.CELL * 0.9;
+          // Enemies
+          this.enemies.forEach(enemy => {
+              const x = enemy.c * this.CELL + this.CELL / 2;
+              const y = enemy.r * this.CELL + this.CELL / 2;
 
-                this.ctx.imageSmoothingEnabled = true;
-                this.ctx.imageSmoothingQuality = "high";
+              this.ctx.font = `${this.CELL * 0.8}px serif`;
 
-                this.ctx.drawImage(
-                    avatarImg,
-                    playerX - size / 2,
-                    playerY - size / 2,
-                    size,
-                    size
-                );
-            };
+              this.ctx.fillText("🎃", x, y);
 
-            const highResSvg = avatarSvg.replace(
-                "<svg",
-                '<svg width="300" height="300"'
-            );
+          });
 
-            avatarImg.src =
-                `data:image/svg+xml;charset=utf-8,${encodeURIComponent(highResSvg)}`;
+          // Player
+          const playerX = this.player.c * this.CELL + this.CELL / 2;
+          const playerY = this.player.r * this.CELL + this.CELL / 2;
 
-        },
-        getProtectedTarget() {
+          const currentPlayerData = JSON.parse(localStorage.getItem("playerData"));
+          const avatarSvg = this.$buildAvatar(currentPlayerData?.avatar);
 
-            const remainingItems = this.items.filter(
-                item => !item.get
-            );
+          const avatarImg = new Image();
 
-            if (remainingItems.length > 0) {
+          avatarImg.onload = () => {
+              const size = this.CELL * 0.9;
 
-                return remainingItems[
-                    remainingItems.length - 1
-                ];
+              this.ctx.imageSmoothingEnabled = true;
+              this.ctx.imageSmoothingQuality = "high";
 
-            }
+              this.ctx.drawImage(
+                  avatarImg,
+                  playerX - size / 2,
+                  playerY - size / 2,
+                  size,
+                  size
+              );
+          };
 
-            return this.goal;
+          const highResSvg = avatarSvg.replace(
+              "<svg",
+              '<svg width="300" height="300"'
+          );
 
-        },
-        nearGoal(r, c) {
+          avatarImg.src =
+              `data:image/svg+xml;charset=utf-8,${encodeURIComponent(highResSvg)}`;
 
-            return (
+      },
+      getProtectedTarget() {
 
-                Math.abs(r - this.goal.r) +
-                Math.abs(c - this.goal.c)
+          const remainingItems = this.items.filter(
+              item => !item.get
+          );
 
-            ) <= 1;
+          if (remainingItems.length > 0) {
 
-        },
-        blocksCriticalPath(r, c) {
+              return remainingItems[
+                  remainingItems.length - 1
+              ];
 
-            const target =
-                this.getProtectedTarget();
+          }
 
-            const before =
+          return this.goal;
 
-                Math.abs(
-                    this.player.r - target.r
-                ) +
+      },
+      nearGoal(r, c) {
 
-                Math.abs(
-                    this.player.c - target.c
-                );
+          return (
 
-            const after =
+              Math.abs(r - this.goal.r) +
+              Math.abs(c - this.goal.c)
 
-                Math.abs(
-                    r - target.r
-                ) +
+          ) <= 1;
 
-                Math.abs(
-                    c - target.c
-                );
+      },
+      blocksCriticalPath(r, c) {
 
-            return after < before;
+          const target =
+              this.getProtectedTarget();
 
-        },
+          const before =
 
+              Math.abs(
+                  this.player.r - target.r
+              ) +
 
+              Math.abs(
+                  this.player.c - target.c
+              );
+
+          const after =
+
+              Math.abs(
+                  r - target.r
+              ) +
+
+              Math.abs(
+                  c - target.c
+              );
+
+          return after < before;
+
+      },
     },
 
     computed: {
@@ -881,9 +897,6 @@ width:95%;height:80%;background:white;border-radius:16px;padding:16px;
 
 /* 帰還ゲートのボタンデザイン */
 #returnGate {
-  position: fixed;
-  left: 30px;
-  top: 30px;
   width: 100px;
   height: 100px;
   border-radius: 50%;
@@ -902,7 +915,33 @@ width:95%;height:80%;background:white;border-radius:16px;padding:16px;
     inset 0 0 20px #00ff00;
   animation: pulse 2s infinite;
   z-index: 1000;
+
+  margin-bottom: 30px; /* 下に余白を追加 */
 }
+
+/* ■追加：他洞窟へのワープボタンデザイン */
+#forestWarpGate {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid #ff00ff;
+  color: #ff00ff;
+  background: rgba(255,0,255,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow:
+    0 0 20px #ff00ff,
+    inset 0 0 20px #ff00ff;
+  animation: pulse 2s infinite;
+  z-index: 1000;
+}
+
 @keyframes pulse {
   0%   { transform: scale(1); }
   50%  { transform: scale(1.1); }
