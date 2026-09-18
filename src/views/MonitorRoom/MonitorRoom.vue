@@ -57,6 +57,22 @@
             >
                 生き物スキャン
             </button>
+
+            <!-- ■仮設置：本来は野生にもどそう(地図)側に組み込む予定 -->
+            <button
+                class="monitor"
+                @click="$router.push({ name: 'ABGame' })"
+            >
+                ABゲーム（仮）
+            </button>
+
+            <!-- ■仮設置：操作感・レイアウトを見直した別案（比較用） -->
+            <button
+                class="monitor"
+                @click="$router.push({ name: 'ABGameB' })"
+            >
+                ABゲーム提案B（仮）
+            </button>
     
     
             <!-- Team -->
