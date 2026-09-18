@@ -1,11 +1,15 @@
 <template>
-    <div class="relative w-screen h-screen overflow-hidden bg-slate-950 padding-4" :style="themeVars">
+    <div class="relative w-screen h-screen overflow-hidden bg-slate-950 padding-4">
 
         <!-- Background -->
-        <div class="absolute inset-0 room-bg"></div>
+        <div
+            class="absolute inset-0 bg-[radial-gradient(circle_at_center,#1c2435,#05070d)]"
+        ></div>
 
         <!-- Title -->
-        <h1 class="m-4 room-title text-3xl font-bold tracking-wider">
+        <h1
+            class="m-4 text-cyan-300 text-3xl font-bold tracking-wider drop-shadow-[0_0_12px_#00ffff]"
+        >
             SECRET BASE CONTROL ROOM
         </h1>
 
@@ -98,14 +102,14 @@
         </div>
 
         <!-- Door -->
-        <div ref="doorEl" class="my-8 mx-auto w-[80%] h-64 flex justify-center items-center relative">
-            <div class="door-left panel bg-gray-700 h-full w-[90px] relative z-100 transition-transform duration-1000 z-20" :style="{transform: isTransitioning ? 'translateX(-75px)' : 'translateX(0)'}">
-                <div class="door-line absolute h-full w-[2px] right-0"></div>
+        <div class="my-8 mx-auto w-[80%] h-64 flex justify-center items-center relative">
+            <div class="door-left panel bg-gray-700 h-full w-[90px] relative z-100 transition-transform duration-1000 z-20" @click="changeMode('cave-adventure/cave-entrance')" :style="{transform: isTransitioning ? 'translateX(-75px)' : 'translateX(0)'}">
+                <div class="door-line absolute h-full w-[2px] right-0 bg-[#0ff]"></div>
             </div>
-            <div class="door-right panel bg-gray-700 h-full w-[90px] relative z-100 transition-transform duration-1000 z-20  " :style="{transform: isTransitioning ? 'translateX(75px)' : 'translateX(0)'}">
-                <div class="door-line absolute h-full w-[2px] left-0"></div>
+            <div class="door-right panel bg-gray-700 h-full w-[90px] relative z-100 transition-transform duration-1000 z-20  " @click="changeMode('cave-adventure/cave-entrance')" :style="{transform: isTransitioning ? 'translateX(75px)' : 'translateX(0)'}">
+                <div class="door-line absolute h-full w-[2px] left-0 bg-[#0ff]"></div>
             </div>
-            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center z-10 bg-gray-800 bg-opacity-80 px-4 py-2 rounded-lg shadow-lg room-accent-text text-lg font-bold">
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center z-10 bg-gray-800 bg-opacity-80 px-4 py-2 rounded-lg shadow-lg text-cyan-300 text-lg font-bold">
                 <span class="">出動中</span>
             </div>
 						
@@ -114,31 +118,32 @@
         <!-- Console -->
         <div class="consoles realtive flex justify-between items-center w-[400px] mx-auto">
             <div
-                class="relative w-44 h-16 bg-gray-700 border-2 border-gray-500 room-console flex justify-center items-center"
+                class="relative w-44 h-16 bg-gray-700 border-2 border-gray-500 shadow-[0_0_15px_cyan] flex justify-center items-center"
                 >
-                <div class="text-center room-accent-text text-sm">
+                <div class="text-center text-cyan-300 text-sm">
                     <div class="desk-monitor">{{ teamEmoji }} {{ teamName }}</div>
                 </div>
             </div>
-
+    
             <!-- Right Console -->
             <div
-                class="relative w-44 h-16 bg-gray-700 border-2 border-gray-500 room-console flex justify-center items-center"
+                class="relative w-44 h-16 bg-gray-700 border-2 border-gray-500 shadow-[0_0_15px_cyan] flex justify-center items-center"
             >
-                <div class="text-center room-accent-text text-sm">
-                    <div class="desk-monitor">{{ teamEmoji }} {{ teamName }}</div>
+                <div class="text-center text-cyan-300 text-sm">
+                    <div class="text-center text-cyan-300 text-sm">
+                        <div class="desk-monitor">{{ teamEmoji }} {{ teamName }}</div>
+                    </div>
                 </div>
             </div>
 
 						<div
-							ref="avatarEl"
 							class="w-[80px] aspect-square mx-auto fixed left-[15%] bottom-[10%] z-[500] transform -translate-x-1/2
-							rounded-full border-4 border-yellow-400 room-avatar-ring
-							cursor-pointer transition-all duration-1000"
-							:class="{ 'animate-pulse': !isTransitioning }"
+							rounded-full border-4 border-yellow-400 ring-4 ring-blue-500
+							shadow-[0_0_10px_rgba(59,130,246,1),0_0_25px_rgba(59,130,246,0.8)]
+							animate-pulse cursor-pointer transition-all duration-1000"
 							v-html="avatarSvg"
 							@click="showProfileModal = true"
-							:style="avatarTransitionStyle"
+							:class="isTransitioning? 'left-[50%]' : ''"
 						></div>
 
 						<!-- Profile Modal -->
@@ -175,14 +180,12 @@
 						</div>
 
             <!-- Workers -->
-            <div class="absolute inset-x-[4%] top-[34%] bottom-[6%] pointer-events-none">
+            <div class="absolute bottom-[5%] right-[5%] grid grid-cols-5 gap-2">
               <template v-for="(member) in onlineTeamMembers" :key="member.uid">
-								<div class="wanderer" :style="wanderStyle(member)">
-									<div
-										class="wanderer-inner w-[50px] aspect-square rounded-full border-2 room-worker-avatar"
-										v-html="member.avatarSvg"
-									>
-									</div>
+								<div
+									class="w-[50px] aspect-square rounded-full border-2 border-blue-400"
+									v-html="member.avatarSvg"
+								>
 								</div>
               </template>
             </div>
@@ -205,9 +208,6 @@ export default {
 			return {
 				status: "監視システム正常",
 				isTransitioning: false,
-				isDocking: false,
-				avatarFrom: null,
-				doorTarget: null,
 
 				myTeam,
 				currentPlayerName,
@@ -285,75 +285,12 @@ export default {
             }
         },
 
-        teamTheme() {
-            const themes = {
-                water: {
-                    accent: "#22d3ee",
-                    bgGlow: "#15324a",
-                    bgDark: "#030a12",
-                    titleGlow: "#67e8f9"
-                },
-                earth: {
-                    accent: "#4ade80",
-                    bgGlow: "#1f3320",
-                    bgDark: "#060d04",
-                    titleGlow: "#86efac"
-                },
-                air: {
-                    accent: "#7dd3fc",
-                    bgGlow: "#33475a",
-                    bgDark: "#10181f",
-                    titleGlow: "#bae6fd"
-                }
-            };
-
-            return themes[this.myTeam] || {
-                accent: "#00ffff",
-                bgGlow: "#1c2435",
-                bgDark: "#05070d",
-                titleGlow: "#67e8f9"
-            };
-        },
-
-        themeVars() {
-            return {
-                "--team-accent": this.teamTheme.accent,
-                "--team-bg-glow": this.teamTheme.bgGlow,
-                "--team-bg-dark": this.teamTheme.bgDark,
-                "--team-title-glow": this.teamTheme.titleGlow
-            };
-        },
-
 				onlineTeamMembers() {
 						// also cannot be same id as me
 						// cenId cannot be same as currentPlayerData.cenId
 
 						// return this.teamMembers.filter(member => member.isOnline);
 						return this.teamMembers.filter(member => member.isOnline && member.uid !== this.currentPlayerData.uid && member.cenId !== this.currentPlayerData.cenId);
-				},
-
-				avatarTransitionStyle() {
-						if (this.isDocking && this.doorTarget) {
-								return {
-										left: `${this.doorTarget.left}px`,
-										top: `${this.doorTarget.top}px`,
-										bottom: "auto",
-										transform: "translate(-50%, -50%) scale(0.15)",
-										opacity: 0
-								};
-						}
-
-						if (this.isTransitioning && this.avatarFrom) {
-								return {
-										left: `${this.avatarFrom.left}px`,
-										top: `${this.avatarFrom.top}px`,
-										bottom: "auto",
-										transform: "translate(-50%, -50%) scale(1)",
-										opacity: 1
-								};
-						}
-
-						return {};
 				}
     },
 
@@ -409,79 +346,12 @@ export default {
             }
         },
         changeMode(mode) {
-            if (this.isTransitioning) {
-                return;
-            }
-
-            const avatarEl = this.$refs.avatarEl;
-            const doorEl = this.$refs.doorEl;
-
-            if (avatarEl && doorEl) {
-                const avatarRect = avatarEl.getBoundingClientRect();
-                const doorRect = doorEl.getBoundingClientRect();
-
-                // 現在のアバターの見た目の位置を、bottom基準からpx指定のtop/leftに
-                // 一度固定してから動かすことで、auto→数値の瞬間移動を防ぐ
-                this.avatarFrom = {
-                    left: avatarRect.left + avatarRect.width / 2,
-                    top: avatarRect.top + avatarRect.height / 2
-                };
-                this.doorTarget = {
-                    left: doorRect.left + doorRect.width / 2,
-                    top: doorRect.top + doorRect.height / 2
-                };
-
-                this.isTransitioning = true;
-
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        this.isDocking = true;
-                    });
-                });
-            } else {
-                this.isTransitioning = true;
-            }
+            this.isTransitioning = true;
 
             setTimeout(() => {
                 this.isTransitioning = false;
-                this.isDocking = false;
-                this.avatarFrom = null;
-                this.doorTarget = null;
                 this.$router.push(`/${mode}`);
             }, 1500); // 1秒後に遷移
-        },
-        hashSeed(str) {
-            let hash = 0;
-
-            for (let i = 0; i < str.length; i++) {
-                hash = (hash << 5) - hash + str.charCodeAt(i);
-                hash |= 0;
-            }
-
-            return Math.abs(hash);
-        },
-        seededRandom(seed, index) {
-            const x = Math.sin(seed + index * 7919) * 10000;
-
-            return x - Math.floor(x);
-        },
-        wanderStyle(member) {
-            const seed = this.hashSeed(member.uid || member.cenId || "wanderer");
-            const rand = index => this.seededRandom(seed, index);
-            const pct = (min, max, index) => `${(min + rand(index) * (max - min)).toFixed(1)}%`;
-
-            return {
-                "--p0x": pct(0, 85, 1),
-                "--p0y": pct(0, 80, 2),
-                "--p1x": pct(0, 85, 3),
-                "--p1y": pct(0, 80, 4),
-                "--p2x": pct(0, 85, 5),
-                "--p2y": pct(0, 80, 6),
-                "--p3x": pct(0, 85, 7),
-                "--p3y": pct(0, 80, 8),
-                "--wander-duration": `${(16 + rand(9) * 10).toFixed(1)}s`,
-                "--wander-delay": `-${(rand(10) * 14).toFixed(1)}s`
-            };
         },
         async getTeamMembers() {
             const snapshot = await db
@@ -519,70 +389,6 @@ export default {
 };
 </script>
 <style scoped>
-  .room-bg{
-      background: radial-gradient(circle at center, var(--team-bg-glow, #1c2435), var(--team-bg-dark, #05070d));
-      transition: background 1s ease;
-  }
-
-  .room-title{
-      color: var(--team-title-glow, #67e8f9);
-      filter: drop-shadow(0 0 12px var(--team-accent, #00ffff));
-      transition: color 1s ease, filter 1s ease;
-  }
-
-  .room-accent-text{
-      color: var(--team-accent, #00ffff);
-  }
-
-  .room-console{
-      box-shadow: 0 0 15px var(--team-accent, cyan);
-      transition: box-shadow 1s ease;
-  }
-
-  .door-line{
-      background: var(--team-accent, #0ff);
-      transition: background 1s ease;
-  }
-
-  .room-avatar-ring{
-      box-shadow: 0 0 0 4px var(--team-accent, #3b82f6), 0 0 10px var(--team-accent, #3b82f6), 0 0 25px var(--team-accent, #3b82f6);
-      transition: box-shadow 1s ease;
-  }
-
-  /* 他ユーザーが画面上をふわふわ歩き回る演出 */
-  .wanderer{
-      position: absolute;
-      width: 50px;
-      height: 50px;
-      animation: wander var(--wander-duration, 20s) ease-in-out infinite;
-      animation-delay: var(--wander-delay, 0s);
-  }
-
-  @keyframes wander{
-      0%   { left: var(--p0x); top: var(--p0y); }
-      25%  { left: var(--p1x); top: var(--p1y); }
-      50%  { left: var(--p2x); top: var(--p2y); }
-      75%  { left: var(--p3x); top: var(--p3y); }
-      100% { left: var(--p0x); top: var(--p0y); }
-  }
-
-  .wanderer-inner{
-      width: 100%;
-      height: 100%;
-      animation: bob 2.4s ease-in-out infinite;
-  }
-
-  @keyframes bob{
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
-  }
-
-  .room-worker-avatar{
-      border-color: var(--team-accent, #60a5fa);
-      box-shadow: 0 0 8px var(--team-accent, #60a5fa);
-      transition: border-color 1s ease, box-shadow 1s ease;
-  }
-
   .monitor{
       position:relative;
       width:min(260px,17.5vw);
@@ -591,9 +397,9 @@ export default {
       height: auto;
       min-height:70px;
 
-      border:4px solid var(--team-accent, #0ff);
+      border:4px solid #0ff;
       background:#001d24;
-      box-shadow:0 0 20px var(--team-accent, #0ff);
+      box-shadow:0 0 20px #0ff;
       cursor:pointer;
       overflow:hidden;
 
@@ -601,13 +407,12 @@ export default {
       justify-content:center;
       align-items:center;
       white-space:nowrap;
-      color:var(--team-accent, #00ffff);
+      color:#00ffff;
       font-size:clamp(12px,1.5vw,24px);
       font-weight:bold;
-      text-shadow:0 0 5px var(--team-accent, #0ff),0 0 15px var(--team-accent, #0ff);
+      text-shadow:0 0 5px #0ff,0 0 15px #0ff;
       text-align:center;
       padding:0.5em 0;
-      transition: border-color 1s ease, box-shadow 1s ease, color 1s ease, text-shadow 1s ease;
   }
   .monitor::before {
       content: "";
@@ -629,8 +434,8 @@ export default {
       left: 0;
       width: 100%;
       height: 4px;
-      background: var(--team-accent, #0ff);
-      box-shadow: 0 0 15px var(--team-accent, #0ff);
+      background: rgba(0,255,255,.9);
+      box-shadow: 0 0 15px #0ff;
       animation: scan 2s linear infinite;
   }
 

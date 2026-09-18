@@ -52,17 +52,17 @@ export default {
         teamConfig() {
             const configs = {
                 air: {
-                    title: "風",
-                    icon: "🍃",
+                    title: "空気",
+                    icon: "💨",
                     image: "/images/air.png",
-                    alt: "風の三充師",
+                    alt: "空気の三充師",
                     bgClass: "bg-sky-100",
                     titleClass: "text-sky-800",
                     textClass: "text-sky-900",
                     imageClass: "",
                     buttonClass: "bg-sky-500 hover:bg-sky-600",
                     description: [
-                        "風の三充師は、",
+                        "空気の三充師は、",
                         "ふわりと軽やかに世界をめぐる風の守護者。",
                         "やわらかな風でみんなの心をととのえ、",
                         "そっと背中を押してくれる存在です。"
