@@ -1,248 +1,294 @@
 <template>
     <!-- <button class="m-2 px-3 py-1 bg-blue-500 text-white rounded-md text-sm" @click="changeMode()">Change Mode</button> -->
     <template v-if="dominationMode == 'standard'">
-        <div class="tiles-app p-5">
-            <!--  --- Right side Area --- -->
-                <div class="grid grid-cols-[30%_1fr] gap-4 mb-6 items-start">
-                    <div>
-                        <template v-if="isShowingTuorial">
+        <div class="domination-app min-h-screen bg-slate-100">
 
-                            <!-- 色の説明 -->
-                            <div>
-                                <div class="grid grid-cols-4 gap-2">
-                                    <template v-for="(item,index) in terrainList" :key="item.key">
-                                        <div   
-                                            class="flex items-center gap-1"
-                                            :class="{ 'col-span-2': index === terrainList.length - 1 }"
-                                        >
-                                            <div
-                                                class="w-4 h-4 rounded-full"
-                                                :style="{ background: areaColors[item.key] }"
-                                            ></div>
-                                            <span class="text-xs whitespace-nowrap">{{ item.label }}</span>
-                                        </div>
-        
-                                    </template>
-                                </div>
-        
-                            </div>
-        
-                            <!-- レベルの説明 -->
-                            <div>
-                                <h3 class="text-sm font-medium mb-3">レベルとポイントの説明</h3>
-                                <div class="flex justify-between items-center items-stretch">
-                                    <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="text-center bg-gray-300 rounded block p-2">
-                                        <div
-                                            v-if="tier !== 1 && tier !== 4"
-                                            class="mx-auto mb-2"
-                                            :class="tierShapeClass(tier)"
-                                            :style="tierShapeStyle(tier,'#555')"
-                                            style="background: black; border-color: black"
-                                        ></div>
-                                        <span class="text-xs">
-                                            <strong v-if="tier === 1" class="text-xl">&#9650;<br></strong>
-                                            <strong v-if="tier === 4" class="text-xl">★<br></strong>
-                                            <strong>Lv{{ tier }}</strong><br>
-                                            <small class="whitespace-nowrap text-center">{{ getScoreForTile(tier) }}点</small>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-        
-                            
-                        </template>
-                        <!-- アクションボタン -->
-                        <div class="my-4 w-full">
-                            <div class="grid grid-cols-2 gap-2 w-full">
-                                <button 
-                                    @click="selectedCard = null" 
-                                    :disabled="!selectedCard"
-                                    class="px-1 py-2 rounded-md border text-sm"
-                                    :class="[
-                                        selectedCard
-                                            ? 'bg-gray-200 hover:bg-gray-300'
-                                            : 'bg-gray-200 opacity-[0.4] cursor-not-allowed'
-                                    ]">
-                                    キャンセル
-                                </button>
-                                <button
-                                    class="px-1 py-2 rounded-md border bg-blue-200 text-sm"
-                                    @click="confirmSkip()"
-                                >
-                                    スキップ
-                                </button>
-                                <button
-                                    class="px-1 py-2 rounded-md border bg-green-200 text-sm"
-                                    @click="confirmFinish()"
-                                >
-                                    ゲーム終了
-                                </button>
-                                <button
-                                    class="px-1 py-2 rounded-md border bg-red-200 text-sm"
-                                    @click="backToMonitorRoom()"
-                                >
-                                    戻る
-                                </button>
-                            </div>
-                        </div>
-                        <div
-                          class="p-3 border rounded-md flex flex-col gap-2 relative"
-                          style="background:#FFC72C;"
+            <!-- Header: title + scoreboard -->
+            <header class="bg-white border-b border-slate-200 shadow-sm">
+                <div class="max-w-[1500px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+                            <span>🗺️</span><span>陣取りゲーム</span>
+                        </h1>
+
+                        <button
+                            class="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-full pl-3 pr-2.5 py-1 font-mono font-bold tracking-wider text-slate-600 transition"
+                            title="クリックでコピー"
+                            @click="copyRoomCode"
                         >
-                            <div class="flex items-center gap-3">
-                                <div class="w-7 h-7 rounded-md" :style="{ background: currentPlayer?.color }"></div>
-                                <div class="flex-1 text-sm">
-                                <span class="font-medium">{{ currentPlayer?.name }}: {{ currentPlayer?.score }}点</span>
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <template
-                                    v-for="(group, index) in groupHandByTier(hands[currentPlayerId])"
-                                    :key="group.tier"
-                                >
-                                <div
-                                    class="w-full pb-2"
-                                    :class="{ 'border-b border-color-slate-300': index !== groupHandByTier(hands[currentPlayerId]).length - 1 }"
-                                    >
-        
-                                    
-                                    <div class="flex flex-wrap gap-2 items-center">
-                                        <div class="mb-1">
-                                            <span class="text-xs text-slate-400 mb-1">Lv{{ group.tier }}:</span> 
-                                        </div>
-                                        <div
-                                            v-for="card in group.cards"
-                                            :key="card.id"
-                                            class="inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium border cursor-pointer"
-                                            :class="areaBadgeClass(card, currentPlayerId)"
-                                            @click="previewCard(card, currentPlayerId)"
-                                        >
-                                            <span>{{ card.label }}</span>
-                                            <span class="text-slate-500">×{{ card.holdingCount }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                </template>
-                            </div>
+                            <span class="text-slate-400">🔑ルーム</span>
+                            <span>{{ roomCode }}</span>
+                            <span v-if="roomCodeCopied" class="text-emerald-600 font-sans font-normal">コピーしました！</span>
+                            <span v-else class="text-slate-400 font-sans font-normal">📋</span>
+                        </button>
+
+                        <button
+                            class="text-xs text-slate-400 hover:text-slate-600 underline whitespace-nowrap"
+                            @click="changeRoom"
+                        >
+                            ルームを変える
+                        </button>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <div
+                            v-for="player in players"
+                            :key="player.id"
+                            class="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border-2 text-sm transition-all"
+                            :class="player.id === currentPlayerId ? 'shadow-md scale-105' : 'opacity-60'"
+                            :style="{
+                                borderColor: player.color,
+                                background: player.id === currentPlayerId ? player.color + '1a' : 'transparent'
+                            }"
+                        >
+                            <span class="w-3 h-3 rounded-full flex-none" :style="{ background: player.color }"></span>
+                            <span class="font-semibold whitespace-nowrap">{{ player.name }}</span>
+                            <span v-if="player.isAI" class="text-xs" title="AIが操作します">🤖</span>
+                            <span class="font-bold whitespace-nowrap">{{ player.score }}点</span>
+                            <span
+                                v-if="player.id === currentPlayerId"
+                                class="text-xs font-bold whitespace-nowrap"
+                                :style="{ color: player.color }"
+                            >
+                                ▶手番
+                            </span>
                         </div>
                     </div>
-                    <!-- Tiles Area -->
-                    <div class="w-full rounded-md bg-gray-200 p-4 flex-1">
-                          <div
-                              class="grid gap-1 w-full h-full"
-                              :style="{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }"
-                          >
+                </div>
+            </header>
+
+            <!-- AI thinking banner -->
+            <transition name="fade">
+                <div
+                    v-if="isAiThinking"
+                    class="bg-amber-50 border-b border-amber-200 text-amber-800 text-center text-sm py-2 font-medium"
+                >
+                    🤖 {{ currentPlayer?.name }}が考え中…
+                </div>
+            </transition>
+
+            <div class="max-w-[1500px] mx-auto p-4 flex flex-col lg:flex-row gap-4 items-start">
+
+                <!-- Board -->
+                <div class="flex-1 w-full bg-white rounded-xl shadow-sm border border-slate-200 p-3 overflow-auto">
+                    <div
+                        class="grid gap-[2px] mx-auto"
+                        :style="{ gridTemplateColumns: `repeat(${cols}, minmax(14px, 1fr))`, maxWidth: '1100px' }"
+                    >
+                        <div
+                            v-for="tile in tiles"
+                            :key="tile.id"
+                            class="relative rounded-[2px] cursor-pointer transition-transform duration-150"
+                            :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected }"
+                            @click="onTileClick(tile, $event)"
+                            :style="tileStyle(tile)"
+                        >
                             <div
-                                v-for="tile in tiles"
-                                :key="tile.id"
-                                class="relative rounded-sm transition-transform duration-150 cursor-pointer"
-                                :class="{
-                                    'scale-[1.03] ring-4 ring-offset-1': tile.selected
-                                }"
-                                @click="onTileClick(tile, $event)"
-                                :style="tileStyle(tile)"
-                              >
-                              <div 
-                                  v-if="tile.validForSelection"
-                                  class="
-                                  animate-pulse
-                                  absolute
-                                  top-1/2
-                                  left-1/2
-                                  -translate-x-1/2
-                                  -translate-y-1/2
-                                  bg-golden
-                                  w-[70%]
-                                  rounded-full
-                                  aspect-square
-                                  bg-yellow-100"
-                                  >
-                              </div>
-      
-                              <div v-if="tile.ownerTeam" class="flex justify-center items-center w-full h-full">
+                                v-if="tile.validForSelection"
+                                class="animate-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] rounded-full aspect-square bg-yellow-200"
+                            ></div>
+
+                            <div v-if="tile.ownerTeam" class="flex justify-center items-center w-full h-full">
                                 <div
                                     :class="tierShapeClass(tile)"
                                     :style="tierShapeStyle(tile.placedCard?.tier, tile.ownerTeam, tile.eatenByPlayerId)"
                                 >
                                     <span v-if="tile.placedCard?.tier === 4">★</span>
                                 </div>
-                              </div>
-      
                             </div>
-      
-                            <!-- tile preview -->
-      
-                            <template v-if="tilePreviewCard">
-                              <div
-                              v-if="tilePreviewCard?.instanceId"
-                              class="fixed inset-0 z-50 bg-black/40"
-                              >
-                              tilepreviewCard: {{ tilePreviewCard.id }} 
-                                  <div
-                                      class="absolute transition-all duration-300 ease-out z-[100] pointer-events-auto"
-                                      :style="previewStyle"
-                                  >
-                                    <!-- Close Button -->
-                                    <button
-                                        class="absolute -top-3 -right-3 bg-white rounded-full shadow px-2 py-1 text-sm"
-                                        @click="tilePreviewCard = null; previewStyle = {}"
-                                    >
-                                        ✕
-                                    </button>
-      
-                                    <CreatureCard
-                                        :creature="tilePreviewCard"
-                                        class="w-full h-full rounded-lg shadow-xl"
-                                    />
-                                  </div>
-                              </div>
-                            </template>
-                          </div>
+                        </div>
                     </div>
                 </div>
-              <!-- ---------preview all the unique cards------------- -->
-              <!-- <hr class="my-6">
-              <div class="grid grid-cols-3 gap-4">
-                <CreatureCard 
-                    :creature="card" 
-                    v-for="(card, index) in allCards.sort((a, b) =>
-                        a.area === b.area
-                        ? a.tier - b.tier
-                        : a.area.localeCompare(b.area)
-                    )" :key="index"/>
-              </div> -->
 
+                <!-- Sidebar -->
+                <div class="w-full lg:w-[340px] flex-none flex flex-col gap-3">
 
-            <div class="relative">
-                <!-- プレイヤーリスト -->
-                <!-- <h3 class="text-lg font-semibold absolute bottom-full left-0">プレイヤーリスト</h3> -->
-                <div>
-                  <div v-if="gameState=='finished'">
-                    <div class="absolute inset-0 bg-black/50 z-10 flex items-center justify-center w-full h-full">
-                      <div class="bg-white p-6 rounded-lg shadow-lg text-center z-20">
-                        <h2 class="text-2xl font-bold mb-4">ゲーム終了！</h2>
-                        <p class="text-lg mb-4">最終スコア</p>  
-                        <ul class="text-left mb-4">
-                          <li v-for="player in players" :key="player.id" class="mb-2">
-                            <span :style="{ color: player.color }" class="font-semibold">{{ player.name }}</span>: {{ player.score }}点
-                          </li>
-                        </ul>
-                        <hr>
-                        <!-- もう一回 -->
-                        <button class="mt-4 px-4 py-2 bg-green-500 text-white rounded-md" @click="resetTiles()">もう一回遊ぶ</button>
-                      </div>
+                    <!-- legend toggle -->
+                    <button
+                        class="text-xs text-slate-500 hover:text-slate-700 underline self-start"
+                        @click="isShowingTuorial = !isShowingTuorial"
+                    >
+                        {{ isShowingTuorial ? '説明を閉じる ▲' : '地形・レベルの説明を見る ▼' }}
+                    </button>
+
+                    <div v-if="isShowingTuorial" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
+                        <div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <template v-for="item in terrainList" :key="item.key">
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-3.5 h-3.5 rounded-full flex-none" :style="{ background: areaColors[item.key] }"></div>
+                                        <span class="text-xs whitespace-nowrap">{{ item.label }}</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="text-xs font-bold text-slate-600 mb-2">レベルとポイント</div>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="text-center bg-slate-100 rounded-lg p-2">
+                                    <div
+                                        v-if="tier === 2 || tier === 3"
+                                        class="mx-auto mb-1.5 w-5 h-5 bg-slate-600"
+                                        :class="{ 'rounded-full': tier === 3 }"
+                                    ></div>
+                                    <div class="text-xs leading-tight">
+                                        <strong v-if="tier === 1" class="text-lg block">&#9650;</strong>
+                                        <strong v-if="tier === 4" class="text-lg block">★</strong>
+                                        <strong>Lv{{ tier }}</strong>
+                                        <div class="text-[10px] text-slate-500">{{ getScoreForTile(tier) }}点</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                  </div>
+
+                    <!-- current player hand -->
+                    <div v-if="gameState === 'playing' && currentPlayer" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <template v-if="currentPlayer.isAI">
+                            <div class="flex items-center gap-2 text-slate-500 text-sm py-6 justify-center">
+                                <span class="text-2xl">🤖</span>
+                                <span>{{ currentPlayer?.name }}が手を考えています…</span>
+                            </div>
+                        </template>
+                        <template v-else>
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-5 h-5 rounded-md flex-none" :style="{ background: currentPlayer?.color }"></div>
+                                <span class="font-bold text-sm">{{ currentPlayer?.name }}</span>
+                                <span class="text-sm text-slate-500 ml-auto">{{ currentPlayer?.score }}点</span>
+                            </div>
+
+                            <div
+                                v-if="selectedCard"
+                                class="mb-3 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2"
+                            >
+                                「{{ selectedCard.label }}」を選択中 → 黄色く光るマスに配置できます
+                            </div>
+
+                            <div class="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                                <div
+                                    v-for="group in groupHandByTier(hands[currentPlayerId])"
+                                    :key="group.tier"
+                                >
+                                    <div class="text-[11px] font-bold text-slate-400 mb-1">Lv{{ group.tier }}</div>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        <button
+                                            v-for="card in group.cards"
+                                            :key="card.id"
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border transition"
+                                            :class="areaBadgeClass(card, currentPlayerId)"
+                                            @click="previewCard(card, currentPlayerId)"
+                                        >
+                                            <span>{{ card.label }}</span>
+                                            <span class="text-slate-500">×{{ card.holdingCount }}</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p
+                                    v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0"
+                                    class="text-xs text-slate-400 text-center py-4"
+                                >
+                                    手札がありません
+                                </p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- actions -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 grid grid-cols-2 gap-2">
+                        <button
+                            @click="selectedCard = null"
+                            :disabled="!selectedCard"
+                            class="px-2 py-2.5 rounded-lg border text-sm font-medium transition"
+                            :class="selectedCard ? 'bg-slate-100 hover:bg-slate-200 border-slate-300' : 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed'"
+                        >
+                            キャンセル
+                        </button>
+                        <button
+                            class="px-2 py-2.5 rounded-lg border text-sm font-medium transition"
+                            :class="currentPlayer?.isAI ? 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-sky-100 hover:bg-sky-200 border-sky-300'"
+                            :disabled="currentPlayer?.isAI"
+                            @click="confirmSkip()"
+                        >
+                            スキップ
+                        </button>
+                        <button
+                            class="px-2 py-2.5 rounded-lg border border-emerald-300 bg-emerald-100 hover:bg-emerald-200 text-sm font-medium transition"
+                            @click="confirmFinish()"
+                        >
+                            ゲーム終了
+                        </button>
+                        <button
+                            class="px-2 py-2.5 rounded-lg border border-rose-300 bg-rose-100 hover:bg-rose-200 text-sm font-medium transition"
+                            @click="backToMonitorRoom()"
+                        >
+                            🏠 ホームにもどる
+                        </button>
+                        <button
+                            class="col-span-2 px-2 py-2.5 rounded-lg border border-orange-300 bg-orange-100 hover:bg-orange-200 text-sm font-medium transition"
+                            @click="startNewMap()"
+                        >
+                            🔄 新規マップで再開
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- tile preview overlay (placed card on the board) -->
+            <div
+                v-if="tilePreviewCard"
+                class="fixed inset-0 z-50 bg-black/40"
+                @click.self="tilePreviewCard = null; previewStyle = {}"
+            >
+                <div class="absolute transition-all duration-300 ease-out z-[100]" :style="previewStyle">
+                    <button
+                        class="absolute -top-3 -right-3 bg-white rounded-full shadow px-2 py-1 text-sm"
+                        @click="tilePreviewCard = null; previewStyle = {}"
+                    >
+                        ✕
+                    </button>
+                    <CreatureCard :creature="tilePreviewCard" class="w-full h-full rounded-lg shadow-xl" />
+                </div>
+            </div>
+
+            <!-- finished game modal -->
+            <div v-if="gameState === 'finished'" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+                <div class="bg-white p-6 rounded-2xl shadow-xl text-center max-w-sm w-full">
+                    <h2 class="text-2xl font-bold mb-1">ゲーム終了！</h2>
+                    <p class="text-sm text-slate-500 mb-4">最終スコア</p>
+                    <ul class="text-left mb-5 space-y-2">
+                        <li
+                            v-for="player in sortedPlayersByScore"
+                            :key="player.id"
+                            class="flex items-center justify-between px-3 py-2 rounded-lg"
+                            :style="{ background: player.color + '15' }"
+                        >
+                            <span class="font-semibold flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full" :style="{ background: player.color }"></span>
+                                {{ player.name }}
+                                <span v-if="player.isAI" class="text-xs">🤖</span>
+                            </span>
+                            <span class="font-bold">{{ player.score }}点</span>
+                        </li>
+                    </ul>
+                    <button
+                        class="w-full px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold transition"
+                        @click="resetTiles()"
+                    >
+                        もう一回遊ぶ
+                    </button>
                 </div>
             </div>
         </div>
-        <!-- Modal -->
+
+        <!-- card select modal -->
         <div
             v-if="modalCard && isPreviewing"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
             @click.self="closePreview"
           >
-            <div class="relative p-4 bg-white rounded-lg shadow-lg w-full max-w-sm">
+            <div class="relative p-4 bg-white rounded-2xl shadow-xl w-full max-w-sm">
 
                 <!-- Close Button -->
                 <button
@@ -252,11 +298,10 @@
                     ✕
                 </button>
 
-                <!-- 🔥 ここで既存コンポーネントを使う -->
                 <CreatureCard :creature="modalCard" class="mx-auto"/>
 
                 <div class="button-container flex justify-center mt-4">
-                    <button @click="useCard()" class="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">選択する</button>
+                    <button @click="useCard()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition">選択する</button>
                 </div>
 
             </div>
@@ -274,12 +319,37 @@
 </template>
 
 <script>
+import db from '../../firebase.js';
 import CreatureCard from './CreatureCard.vue';
+
+// ■陣取りゲームは操作端末1台で複数チームが遊ぶ「共有の1ゲーム」という前提のため、
+// Firestoreには「ルームコード」ごとに1ドキュメント（進行中の1ゲーム分）として保存する。
+// 別の端末・別のグループが同時に遊んでも、ルームコードが違えば互いのゲームに影響しない
+const SAVE_COLLECTION = 'dominationGames'
+const ROOM_CODE_STORAGE_KEY = 'dominationRoomCode'
+const ROOM_CODE_CHARSET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789' // 0/O, 1/I/L等の紛らわしい文字は除外
+
+function generateRoomCode() {
+    let code = ''
+    for (let i = 0; i < 4; i++) {
+        code += ROOM_CODE_CHARSET[Math.floor(Math.random() * ROOM_CODE_CHARSET.length)]
+    }
+    return code
+}
+
+// ■自分のチーム(localStorage.myTeam)以外の2チームは、既定でAIが操作する
+const TEAM_ID_BY_NAME = { water: 1, air: 2, earth: 3 };
+
 export default {
     // name: 'Tiles20x20',
     data() {
       const cols = 30
       const rows = 15
+
+      const humanPlayerId = TEAM_ID_BY_NAME[localStorage.getItem('myTeam')] || 1
+
+      const roomCode = localStorage.getItem(ROOM_CODE_STORAGE_KEY) || generateRoomCode()
+      localStorage.setItem(ROOM_CODE_STORAGE_KEY, roomCode)
 
       return {
         cols,
@@ -287,11 +357,16 @@ export default {
         tiles: [],
         currentPlayerId: null,
         currentType: null,
-       
+
+        humanPlayerId,
+
+        roomCode,
+        roomCodeCopied: false,
+
         players: [
-            { id: 1, name: '水チーム', color: '#00BFA6', score: 0 }, // teal (water but not blue)
-            { id: 2, name: '空気チーム', color: '#9B5DE5', score: 0 }, // purple (air = light / abstract)
-            { id: 3, name: '土チーム', color: '#FFB97A', score: 0 }  // sand/orange (earth)
+            { id: 1, name: '水チーム', color: '#00BFA6', score: 0, isAI: humanPlayerId !== 1 }, // teal (water but not blue)
+            { id: 2, name: '空気チーム', color: '#9B5DE5', score: 0, isAI: humanPlayerId !== 2 }, // purple (air = light / abstract)
+            { id: 3, name: '土チーム', color: '#FFB97A', score: 0, isAI: humanPlayerId !== 3 }  // sand/orange (earth)
         ],
 
         typeColors: {
@@ -368,7 +443,7 @@ export default {
 
         // dominationMode: 'standard',
         dominationMode: 'mapControl',
-        mapStep: 0, 
+        mapStep: 0,
 
         selectedCard: null,
         modalCard: null,
@@ -382,15 +457,18 @@ export default {
 
         gameState: 'playing', // 'playing' or 'finished'
 
-        isShowingTuorial: false
+        isShowingTuorial: false,
+
+        isAiThinking: false
       }
     },
     methods: {
         backToMonitorRoom() {
-            this.$router.push({ name: 'MonitorRoom' });
+            this.$router.push({ name: 'Home' });
         },
         onTileClick(tile, event) {
-          console.log(tile)
+          if (this.currentPlayer?.isAI) return // AIの手番中は操作不可
+
           if(tile.placedCard) {
             const rect = event.currentTarget.getBoundingClientRect()
 
@@ -414,13 +492,12 @@ export default {
                 }
             })
 
-            // alert("すでにカードが置いてあるタイルだよ")
             return
           }
           if(!this.selectedCard) {
               alert("カードを選択してからタイルを選んでね")
               return
-          } 
+          }
           if(tile.area === 'undeveloped') {
               alert("まだ動物たちが住めないから、環境をなおしてね")
               return; // cannot select undeveloped
@@ -428,7 +505,6 @@ export default {
 
           if(tile.ownerTeam !== null) return; // already owned
 
-          // if(this.currentType === null) return; // no type selected
           if (!tile.validForSelection) {
             alert("このタイルにはこのカードは置けないよ")
             return // not valid for selection
@@ -452,13 +528,12 @@ export default {
               hand.splice(index, 1)
           }
 
-
-          console.log(this.hands[this.currentPlayerId])
           this.selectedCard = null
           this.updateValidTiles()
-          // this.updateScores()
           this.skipCount = 0
           this.goToNextPlayer()
+          this.saveGame()
+          this.maybeTriggerAI()
         },
         handleEating(placedTile) {
             const neighbors = this.getNeighbors(placedTile)
@@ -490,31 +565,133 @@ export default {
             this.initializeHands()
             this.gameState = 'playing'
             this.currentPlayerId = this.players[0].id
+            this.skipCount = 0
+            this.selectedCard = null
+            this.isAiThinking = false
 
             this.players.forEach(p => (p.score = 0))
+
+            this.saveGame()
+            this.maybeTriggerAI()
+        },
+
+        // ■保存されている進行中のゲームを読み込む。保存が無ければfalseを返す
+        async loadSavedGame() {
+            try {
+                const doc = await db.collection(SAVE_COLLECTION).doc(this.roomCode).get()
+
+                if (!doc.exists) return false
+
+                const data = doc.data()
+
+                if (!data || !Array.isArray(data.tiles) || data.tiles.length === 0) return false
+
+                this.tiles = data.tiles
+                this.hands = data.hands || {}
+                this.skipCount = data.skipCount || 0
+                this.gameState = data.gameState || 'playing'
+                this.currentPlayerId = data.currentPlayerId ?? this.players[0].id
+
+                if (Array.isArray(data.players)) {
+                    data.players.forEach(saved => {
+                        const player = this.players.find(p => p.id === saved.id)
+                        if (player) player.score = saved.score || 0
+                    })
+                }
+
+                return true
+            } catch (e) {
+                console.error('陣取りゲームの読み込みに失敗しました', e)
+                return false
+            }
+        },
+
+        // ■現在の進行状況をまるごと保存する
+        async saveGame() {
+            try {
+                await db.collection(SAVE_COLLECTION).doc(this.roomCode).set({
+                    tiles: this.tiles,
+                    hands: this.hands,
+                    players: this.players.map(p => ({ id: p.id, score: p.score })),
+                    currentPlayerId: this.currentPlayerId,
+                    skipCount: this.skipCount,
+                    gameState: this.gameState,
+                    updatedAt: new Date().toISOString()
+                })
+            } catch (e) {
+                console.error('陣取りゲームの保存に失敗しました', e)
+            }
+        },
+
+        // ■仮：保存済みの進行状況を破棄して、完全に新しいマップで最初から遊び直す（ルームは変えない）
+        startNewMap() {
+            this.resetTiles()
+        },
+
+        async copyRoomCode() {
+            try {
+                await navigator.clipboard.writeText(this.roomCode)
+            } catch (e) {
+                console.error('ルームコードのコピーに失敗しました', e)
+                return
+            }
+
+            this.roomCodeCopied = true
+            setTimeout(() => {
+                this.roomCodeCopied = false
+            }, 1500)
+        },
+
+        // ■別のルームコードに参加する（存在しなければそのコードで新しいルームが作られる）
+        async changeRoom() {
+            const input = prompt(
+                '参加したいルームコードを入力してください。\n存在しないコードを入力すると、新しいルームが作られます。',
+                this.roomCode
+            )
+
+            if (!input) return
+
+            const code = input.trim().toUpperCase()
+
+            if (!code || code === this.roomCode) return
+
+            this.roomCode = code
+            localStorage.setItem(ROOM_CODE_STORAGE_KEY, code)
+
+            await this.loadOrInitGame()
+        },
+
+        // ■現在のroomCodeのゲームを読み込む。無ければ新規に生成して保存する
+        async loadOrInitGame() {
+            this.isAiThinking = false
+            this.selectedCard = null
+            this.tilePreviewCard = null
+
+            const loaded = await this.loadSavedGame()
+
+            if (!loaded) {
+                this.initializeHands()
+                this.generateTiles()
+                this.gameState = 'playing'
+                this.currentPlayerId = this.players[0].id
+                this.skipCount = 0
+                this.players.forEach(p => (p.score = 0))
+                await this.saveGame()
+            }
+
+            this.maybeTriggerAI()
         },
         teamColor(teamId) {
             const player = this.players.find(p => p.id === teamId)
             return player ? player.color : '#000'
         },
         tileStyle(tile) {
-            // const base = {
-            //     background: this.typeColors[tile.type] || '#ccc',
-            //     width: '100%',
-            //     aspectRatio: '1 / 1'
-            // }
             const base = {
                 background: this.areaColors[tile.area] || '#ccc',
                 width: '100%',
                 aspectRatio: '1 / 1'
             }
 
-            // if has a card placed, then change the background to the card color
-            // if(tile.placedCard) {
-            //     base.background = this.typeColors[tile.placedCard.area] || '#ccc'
-            // }
-
-            // if tile is eatenm then change the background eater color
            if (tile.eatenByTileId) {
                 let currentTile = this.tiles.find(t => t.id === tile.eatenByTileId)
 
@@ -537,23 +714,6 @@ export default {
                     base.background = this.teamColor(currentTile.ownerTeam)
                 }
             }
-
-            //
-            // if(tile.eatenByPlayerId) {
-            //     const eaterPlayer = this.players.find(p => p.id === tile.eatenByPlayerId)
-            //     if(eaterPlayer) {
-            //         base.background = this.teamColor(eaterPlayer.id) 
-            //     }
-            // }
-
-
-
-            // pulse for valid tiles
-            //if (tile.validForSelection) {
-                //base.animation = 'pulse 1s infinite'
-                //base.background = 'gold'
-                //return base
-            //}
 
             if (tile.ownerTeam !== null) {
                 base.boxShadow = `inset 0 0 0 3px ${this.teamColor(tile.ownerTeam)}55`
@@ -586,53 +746,34 @@ export default {
         updateValidTiles() {
             this.tiles.forEach(t => t.validForSelection = false) // reset
             if(this.selectedCard === null) return
-            console.log("updating valid tiles for card: ")
-            console.log(this.selectedCard)
 
-            const tier = this.selectedCard.tier
             this.tiles.forEach(t => {
-              // 初期化
-              t.validForSelection = false
-
-              if (t.area === "undeveloped") return
-              if (t.ownerTeam !== null) return
-              
-              // if area is water then only water cards can be placed, if area is land then only land cards can be placed
-              if (t.area === "river" || t.area === "sea") {
-                  if (this.selectedCard.area !== "water") return
-              } else {
-                  if (this.selectedCard.area !== "land") return
-              }
-            
-
-              // Lv1は無条件OK
-              if (tier === 1) {
-                  t.validForSelection = true
-                  return
-              }
-
-              const neighbors = this.getNeighbors(t)
-
-              // 1つ下のtierを2つ以上持っているかチェック
-              // but the card doesnt count if it is already eaten
-              const lowerTier = tier - 1    
-              const count = neighbors.filter(n => n.placedCard?.tier === lowerTier && !n.eatenByTileId).length
-              t.validForSelection = count >= 2
-
-                // const lowerTier = tier - 1
-
-                // const count = neighbors.filter(n => n.placedCard?.tier === lowerTier).length
-
-                // t.validForSelection = count >= 2
+              t.validForSelection = this.isTileValidForCard(t, this.selectedCard)
             })
         },
-        // getNeighbors(tile) {
-        //     const { row, col } = tile
-        //     return this.tiles.filter(t =>
-        //         (t.row === row && Math.abs(t.col - col) === 1) ||
-        //         (t.col === col && Math.abs(t.row - row) === 1)
-        //     )
-        // },
+
+        // ■1マスが、あるカードを置けるかどうかの判定（人間の手札選択・AIの候補探索どちらからも使う）
+        isTileValidForCard(t, card) {
+            if (t.area === "undeveloped") return false
+            if (t.ownerTeam !== null) return false
+
+            // if area is water then only water cards can be placed, if area is land then only land cards can be placed
+            if (t.area === "river" || t.area === "sea") {
+                if (card.area !== "water") return false
+            } else {
+                if (card.area !== "land") return false
+            }
+
+            // Lv1は無条件OK
+            if (card.tier === 1) return true
+
+            // 1つ下のtierを2つ以上持っているかチェック（食われていないもののみ）
+            const neighbors = this.getNeighbors(t)
+            const lowerTier = card.tier - 1
+            const count = neighbors.filter(n => n.placedCard?.tier === lowerTier && !n.eatenByTileId).length
+            return count >= 2
+        },
+
         getNeighbors(tile) {
             const { row, col } = tile
 
@@ -686,10 +827,10 @@ export default {
                 for (let i = 0; i < 400; i++) {
                         const tile = this.tiles[Math.floor(Math.random() * this.tiles.length)]
                         if (tile.area !== 'town') continue
-                        
+
                         const neighbors = this.getNeighbors(tile)
                         neighbors.forEach(n => {
-                                if (!n.area && Math.random() < 0.75) {  
+                                if (!n.area && Math.random() < 0.75) {
                                         n.area = 'town'
                                 }
                         })
@@ -904,15 +1045,9 @@ export default {
 
 
         initializeHands() {
-          const unshuffledDeck = this.buildDeck(this.allCards)
-          console.log(unshuffledDeck)
-
-          // 3/26以降は戻す----------------------------
           const deck = this.shuffleArray(
               this.buildDeck(this.allCards)
           );
-
-          console.log("Shuffled Deck:", deck);
 
           const playerCount = this.players.length;
           const cardsPerPlayer = Math.floor(deck.length / playerCount);
@@ -1021,16 +1156,16 @@ export default {
         // ------------------------
         previewCard(card, playerId) {
             if(this.currentPlayerId !== playerId) return
+            if(this.currentPlayer?.isAI) return
             this.isPreviewing = true
             this.modalCard = card
         },
 
         useCard() {
-          // alert(`You selected ${card.label}! Implement card effects here.`)
           this.selectedCard = this.modalCard
           this.isPreviewing = false
           this.modalCard = null
-          
+
           this.updateValidTiles()
         },
 
@@ -1043,7 +1178,7 @@ export default {
           // if everyone 0
           if (this.players.every(p => p.score === 0)) {
               return null
-          } 
+          }
 
           return Math.max(...this.players.map(p => p.score))
         },
@@ -1057,46 +1192,48 @@ export default {
 
         },
         tierShapeStyle(tier,color, isEaten) {
-            // if(isEaten) {
-            //     // eaten then just show the grey color
-            //     return {
-            //         background: '#66666688',
-            //         color: '#66666688',
-            //         borderBottomColor: '#66666688'
-            //     }
-            // }
+            const fillColor = isEaten ? '#66666688' : this.teamColor(color)
 
+            // ■置いたアイコンが背景の地形色に埋もれて見づらいため、
+            // アイコンそのものに黒フチを付けてくっきり見えるようにする
             if (tier === 1) {
-                if(isEaten) {
-                    // make it black but a little bit grey
-                    return { borderBottomColor: '#66666688' }
+                // 三角形はborder-trickで作っているため、drop-shadowを4方向に重ねてフチを再現する
+                return {
+                    borderBottomColor: fillColor,
+                    filter: 'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000)'
                 }
-                return { borderBottomColor: this.teamColor(color) }
             }
 
             if (tier === 4) {
-                if(isEaten) {
-                    return { color: '#66666688' }
+                return {
+                    color: fillColor,
+                    WebkitTextStroke: '1.5px #000',
+                    textShadow: '0 0 2px rgba(0,0,0,0.6)'
                 }
-                return { color: this.teamColor(color) }
             }
 
-            if(isEaten) {
-                return { background: '#66666688' }
+            // tier 2（四角）・tier 3（丸）
+            return {
+                background: fillColor,
+                border: '2px solid #000',
+                boxSizing: 'border-box'
             }
-            return { background: this.teamColor(color) }
         },
 
         confirmSkip() {
+            if (this.currentPlayer?.isAI) return
+
             if (confirm("本当にスキップしますか？")) {
                 this.skipCount++
                 if(this.skipCount >= this.players.length) {
                     alert("全員がスキップしたので、ゲームを終了します。")
                     this.finishGame();
                     return;
-                } else {                
+                } else {
                     this.goToNextPlayer()
                 }
+                this.saveGame()
+                this.maybeTriggerAI()
             }
         },
 
@@ -1109,22 +1246,109 @@ export default {
         finishGame(){
           this.gameState = 'finished'
           this.currentPlayerId = null
+          this.isAiThinking = false
+          this.saveGame()
         },
 
+        // ------------------------
+        // AIプレイヤー関連
+        // ------------------------
+
+        // ■手番がAIなら自動で打たせる。人間の手番なら何もしない
+        maybeTriggerAI() {
+            if (this.gameState !== 'playing') return
+            if (this.currentPlayer && this.currentPlayer.isAI) {
+                this.playAITurn()
+            }
+        },
+
+        // ■シンプルなAI: 手札からランダムに1枚選び、置けるマスがあればランダムな有効マスに置く。
+        // どのカードも置ける場所が無ければスキップする
+        findAIMove(hand) {
+            const candidates = this.shuffleArray(hand || [])
+
+            for (const card of candidates) {
+                const validTiles = this.tiles.filter(t => this.isTileValidForCard(t, card))
+
+                if (validTiles.length > 0) {
+                    const tile = validTiles[Math.floor(Math.random() * validTiles.length)]
+                    return { card, tile }
+                }
+            }
+
+            return null
+        },
+
+        delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms))
+        },
+
+        async playAITurn() {
+            if (this.gameState !== 'playing') return
+
+            const player = this.currentPlayer
+            if (!player || !player.isAI) return
+
+            this.isAiThinking = true
+
+            // 「考えている」感を出すための、少しだけのウェイト
+            await this.delay(900 + Math.random() * 500)
+
+            // ウェイト中に状況が変わっていたら中断（保存の再読込・リセット等）
+            if (this.gameState !== 'playing' || this.currentPlayerId !== player.id) {
+                this.isAiThinking = false
+                return
+            }
+
+            const hand = this.hands[player.id] || []
+            const move = this.findAIMove(hand)
+
+            if (!move) {
+                this.isAiThinking = false
+                this.skipCount++
+
+                if (this.skipCount >= this.players.length) {
+                    this.finishGame()
+                    return
+                }
+
+                this.goToNextPlayer()
+                this.saveGame()
+                this.maybeTriggerAI()
+                return
+            }
+
+            const { card, tile } = move
+
+            tile.ownerTeam = player.id
+            tile.placedCard = card
+            player.score += this.getScoreForTile(card.tier)
+
+            this.handleEating(tile)
+
+            const idx = hand.findIndex(c => c.instanceId === card.instanceId)
+            if (idx !== -1) hand.splice(idx, 1)
+
+            this.skipCount = 0
+            this.isAiThinking = false
+            this.goToNextPlayer()
+            this.saveGame()
+            this.maybeTriggerAI()
+        },
 
     },
-    mounted() {
+    async mounted() {
         console.clear()
 
-        this.initializeHands();
-
-        // set the first player as the current player on mount
+        // set the first player as the current player by default (保存データがあれば後で上書きされる)
         if (this.players.length > 0) {
             this.currentPlayerId = this.players[0].id
         }
-        
-        this.generateTiles();
 
+        await this.loadOrInitGame();
+
+        // ■tiles/handsの準備が整ってから'standard'表示へ切り替える
+        // （先に切り替えるとhands[currentPlayerId]が未定義の状態でテンプレートが描画され例外になる）
         this.dominationMode = 'standard';
     },
     components: {
@@ -1133,6 +1357,9 @@ export default {
     computed: {
       currentPlayer() {
           return this.players.find(p => p.id === this.currentPlayerId)
+      },
+      sortedPlayersByScore() {
+          return [...this.players].sort((a, b) => b.score - a.score)
       }
     }
 
@@ -1140,19 +1367,6 @@ export default {
 </script>
 
 <style scoped>
-  h3{
-    font-size: 1rem;
-    font-weight: bold;
-    background: linear-gradient(90deg, #ff7e5f, #feb47b);
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    width: auto;
-    margin: 1rem;
-    margin-left: unset;
-    /* -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;  */
-  }
-
   @keyframes pulse {
       0%, 100% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.05); opacity: 0.7; }
@@ -1164,6 +1378,16 @@ export default {
       border-left:12px solid transparent;
       border-right:12px solid transparent;
       border-bottom:20px solid;
+  }
+
+  .fade-enter-active,
+  .fade-leave-active{
+      transition: opacity .2s ease;
+  }
+
+  .fade-enter-from,
+  .fade-leave-to{
+      opacity: 0;
   }
 
 </style>

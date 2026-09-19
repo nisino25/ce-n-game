@@ -58,23 +58,6 @@
                 生き物スキャン
             </button>
 
-            <!-- ■仮設置：本来は野生にもどそう(地図)側に組み込む予定 -->
-            <button
-                class="monitor"
-                @click="$router.push({ name: 'ABGame' })"
-            >
-                ABゲーム（仮）
-            </button>
-
-            <!-- ■仮設置：操作感・レイアウトを見直した別案（比較用） -->
-            <button
-                class="monitor"
-                @click="$router.push({ name: 'ABGameB' })"
-            >
-                ABゲーム提案B（仮）
-            </button>
-    
-    
             <!-- Team -->
             <button
                 class="monitor"
@@ -111,6 +94,29 @@
 
             </button>
 
+        </div>
+
+        <!-- ■仮リンク集約：本来はそれぞれの本来の画面（地図側など）に組み込む予定の暫定導線をまとめておく場所 -->
+        <div class="fixed bottom-4 right-4 z-[450] bg-black/40 border border-dashed border-yellow-400/60 rounded-lg p-2 flex flex-col gap-1.5 backdrop-blur-sm">
+            <div class="text-yellow-300 text-[10px] font-bold tracking-wider px-1">🚧 仮リンク</div>
+            <button
+                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                @click="$router.push({ name: 'DominationGame' })"
+            >
+                陣取りゲームに直接アクセス（仮）
+            </button>
+            <button
+                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                @click="$router.push({ name: 'ABGame' })"
+            >
+                ABゲーム（仮）
+            </button>
+            <button
+                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                @click="$router.push({ name: 'ABGameB' })"
+            >
+                ABゲーム提案B（仮）
+            </button>
         </div>
 
         <!-- Door -->

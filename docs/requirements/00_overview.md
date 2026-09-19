@@ -131,7 +131,7 @@ flowchart TD
 |---|---|
 | `Recruitment` 画面 | ファイルが空。ルート未登録。未実装のプレースホルダー |
 | モニタールームの「生きもの修復」「生き物スキャン」 | ボタンは表示されるが無効化・コメントアウトされており未実装 |
-| 陣取りゲームの永続化 | `DominationGame` は完全にメモリ内で完結し、Firestoreに保存されない（リロードで消える。ネットワーク越しの対戦ではなく1画面での対面プレイが前提） |
+| ~~陣取りゲームの永続化~~ | **2026-09-19に対応済み。** `dominationGames/{ルームコード}` にFirestore保存され、離脱・再訪しても再開できる。AI操作(2チーム)追加、UI刷新も実施。詳細は [02_domination_game.md](02_domination_game.md) 参照 |
 | チーム別専用ルーム（`goTeamRoom`） | スタブ止まりで未実装 |
 | `collection`（洞窟探検で集めたカード）の永続化 | **現状は `localStorage` のみで管理されており、Firestoreに保存されていない。** ブラウザ/端末を変えると消える。安藤氏より「ちゃんとFirestoreに保存する必要がある」との課題認識あり。対応方針は別途検討・実装予定 |
 | ログアウト処理での `collection` 未クリア | `MonitorRoom.logout()` も今回の `ErrorView` のログアウト処理も、`collection` キーはクリアしていない（上記Firestore移行と合わせて整理が必要） |
@@ -148,5 +148,5 @@ flowchart TD
 - ログイン／新規登録（LoginPage・IntroView・TeamIntro）要件定義書
 - プロフィール編集（ProfileEditor）要件定義書
 - 洞窟探検ゲーム（CaveEntrance / CaveGame / CaveEnd）要件定義書
-- 陣取りゲーム（DominationMap / DominationGame）要件定義書
+- ~~陣取りゲーム（DominationMap / DominationGame）要件定義書~~ → [02_domination_game.md](02_domination_game.md) 作成済み
 - カード収集・所持データ（`collection`）のFirestore移行 要件定義書
