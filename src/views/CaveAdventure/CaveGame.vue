@@ -14,9 +14,16 @@
 
     <div class="keyCount absolute top-4 right-4 text-white text-lg font-bold z-10">
       ゲットしたカギ：{{ keyCount }}本
+
+        <!-- ■追加：洞窟エンブレム -->
+        <img
+            v-if="currentEmblem"
+            :src="`${currentEmblem}`"
+            alt="Emblem"
+            class="w-[180px] h-[80px] object-contain mt-2"
+        />
     </div>
 
- 
     <!-- Warp -->
     <div ref="warp" id="warpEffect"></div>
 
@@ -65,6 +72,14 @@ export default {
             // ■追加：木処理
             stage: "cave",
             forestGate: {},
+
+            // ■追加：エンブレム画像リストと選択変数
+            emblems:[
+                "/images/cave/hokkaidoEnblem.png",
+                "/images/cave/kanagawaEmblem.png",
+                "/images/cave/kyotoEmblem.png"
+            ],
+            currentEmblem: "",
 
             // ■追加：ステージの色設定と対応アイコン
             stageData: {
@@ -131,6 +146,12 @@ export default {
 
     methods: {
 
+        // ■追加：ランダムにエンブレムを選択する処理
+        selectRandomEmblem() {
+            const randomIndex = Math.floor(Math.random() * this.emblems.length);
+            this.currentEmblem = this.emblems[randomIndex];
+        },
+
         returnHome() {
 
             const warp = this.$refs.warp;
@@ -163,6 +184,8 @@ export default {
             const dungeons = ["cave", "forest", "water", "air"];
             this.stage = dungeons[Math.floor(Math.random() * dungeons.length)];
             // ----------
+
+            this.selectRandomEmblem(); // ■追加：ゲームリセット時にランダム選出
 
             this.createMaze();
             this.createForestGate();
@@ -587,6 +610,8 @@ export default {
                   dungeonData[
                       Math.floor(Math.random() * dungeonData.length)
                   ];
+
+              this.selectRandomEmblem(); // ■追加：emblem切り替え
 
               this.createMaze();
               this.createForestGate();
