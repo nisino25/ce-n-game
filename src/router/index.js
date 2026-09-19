@@ -17,6 +17,9 @@ import ErrorView from "@/views/ErrorView/ErrorView.vue";
 
 import ProfileEditor from "@/views/Settings/ProfileEditor.vue";
 
+import ABGame from "@/views/ABGame/ABGame.vue";
+import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
+
 
 const routes = [
     {
@@ -85,6 +88,20 @@ const routes = [
         path: "/error",
         name: "Error",
         component: ErrorView
+    },
+
+    // ■仮設置：本来は陣取りゲーム(地図)側に組み込む予定
+    {
+        path: "/ab-game",
+        name: "ABGame",
+        component: ABGame
+    },
+
+    // ■操作感・レイアウトを見直した別案（既存のABGameはそのまま残し、比較用に並行して置いている）
+    {
+        path: "/ab-game-b",
+        name: "ABGameB",
+        component: ABGameProposalB
     }
 ];
 
