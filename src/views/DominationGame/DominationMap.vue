@@ -60,7 +60,9 @@ export default {
 
             hiratsukaMarker: null,
 
-            kushiroMarker: null
+            kushiroMarker: null,
+            // ■追加：エリア表示
+            honeycombLayers: []
 
         };
     },
@@ -73,6 +75,23 @@ export default {
             [36.2048, 138.2529],
             5
         );
+
+        // ■追加：塗りつぶし
+        fetch("https://raw.githubusercontent.com/dataofjapan/land/master/japan.geojson")
+          .then(response => response.json())
+          .then(data => {
+            this.japanLayer = L.geoJSON(data, {
+              style: {
+                fillColor: "#228B22",
+                fillOpacity: 1,
+                color: "#228B22",
+                weight: 0
+              }
+            }).addTo(this.map);
+          })
+          .catch(error => {
+            console.error("日本地図の読み込みに失敗しました:", error);
+          });
 
         // L.tileLayer(
         //     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -235,10 +254,10 @@ L.tileLayer(
                 9,
 
                 "平塚市",
-                [35.3150, 139.3497],
-                14,
+                [35.3250, 139.3497],
+                13,
 
-                "フィールド"
+            //     "フィールド"
             );
 
         },
@@ -253,13 +272,90 @@ L.tileLayer(
 
                 "釧路市",
                 [42.9849, 144.3814],
-                10,
+                13,
 
                 "釧路フィールド"
             );
 
         },
 
+        // ■追加：エリア表示
+        createHoneycomb(cityPos) {
+            this.honeycombLayers.forEach(layer => {
+            this.map.removeLayer(layer);
+            });
+        this.honeycombLayers = [];
+        const centerLat = cityPos[0];
+        const centerLng = cityPos[1];
+        // 六角形の大きさ
+        const radius = 0.0035;
+        // 六角形同士の間隔
+        const horizontal = 0.0065;
+        const vertical = 0.0060;
+        // 5 × 5 = 25個
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 5; col++) {
+                // ハニカム状にするため、奇数行をずらす
+                const offsetLng =
+                    (row % 2 === 1)
+                        ? horizontal / 2
+                        : 0;
+                const lat =
+                    centerLat +
+                    (row - 2) * vertical;
+                const lng =
+                    centerLng +
+                    (col - 2) * horizontal +
+                    offsetLng;
+            // 六角形の頂点を作る
+                const points = [];
+                for (let i = 0; i < 6; i++) {
+                    const angle =
+                        Math.PI / 3 * i +
+                        Math.PI / 6;
+                    const latPoint =
+                        lat +
+                        radius * Math.sin(angle);
+                    const lngPoint =
+                        lng +
+                        radius * Math.cos(angle);
+                    points.push([
+                        latPoint,
+                        lngPoint
+                    ]);
+                }
+
+                const number =
+                    row * 5 + col + 1;
+                const hexagon = L.polygon(
+                    points,
+                    {
+                        color: "#f5c542",
+                        weight: 3,
+                        fillColor: "#fff3a6",
+                        fillOpacity: 0.35
+                    }
+                )
+                .addTo(this.map);
+
+            // クリックしたら次のプログラムへ
+            hexagon.on("click", () => {
+                console.log(
+                    `ハチの巣 ${number} をクリック`
+                );
+                    // クリックした六角形を少し強調
+                    hexagon.setStyle({
+                        fillOpacity: 0.8,
+                        weight: 5
+                    });
+                    setTimeout(() => {
+                        this.$router.push("/dominationGame");
+                    }, 300);
+                });
+                this.honeycombLayers.push(hexagon);
+                }
+            }
+        },
 
         startZoom(
             prefName,
@@ -270,8 +366,12 @@ L.tileLayer(
             cityPos,
             cityZoom,
 
-            popupText
+            // popupText
         ) {
+            // ■追加
+            if (this.japanLayer) {
+              this.map.removeLayer(this.japanLayer);
+            }
 
             // Hide start UI
             this.showStartScreen = false;
@@ -325,20 +425,25 @@ L.tileLayer(
 
 
             // Popup
-            setTimeout(() => {
+            // setTimeout(() => {
 
-                L.marker(cityPos)
-                    .addTo(this.map)
-                    .bindPopup(popupText)
-                    .openPopup();
+            //     L.marker(cityPos)
+            //         .addTo(this.map)
+            //         .bindPopup(popupText)
+            //         .openPopup();
 
-            }, 5000);
+            // }, 5000);
 
 
             // Go to game
+            // setTimeout(() => {
+            //   this.$router.push(`/dominationGame`);
+            // }, 6000);
+        
+            // 追加：ハチの巣を表示
             setTimeout(() => {
-              this.$router.push(`/dominationGame`);
-            }, 6000);
+                this.createHoneycomb(cityPos);
+            }, 5000);
 
         }
 
@@ -427,18 +532,18 @@ L.tileLayer(
     background:
         radial-gradient(
             circle at center,
-            rgba(255, 255, 255, 0.45) 0%,
-            rgba(255, 255, 255, 0.25) 8%,
-            rgba(255, 255, 255, 0.08) 18%,
+            rgba(255, 255, 255, 0) 30%,
+            rgba(255, 255, 255, 0.25) 50%,
+            rgba(255, 255, 255, 0.6) 65%,
             transparent 30%
         ),
         radial-gradient(
             circle at center,
             transparent 0%,
-            rgba(0, 0, 0, 0.25) 20%,
-            rgba(0, 0, 0, 0.65) 45%,
-            rgba(0, 0, 0, 0.9) 70%,
-            rgba(0, 0, 0, 0.98) 100%
+            rgba(0, 0, 0, 0.02) 30%,
+            rgba(0, 0, 0, 0.5) 55%,
+            rgba(0, 0, 0, 0.6) 70%,
+            rgba(0, 0, 0, 0.7) 100%
         );
 }
 
