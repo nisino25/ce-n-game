@@ -46,17 +46,21 @@
             </button> -->
             <button
                 class="monitor"
-                @click="changeMode('dominationMap')"
+                :class="{ offline: cardCountsLoaded && personalCards < minCardsForWild }"
+                @click="goWild"
             >
                 野生にもどそう！
             </button>
 
-            <button
-							class="monitor offline"
+            <!-- ■生き物スキャン：要件定義済み・実装済みだが、今回のデプロイでは一旦非表示
+                 詳細は docs/requirements/03_creature_scan.md 参照 -->
+            <!-- <button
+							class="monitor"
 							style="padding: 1.5em 0 !important;"
+							@click="changeMode('creature-scan')"
             >
                 生き物スキャン
-            </button>
+            </button> -->
 
             <!-- Team -->
             <button
@@ -117,6 +121,45 @@
             >
                 ABゲーム提案B（仮）
             </button>
+            <button
+                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                @click="$router.push({ name: 'CreatureScan' })"
+            >
+                生き物スキャン（仮）
+            </button>
+            <button
+                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                @click="$router.push({ name: 'CardLibrary' })"
+            >
+                カードライブラリ（仮）
+            </button>
+        </div>
+
+        <!-- ■野生にもどそう！はカードが足りないと遊べない -->
+        <div
+            v-if="showCardShortage"
+            class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/70 p-4"
+            @click.self="showCardShortage = false"
+        >
+            <div class="w-full max-w-sm rounded-2xl border-2 border-cyan-300 bg-[#10151c] p-6 text-center text-white shadow-[0_0_24px_rgba(0,255,255,.35)]">
+                <p class="mb-2 text-xl font-black text-cyan-300">カードが足りません</p>
+                <p class="mb-1 text-sm">「野生にもどそう！」は、手元の生きものカードが<br><strong>{{ minCardsForWild }}枚以上</strong>ないと遊べません。</p>
+                <p class="mb-5 text-sm text-slate-300">いま {{ personalCards }}枚（あと{{ minCardsForWild - personalCards }}枚）</p>
+                <div class="flex flex-col gap-2">
+                    <button
+                        class="rounded-lg bg-cyan-500 px-4 py-2 font-bold text-slate-900 hover:bg-cyan-400"
+                        @click="$router.push({ name: 'CardLibrary' })"
+                    >
+                        カードライブラリを見る
+                    </button>
+                    <button
+                        class="rounded-lg border border-slate-500 px-4 py-2 font-bold hover:bg-white/10"
+                        @click="showCardShortage = false"
+                    >
+                        とじる
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Door -->
@@ -183,9 +226,9 @@
 
 									<button
 											class="w-full p-3 mb-3 bg-red-500 hover:bg-red-600 text-white rounded-lg"
-											@click="logout"
+											@click="endGame"
 									>
-											ログアウト
+											ゲームを終了する
 									</button>
 									<button
 											class="w-full p-3 bg-gray-300 hover:bg-gray-400 rounded-lg"
@@ -214,6 +257,11 @@
 </template>
 <script>
 import db from './../../firebase.js';
+import {
+    MIN_CARDS_FOR_DOMINATION,
+    getCurrentUser,
+    countCollectionCards
+} from "@/utils/cards.js";
 
 export default {
     name: "MonitorRoom",
@@ -237,9 +285,12 @@ export default {
 				avatarSvg,
 
 
-				collection: JSON.parse(
-						localStorage.getItem("collection") || "[]"
-				),
+				// ■保有カード数（Firestoreの所持カード cardInstances のうち手元にあるもの）
+				personalCards: 0,
+				teamCards: 0,
+				minCardsForWild: MIN_CARDS_FOR_DOMINATION,
+				showCardShortage: false,
+				cardCountsLoaded: false, // 読み込み前に一瞬「NO SIGNAL」にならないように
 
 
 				belugaMessage: "",
@@ -251,13 +302,6 @@ export default {
     },
 
     computed: {
-        personalCards() {
-            return this.collection.length;
-        },
-
-        teamCards() {
-            return this.personalCards * 9;
-        },
 
         teamName() {
             switch (this.myTeam) {
@@ -380,7 +424,12 @@ export default {
     },
 
     async mounted() {
+        // ■最終ログイン日時を毎回更新し、7日以上放置されたセッションは自動でログアウトする
+        if (this.checkSessionExpired()) {
+            return;
+        }
 
+        this.loadCardCounts();
 
         this.teamMembers = await this.getTeamMembers();
 				// console.log("Current Player Data:", this.currentPlayerData);
@@ -393,8 +442,32 @@ export default {
     },
 
     methods: {
+        async loadCardCounts() {
+            try {
+                const user = await getCurrentUser();
+                if (!user) return;
+                [this.personalCards, this.teamCards] = await Promise.all([
+                    countCollectionCards({ ownerUid: user.uid }),
+                    user.team ? countCollectionCards({ team: user.team }) : 0
+                ]);
+                this.cardCountsLoaded = true;
+            } catch (error) {
+                console.error("保有カード数の取得に失敗しました:", error);
+            }
+        },
+
+        // ■野生にもどそう！：手元のカードが一定枚数以上ないと遊べない
+        async goWild() {
+            await this.loadCardCounts();
+            if (this.personalCards < this.minCardsForWild) {
+                this.showCardShortage = true;
+                return;
+            }
+            this.changeMode('dominationMap');
+        },
+
         goRepair() {
-            if (this.collection.length < 2) {
+            if (this.personalCards < 2) {
                 this.status = "カード不足";
                 return;
             }
@@ -530,12 +603,46 @@ export default {
 							query: {cenId: this.currentPlayerData.cenId}
 					});
         },
+				// ■保存されているログイン日時が7日以上前なら自動ログアウトする。
+				// 期限内であれば、今回のアクセスとして日時を更新して続行する
+				checkSessionExpired() {
+					const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+					const storedLoginDate = localStorage.getItem("loginDate");
+
+					if (storedLoginDate && Date.now() - Number(storedLoginDate) > SEVEN_DAYS_MS) {
+						this.logout();
+						return true;
+					}
+
+					localStorage.setItem("loginDate", String(Date.now()));
+					return false;
+				},
+
 				logout() {
 					localStorage.removeItem("playerUid");
 					localStorage.removeItem("playerData");
 					localStorage.removeItem("myTeam");
 					localStorage.removeItem("loginCenId");
+					localStorage.removeItem("loginDate");
 					this.$router.push({ name: "LoginPage" });
+				},
+
+				// ■プロフィールメニューの「ゲームを終了する」。ログアウトした上で、
+				// ce-n.org側の会員プロフィールページへ送る
+				endGame() {
+					const cenId = this.currentPlayerData?.cenId || localStorage.getItem("loginCenId");
+
+					localStorage.removeItem("playerUid");
+					localStorage.removeItem("playerData");
+					localStorage.removeItem("myTeam");
+					localStorage.removeItem("loginCenId");
+					localStorage.removeItem("loginDate");
+
+					if (cenId) {
+						window.location.href = `https://www.ce-n.org/hui-yuan-purohuiru/${cenId}`;
+					} else {
+						this.$router.push({ name: "LoginPage" });
+					}
 				}
     }
 };
@@ -568,7 +675,11 @@ export default {
 
   .room-avatar-ring{
       box-shadow: 0 0 0 4px var(--team-accent, #3b82f6), 0 0 10px var(--team-accent, #3b82f6), 0 0 25px var(--team-accent, #3b82f6);
-      transition: box-shadow 1s ease;
+      /* ■このセレクタの方がTailwindのtransition-allより後にCDNから注入され、
+         transitionプロパティ自体を上書き（box-shadowだけに絞られる）してしまい、
+         アバターの位置・拡大縮小・透明度が一切アニメーションしない不具合があった。
+         ここで必要なプロパティを明示的にすべて含めて解決する */
+      transition: box-shadow 1s ease, left 1s ease, top 1s ease, transform 1s ease, opacity 1s ease;
   }
 
   /* 他ユーザーが画面上をふわふわ歩き回る演出 */

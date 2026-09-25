@@ -321,6 +321,13 @@
 <script>
 import db from '../../firebase.js';
 import CreatureCard from './CreatureCard.vue';
+import {
+    fetchCardLibrary,
+    fetchTeamCollectionInstances,
+    placeCardInstance,
+    markCardInstancesEaten,
+    toDominationCard
+} from '@/utils/cards.js';
 
 // ■陣取りゲームは操作端末1台で複数チームが遊ぶ「共有の1ゲーム」という前提のため、
 // Firestoreには「ルームコード」ごとに1ドキュメント（進行中の1ゲーム分）として保存する。
@@ -339,6 +346,19 @@ function generateRoomCode() {
 
 // ■自分のチーム(localStorage.myTeam)以外の2チームは、既定でAIが操作する
 const TEAM_ID_BY_NAME = { water: 1, air: 2, earth: 3 };
+const TEAM_NAME_BY_ID = { 1: 'water', 2: 'air', 3: 'earth' };
+
+// ■AIチームの山札（仮）：AIのチームにはプレイヤーがいないので所持カードが無い。
+// カードライブラリから、人間チームの手札と同じ枚数（最低10枚）をレベルの重みで引いて作る
+// （docs/requirements/04_cards.md 6章 #1 の仮対応）
+const AI_MIN_HAND_SIZE = 10;
+const AI_LEVEL_WEIGHTS = { 1: 4, 2: 3, 3: 2, 4: 1 };
+
+// ■プレイヤーの所持カード（DBの cardInstances）かどうか。
+// AIチームの仮のカードや、固定デッキ時代に保存されたカード（cardId が無い）はDBを更新しない
+function isOwnedCard(card) {
+    return !!(card && card.cardId && card.instanceId && !card.isVirtual)
+}
 
 export default {
     // name: 'Tiles20x20',
@@ -398,45 +418,10 @@ export default {
             { key: 'undeveloped', label: '未開発地' },
         ],
 
-        allCards: [
-          {id:'オオワシ', get label(){return this.id}, area: 'land', count: 1, food:["虫","小動物"], tier: 4},
-          {id:'キタキツネ', get label(){return this.id}, area: 'land', count: 2, food:["さかな"], tier: 3},
-          {id:'エゾタヌキ', get label(){return this.id}, area: 'land', count: 2, food:["虫","植物"], tier: 2},
-          {id:'エゾリス', get label(){return this.id}, area: 'land', count: 3, food:["植物"], tier: 2},
-          {id:'オコジョ', get label(){return this.id}, area: 'land', count: 3, food:["虫","小動物"], tier: 2},
-          {id:'カヤネズミ', get label(){return this.id}, area: 'land', count: 3, food:["植物"], tier: 2},
-          {id:'エゾウサギ', get label(){return this.id}, area: 'land', count: 3, food:["植物"], tier: 2},
-          {id:'ミミズ', get label(){return this.id}, area: 'land', count: 10, food:["植物"], tier: 1},
-          {id:'アブラムシ', get label(){return this.id}, area: 'land', count: 4, food:["植物"], tier: 1},
-          {id:'カナブン', get label(){return this.id}, area: 'land', count: 4, food:["植物"], tier: 1},
-          {id:'シオカラトンボ', get label(){return this.id}, area: 'land', count: 3, food:["虫"], tier: 1},
-          {id:'モンシロチョウ', get label(){return this.id}, area: 'land', count: 4, food:["植物"], tier: 1},
-          {id:'カマキリ', get label(){return this.id}, area: 'land', count: 3, food:["虫"], tier: 1},
-          {id:'ミツバチ', get label(){return this.id}, area: 'land', count: 4, food:["植物"], tier: 1},
-          {id:'シジミチョウ', get label(){return this.id}, area: 'land', count: 4, food:["植物"], tier: 1},
-          {id:'イトウ', get label(){return this.id}, area: 'water', count: 1, food:["魚","小動物"], tier: 4},
-          {id:'オショロコマ', get label(){return this.id}, area: 'water', count: 1, food:["魚","小動物"], tier: 3},
-          {id:'ニジマス', get label(){return this.id}, area: 'water', count: 1, food:["虫"], tier: 3},
-          {id:'ヤマメ', get label(){return this.id}, area: 'water', count: 1, food:["虫"], tier: 2},
-          {id:'ウグイ', get label(){return this.id}, area: 'water', count: 1, food:["藻類"], tier: 2},
-          {id:'ヤゴ', get label(){return this.id}, area: 'water', count: 1, food:["虫"], tier: 1},
-          {id:'カゲロウの幼虫', get label(){return this.id}, area: 'water', count: 2, food:["藻類"], tier: 1},
-          {id:'ゲンゴロウ', get label(){return this.id}, area: 'water', count: 1, food:["植物"], tier: 1},
-          {id:'川エビ', get label(){return this.id}, area: 'water', count: 4, food:["藻類"], tier: 1},
-          {id:'オタマジャクシ', get label(){return this.id}, area: 'water', count: 4, food:["藻類"], tier: 2},
-          {id:'シマエナガ', get label(){return this.id}, area: 'land', count: 3, food:["虫"], tier: 2},
-          {id:'エゾモモンガ', get label(){return this.id}, area: 'land', count: 3, food:["植物"], tier: 2},
-          {id:'ヒグマ', get label(){return this.id}, area: 'land', count: 1, food:["植物","小動物"], tier: 4},
-          {id:'タンチョウツル', get label(){return this.id}, area: 'land', count: 1, food:["植物","虫","魚"], tier: 4},
-          {id:'エゾサンショウウオ', get label(){return this.id}, area: 'water', count: 1, food:["植物"], tier: 2},
-          {id:'シマフクロウ', get label(){return this.id}, area: 'land', count: 1, food:["魚","小動物"], tier: 4},
-          {id:'ヒメネズミ', get label(){return this.id}, area: 'land', count: 3, food:["植物"], tier: 2},
-          {id:'モグラ', get label(){return this.id}, area: 'land', count: 3, food:["虫"], tier: 2},
-          {id:'アカガエル', get label(){return this.id}, area: 'water', count: 3, food:["植物"], tier: 2},
-          {id:'アブ', get label(){return this.id}, area: 'land', count: 3, food:["小動物","中動物","大動物"], tier: 1},
-          {id:'エゾシカ', get label(){return this.id}, area: 'land', count: 2, food:["植物"], tier: 4},
-          {id:'モンシロチョウ', get label(){return this.id}, area: 'land', count: 1, food:["植物"], tier: 1},
-        ],
+        // ■カードはFirestoreのカードライブラリ（cards）と所持カード（cardInstances）から作る
+        // （以前の固定デッキ allCards は廃止。docs/requirements/04_cards.md）
+        cardLibrary: [],
+        isPlacingCard: false,
 
         // プレイヤーごとの手札
         hands: {},
@@ -466,8 +451,9 @@ export default {
         backToMonitorRoom() {
             this.$router.push({ name: 'Home' });
         },
-        onTileClick(tile, event) {
+        async onTileClick(tile, event) {
           if (this.currentPlayer?.isAI) return // AIの手番中は操作不可
+          if (this.isPlacingCard) return // カードの保存中は操作不可
 
           if(tile.placedCard) {
             const rect = event.currentTarget.getBoundingClientRect()
@@ -510,23 +496,44 @@ export default {
             return // not valid for selection
           }
 
-          tile.ownerTeam = this.currentPlayerId
-          tile.placedCard = this.selectedCard
-
-          const points = this.getScoreForTile(this.selectedCard.tier)
-          this.currentPlayer.score += points
-
-            this.handleEating(tile)
-
-
-          //カードを削除
+          const card = this.selectedCard
           const hand = this.hands[this.currentPlayerId]
 
-          const index = hand.findIndex(card => card.id === this.selectedCard.id)
+          // ■所持カードを「盤面に置いた（placed）」にする。別のゲームですでに使われていたら置けない
+          if (isOwnedCard(card)) {
+              this.isPlacingCard = true
+              let placed = false
+              try {
+                  placed = await placeCardInstance(card.instanceId, this.roomCode, tile.id)
+              } catch (e) {
+                  console.error('カードの配置の保存に失敗しました', e)
+                  this.isPlacingCard = false
+                  alert("カードを置けませんでした。通信状況を確認して、もう一度ためしてね")
+                  return
+              }
+              this.isPlacingCard = false
 
-          if (index !== -1) {
-              hand.splice(index, 1)
+              if (!placed) {
+                  // すでにほかのゲームで使われていたカードは手札から外す
+                  this.removeFromHand(hand, card)
+                  this.selectedCard = null
+                  this.updateValidTiles()
+                  this.saveGame()
+                  alert(`「${card.label}」は、ほかのゲームですでに使われていたよ`)
+                  return
+              }
           }
+
+          tile.ownerTeam = this.currentPlayerId
+          tile.placedCard = card
+
+          const points = this.getScoreForTile(card.tier)
+          this.currentPlayer.score += points
+
+          this.handleEating(tile)
+
+          //カードを削除
+          this.removeFromHand(hand, card)
 
           this.selectedCard = null
           this.updateValidTiles()
@@ -537,6 +544,7 @@ export default {
         },
         handleEating(placedTile) {
             const neighbors = this.getNeighbors(placedTile)
+            const eatenList = []
 
             neighbors.forEach(n => {
                 // if the neibghot is lower than the placed tile, then it gets eaten
@@ -545,7 +553,24 @@ export default {
                 // mark as eaten
                 n.eatenByTileId = placedTile.id
                 n.eatenByPlayerId = this.currentPlayerId
+
+                // ■食べられたのがプレイヤーの所持カードなら、DBでも eaten にする
+                if (isOwnedCard(n.placedCard)) {
+                    eatenList.push({
+                        instanceId: n.placedCard.instanceId,
+                        eatenByInstanceId: isOwnedCard(placedTile.placedCard) ? placedTile.placedCard.instanceId : null
+                    })
+                }
             })
+
+            markCardInstancesEaten(eatenList).catch(e => {
+                console.error('食べられたカードの保存に失敗しました', e)
+            })
+        },
+
+        removeFromHand(hand, card) {
+            const index = hand.findIndex(c => c.instanceId === card.instanceId)
+            if (index !== -1) hand.splice(index, 1)
         },
 
         getScoreForTile(tier) {
@@ -558,11 +583,11 @@ export default {
 
             return tier * 2
         },
-        resetTiles() {
+        async resetTiles() {
             if (!confirm("本当にタイルをリセットしますか？現在の進行状況は失われます。")) return;
 
             this.generateTiles()
-            this.initializeHands()
+            await this.initializeHands()
             this.gameState = 'playing'
             this.currentPlayerId = this.players[0].id
             this.skipCount = 0
@@ -667,10 +692,23 @@ export default {
             this.selectedCard = null
             this.tilePreviewCard = null
 
+            if (!this.cardLibrary.length) {
+                try {
+                    this.cardLibrary = await fetchCardLibrary()
+                } catch (e) {
+                    console.error('カードライブラリの読み込みに失敗しました', e)
+                }
+            }
+
             const loaded = await this.loadSavedGame()
 
-            if (!loaded) {
-                this.initializeHands()
+            if (loaded) {
+                // ■保存後にメンバーが新しくカードを集めたり、別のゲームで使ったりしているので、
+                // 人間チームの手札はDBの所持カードから作り直す
+                await this.refreshHumanHand()
+                await this.saveGame()
+            } else {
+                await this.initializeHands()
                 this.generateTiles()
                 this.gameState = 'playing'
                 this.currentPlayerId = this.players[0].id
@@ -1029,35 +1067,53 @@ export default {
             return arr;
         },
 
-        buildDeck(cardDefs) {
-            return cardDefs.flatMap(card => {
-                return Array.from({ length: card.count }, (_, index) => ({
-                    id: card.id,
-                    label: card.label,
-                    area: card.area,
-                    tier: card.tier,
-                    food: card.food,
-                    // optional: unique instance id
-                    instanceId: (card.id === "モンシロチョウ" && card.count === 1) ? `${card.id}-4` : `${card.id}-${index}`
-                }));
-            });
+        // ■人間チームの手札：チームのメンバー全員の、手元にある所持カード
+        async fetchHumanHand() {
+            const team = TEAM_NAME_BY_ID[this.humanPlayerId]
+            const libraryById = Object.fromEntries(this.cardLibrary.map(card => [card.cardId, card]))
+            try {
+                const instances = await fetchTeamCollectionInstances(team)
+                return instances
+                    .filter(instance => libraryById[instance.cardId])
+                    .map(instance => toDominationCard(libraryById[instance.cardId], instance.instanceId))
+            } catch (e) {
+                console.error('チームの所持カードの読み込みに失敗しました', e)
+                return []
+            }
         },
 
+        async refreshHumanHand() {
+            this.hands[this.humanPlayerId] = this.shuffleArray(await this.fetchHumanHand())
+        },
 
-        initializeHands() {
-          const deck = this.shuffleArray(
-              this.buildDeck(this.allCards)
-          );
+        // ■AIチームの手札（仮）：カードライブラリからレベルの重みで引いた仮のカード
+        buildAIHand(playerId, size) {
+            const weights = this.cardLibrary.map(card => AI_LEVEL_WEIGHTS[card.level] || 1)
+            const total = weights.reduce((sum, w) => sum + w, 0)
 
-          const playerCount = this.players.length;
-          const cardsPerPlayer = Math.floor(deck.length / playerCount);
+            return Array.from({ length: size }, (_, index) => {
+                let roll = Math.random() * total
+                let card = this.cardLibrary[this.cardLibrary.length - 1]
+                for (let i = 0; i < this.cardLibrary.length; i++) {
+                    roll -= weights[i]
+                    if (roll < 0) {
+                        card = this.cardLibrary[i]
+                        break
+                    }
+                }
+                return toDominationCard(card, `ai-${playerId}-${index}`, true)
+            })
+        },
 
-          this.players.forEach((player, index) => {
-              this.hands[player.id] = deck.slice(
-                  index * cardsPerPlayer,
-                  (index + 1) * cardsPerPlayer
-              );
-          });
+        async initializeHands() {
+            const humanHand = this.shuffleArray(await this.fetchHumanHand())
+            const aiHandSize = Math.max(humanHand.length, AI_MIN_HAND_SIZE)
+
+            this.players.forEach(player => {
+                this.hands[player.id] = player.id === this.humanPlayerId
+                    ? humanHand
+                    : this.buildAIHand(player.id, this.cardLibrary.length ? aiHandSize : 0)
+            });
         },
         areaBadgeClass(card, playerId) {
             let baseClass = ''
@@ -1320,14 +1376,30 @@ export default {
 
             const { card, tile } = move
 
+            // ■別の端末で人間が操作していたチームの手札（所持カード）をAIが使う場合も、DBを placed にする
+            if (isOwnedCard(card)) {
+                let placed = false
+                try {
+                    placed = await placeCardInstance(card.instanceId, this.roomCode, tile.id)
+                } catch (e) {
+                    console.error('カードの配置の保存に失敗しました', e)
+                }
+                if (!placed) {
+                    this.removeFromHand(hand, card)
+                    this.isAiThinking = false
+                    this.saveGame()
+                    this.maybeTriggerAI()
+                    return
+                }
+            }
+
             tile.ownerTeam = player.id
             tile.placedCard = card
             player.score += this.getScoreForTile(card.tier)
 
             this.handleEating(tile)
 
-            const idx = hand.findIndex(c => c.instanceId === card.instanceId)
-            if (idx !== -1) hand.splice(idx, 1)
+            this.removeFromHand(hand, card)
 
             this.skipCount = 0
             this.isAiThinking = false

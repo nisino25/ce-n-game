@@ -5,7 +5,8 @@
       "name": "cave-adventure",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["serve"],
-      "port": 8080
+      "port": 8080,
+      "autoPort": true
     }
   ]
 }

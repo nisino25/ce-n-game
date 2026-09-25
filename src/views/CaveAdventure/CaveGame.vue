@@ -12,30 +12,88 @@
     </div>
   </div>
 
-    <div class="keyCount absolute top-4 right-4 text-white text-lg font-bold z-10">
-      ゲットしたカギ：{{ keyCount }}本
+    <div v-if="areaInfo" class="keyCount absolute top-4 right-4 text-white text-lg font-bold z-10">
+      <span class="key-badge" :style="{ background: areaInfo.keyColor }">🔑</span>
+      {{ areaInfo.name }}のカギ：<span :key="keyBumpId" class="key-count-num" :class="{ bump: keyBumpId > 0, lose: keyBumpLose }">{{ keyCount }}</span>本
 
-        <!-- ■追加：洞窟エンブレム -->
+        <!-- ■洞窟エンブレム（エリアに応じて固定） -->
         <img
-            v-if="currentEmblem"
-            :src="`${currentEmblem}`"
-            alt="Emblem"
+            :src="areaInfo.emblem"
+            :alt="areaInfo.name"
             class="w-[180px] h-[80px] object-contain mt-2"
         />
+
+        <!-- ■この洞窟のアイコンの見方（エリアごとに変わる）。スマホ幅では迷路の下に表示 -->
+        <ul class="legend legend-side">
+            <li v-for="item in legendItems" :key="item.label">
+                <span class="legend-icon" :class="item.badgeClass" :style="item.badgeStyle">{{ item.icon }}</span>
+                {{ item.label }}
+            </li>
+        </ul>
+    </div>
+
+    <!-- ■カギを取ったときの演出（取ったマスの上に表示） -->
+    <div
+        v-for="pop in keyPops"
+        :key="pop.id"
+        class="key-pop"
+        :style="{ left: pop.x + 'px', top: pop.y + 'px', fontSize: pop.size + 'px' }"
+    >
+        <span class="key-pop-ring" :class="{ 'hit-ring': pop.hit }"></span>
+        <span class="key-pop-icon">{{ pop.icon }}</span>
+        <span v-if="pop.text" class="key-pop-text" :class="{ 'lose-text': pop.hit }">{{ pop.text }}</span>
     </div>
 
     <!-- Warp -->
     <div ref="warp" id="warpEffect"></div>
 
+    <!-- ■敵にぶつかったときの赤いフラッシュ -->
+    <div v-if="hitFlashId" :key="hitFlashId" class="hit-flash"></div>
+
     <!-- wrap all page -->
-    <div class="bg-[#111] w-full h-auto">
+    <div ref="mazeWrap" class="bg-[#111] w-full h-auto">
         <!-- Canvas -->
         <canvas ref="canvas" class="mx-auto"></canvas>
+
+        <ul v-if="areaInfo" class="legend legend-bottom">
+            <li v-for="item in legendItems" :key="item.label">
+                <span class="legend-icon" :class="item.badgeClass" :style="item.badgeStyle">{{ item.icon }}</span>
+                {{ item.label }}
+            </li>
+        </ul>
     </div>
 
 </template>
 
 <script>
+import {
+    CAVE_AREAS,
+    CAVE_AREA_IDS,
+    loadCaveKeys,
+    saveCaveKeys,
+    saveLastCaveArea,
+    takeNextCaveArea
+} from "./caveAreas.js";
+
+// ■敵の動き
+const ENEMY_DIRS = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+const ENEMY_WANDER_INTERVAL = 650; // うろうろ中の移動間隔(ms)
+const ENEMY_CHASE_INTERVAL = 400; // 追いかけ中の移動間隔(ms)
+const ENEMY_SIGHT_RANGE = 7; // 壁にさえぎられずにまっすぐ見通せる距離（マス）
+const ENEMY_LOSE_TIME = 3000; // 見えなくなってからこの時間(ms)で見失う
+const ENEMY_STUN_TIME = 2000; // ぶつかった後に敵が止まる時間(ms)
+
+// ■効果音：音声ファイルを使わず Web Audio API で鳴らす
+let audioCtx = null;
+
+const getAudioContext = () => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!audioCtx) audioCtx = new AudioContextClass();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+};
+
 export default {
 
     data() {
@@ -49,7 +107,7 @@ export default {
 
             COLS: 15,
             ROWS: 25,
-            globalKeyCount: 0,  // ■鍵保有対応
+            caveKeys: {},  // ■エリアごとのカギ保有数（caveAreas.js）
 
             home: {
                 r: 1,
@@ -74,13 +132,8 @@ export default {
             stage: "cave",
             forestGate: {},
 
-            // ■追加：エンブレム画像リストと選択変数
-            emblems:[
-                "/images/cave/hokkaidoEnblem.png",
-                "/images/cave/kanagawaEmblem.png",
-                "/images/cave/kyotoEmblem.png"
-            ],
-            currentEmblem: "",
+            // ■現在の洞窟のエリア（kanagawa / hokkaido / kyoto）。洞窟の色（ステージ）はエリアで固定
+            area: "",
 
             // ■追加：ステージの色設定と対応アイコン
             stageData: {
@@ -106,6 +159,15 @@ export default {
                 }
             },
             playerMoveCounter: 0,
+
+            // ■カギ取得・敵ヒットの演出
+            keyPops: [],
+            hitFlashId: 0,
+            invincibleUntil: 0,
+            isWarping: false,
+            keyPopSeq: 0,
+            keyBumpId: 0,
+            keyBumpLose: false, // true: カギが減ったとき（赤く弾む）
         };
 
     },
@@ -114,10 +176,8 @@ export default {
 
         this.canvas = this.$refs.canvas;
         this.ctx = this.canvas.getContext("2d");
-        // ■全洞窟共通のカギ数を読み込む
-        const savedKeys = localStorage.getItem("remainKeys");
-        this.globalKeyCount = savedKeys !== null
-        ? Number(savedKeys)  : 0;
+        // ■エリアごとのカギ数を読み込む
+        this.caveKeys = loadCaveKeys();
 
 
         this.resize();
@@ -132,7 +192,19 @@ export default {
             this.handlePointerMove
         );
 
-        this.resetGame();
+        // ブラウザは操作があるまで音を鳴らせないため、タップ/クリック時に音声を有効化しておく
+        this.canvas.addEventListener(
+            "pointerdown",
+            getAudioContext
+        );
+
+        this.loadAvatar();
+
+        // 洞窟の入口で選んだエリアで始める（選ばれていなければランダム）
+        this.resetGame(takeNextCaveArea());
+
+        // ■敵はプレイヤーの操作と関係なく、一定間隔で動かす
+        this.enemyTimer = setInterval(this.enemyTick, 100);
 
     },
 
@@ -148,14 +220,28 @@ export default {
             this.handlePointerMove
         );
 
+        this.canvas.removeEventListener(
+            "pointerdown",
+            getAudioContext
+        );
+
+        clearInterval(this.enemyTimer);
+
     },
 
     methods: {
 
-        // ■追加：ランダムにエンブレムを選択する処理
-        selectRandomEmblem() {
-            const randomIndex = Math.floor(Math.random() * this.emblems.length);
-            this.currentEmblem = this.emblems[randomIndex];
+        // ■エリアをランダムに選び、洞窟のタイプ（色）もエリアに合わせて固定する
+        // exclude を指定すると、そのエリア以外から選ぶ（ワープ時に同じエリアにならないように）
+        // target を指定すると、そのエリアにする
+        selectArea(exclude, target) {
+            if (CAVE_AREAS[target]) {
+                this.area = target;
+            } else {
+                const candidates = CAVE_AREA_IDS.filter(id => id !== exclude);
+                this.area = candidates[Math.floor(Math.random() * candidates.length)];
+            }
+            this.stage = CAVE_AREAS[this.area].stage;
         },
 
         returnHome() {
@@ -185,13 +271,8 @@ export default {
 
         },
 
-        resetGame() {
-            // ■追加：洞窟・森・水・空気からランダムにステージを選択
-            const dungeons = ["cave", "forest", "water", "air"];
-            this.stage = dungeons[Math.floor(Math.random() * dungeons.length)];
-            // ----------
-
-            this.selectRandomEmblem(); // ■追加：ゲームリセット時にランダム選出
+        resetGame(areaId) {
+            this.selectArea(null, areaId);
 
             this.createMaze();
             this.createForestGate();
@@ -342,122 +423,209 @@ export default {
 
         },
 
+        // ■敵の出現：プレイヤーから離れた通路に出す（いきなり隣に出ないように）
         spawnEnemy() {
+            const candidates = [];
 
-            let r;
-            let c;
-
-            do {
-
-                r = Math.floor(
-                    Math.random() * this.ROWS
-                );
-
-                c = Math.floor(
-                    Math.random() * this.COLS
-                );
-
-            } while (
-
-                this.maze[r][c]
-
-            );
-
-            this.enemies.push({
-
-                r,
-                c
-
-            });
-
-        },
-
-        moveEnemies() {
-            this.enemyMoveCounter++;
-
-            if (this.enemyMoveCounter % 3 !== 0) {
-                return;
+            for (let r = 0; r < this.ROWS; r++) {
+                for (let c = 0; c < this.COLS; c++) {
+                    if (this.maze[r][c]) continue;
+                    if (Math.abs(r - this.player.r) + Math.abs(c - this.player.c) < 8) continue;
+                    if (this.nearGoal(r, c) || this.nearRemainingKey(r, c)) continue;
+                    if (this.enemies.some(e => e.r === r && e.c === c)) continue;
+                    candidates.push({ r, c });
+                }
             }
 
+            if (!candidates.length) return;
+
+            const { r, c } = candidates[Math.floor(Math.random() * candidates.length)];
+
+            this.enemies.push({
+                r,
+                c,
+                dir: [0, 0],
+                mode: "wander", // wander（うろうろ） | chase（見つけて追いかける）
+                nextMoveAt: Date.now() + 800,
+                lastSeenAt: 0,
+                stunnedUntil: 0,
+                bubble: null, // 頭の上の「❗」「❓」
+                bubbleUntil: 0
+            });
+        },
+
+        // ■プレイヤーから各マスまでの迷路上の距離（幅優先探索）
+        distancesFromPlayer() {
+            const dist = Array.from({ length: this.ROWS }, () => Array(this.COLS).fill(Infinity));
+            const queue = [[this.player.r, this.player.c]];
+            dist[this.player.r][this.player.c] = 0;
+
+            while (queue.length) {
+                const [r, c] = queue.shift();
+                for (const [dr, dc] of ENEMY_DIRS) {
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    if (this.maze[nr]?.[nc] !== 0 || dist[nr][nc] !== Infinity) continue;
+                    dist[nr][nc] = dist[r][c] + 1;
+                    queue.push([nr, nc]);
+                }
+            }
+
+            return dist;
+        },
+
+        canEnemyEnter(enemy, r, c) {
+            if (this.maze[r]?.[c] !== 0) return false;
+            if (this.nearGoal(r, c)) return false;
+            if (this.nearRemainingKey(r, c)) return false;
+            if (this.enemies.some(e => e !== enemy && e.r === r && e.c === c)) return false;
+            return true;
+        },
+
+        // ■敵からプレイヤーが見えるか：同じ行か列で、間に壁がなく、一定距離以内
+        canSeePlayer(enemy) {
+            const { r, c } = enemy;
+            const { r: pr, c: pc } = this.player;
+            if (r !== pr && c !== pc) return false;
+
+            const distance = Math.abs(r - pr) + Math.abs(c - pc);
+            if (distance > ENEMY_SIGHT_RANGE) return false;
+
+            const dr = Math.sign(pr - r);
+            const dc = Math.sign(pc - c);
+            for (let i = 1; i < distance; i++) {
+                if (this.maze[r + dr * i][c + dc * i]) return false;
+            }
+            return true;
+        },
+
+        setBubble(enemy, bubble) {
+            enemy.bubble = bubble;
+            enemy.bubbleUntil = Date.now() + 900;
+        },
+
+        // ■うろうろ：通路はまっすぐ進み、分かれ道で曲がる。行き止まりなら引き返す
+        wanderStep(enemy) {
+            const [dr, dc] = enemy.dir;
+            const options = ENEMY_DIRS.filter(([ddr, ddc]) => this.canEnemyEnter(enemy, enemy.r + ddr, enemy.c + ddc));
+            if (!options.length) return null;
+
+            const forward = options.find(([ddr, ddc]) => ddr === dr && ddc === dc);
+            const turns = options.filter(([ddr, ddc]) => !(ddr === -dr && ddc === -dc));
+
+            // まっすぐ行ける一本道ならそのまま進む
+            if (forward && turns.length === 1) return forward;
+
+            const choices = turns.length ? turns : options;
+            return choices[Math.floor(Math.random() * choices.length)];
+        },
+
+        // ■追いかける：迷路の最短ルートでプレイヤーに近づく
+        chaseStep(enemy, dist) {
+            const here = dist[enemy.r][enemy.c];
+            const step = ENEMY_DIRS.find(([dr, dc]) =>
+                dist[enemy.r + dr]?.[enemy.c + dc] < here &&
+                this.canEnemyEnter(enemy, enemy.r + dr, enemy.c + dc)
+            );
+            return step || this.wanderStep(enemy);
+        },
+
+        enemyTick() {
+            if (!this.enemies.length || this.isWarping || !this.maze.length) return;
+
+            const now = Date.now();
+            let changed = now < this.invincibleUntil; // 無敵中は点滅させるため毎回描き直す
+            let moved = false;
+            let dist = null;
+
             this.enemies.forEach(enemy => {
+                if (enemy.bubble && now >= enemy.bubbleUntil) {
+                    enemy.bubble = null;
+                    changed = true;
+                }
 
-                let dr = 0;
-                let dc = 0;
-
-                const distance =
-                    Math.abs(this.player.r - enemy.r) +
-                    Math.abs(this.player.c - enemy.c);
-
-                const chase = Math.random() < (
-                    distance <= 2 ? 0.2 : 0.5
-                );
-
-                if (chase) {
-
-                    dr = Math.sign(this.player.r - enemy.r);
-                    dc = Math.sign(this.player.c - enemy.c);
-
-                    if (
-                        Math.abs(this.player.r - enemy.r) >
-                        Math.abs(this.player.c - enemy.c)
-                    ) {
-
-                        dc = 0;
-
-                    } else {
-
-                        dr = 0;
-
+                // 見つかったら追いかけてくる。見えない時間が続くと見失う
+                if (this.canSeePlayer(enemy)) {
+                    enemy.lastSeenAt = now;
+                    if (enemy.mode === "wander" && now >= enemy.stunnedUntil) {
+                        enemy.mode = "chase";
+                        enemy.nextMoveAt = Math.min(enemy.nextMoveAt, now + 250);
+                        this.setBubble(enemy, "❗");
+                        this.playNoticeSound();
+                        changed = true;
                     }
-
-                } else {
-
-                    const dirs = [
-                        [0, 1],
-                        [1, 0],
-                        [0, -1],
-                        [-1, 0]
-                    ];
-
-                    [dr, dc] =
-                        dirs[Math.floor(Math.random() * 4)];
-
+                } else if (enemy.mode === "chase" && now - enemy.lastSeenAt > ENEMY_LOSE_TIME) {
+                    enemy.mode = "wander";
+                    this.setBubble(enemy, "❓");
+                    changed = true;
                 }
 
-                const nr = enemy.r + dr;
-                const nc = enemy.c + dc;
+                if (now < enemy.nextMoveAt || now < enemy.stunnedUntil) return;
 
-                if (this.maze[nr]?.[nc] !== 0) {
-                    return;
+                dist = dist || this.distancesFromPlayer();
+
+                const step = enemy.mode === "chase"
+                    ? this.chaseStep(enemy, dist)
+                    : this.wanderStep(enemy);
+
+                if (step) {
+                    enemy.r += step[0];
+                    enemy.c += step[1];
+                    enemy.dir = step;
+                    moved = true;
                 }
 
-                if (this.nearGoal(nr, nc)) {
-                    return;
-                }
-
-                if (this.blocksCriticalPath(nr, nc)) {
-                    return;
-                }
-
-                enemy.r = nr;
-                enemy.c = nc;
-
-                if (
-                    enemy.r === this.player.r &&
-                    enemy.c === this.player.c
-                ) {
-
-                    this.player = {
-                        r: 1,
-                        c: 1
-                    };
-
-                }
-
+                enemy.nextMoveAt = now + (enemy.mode === "chase" ? ENEMY_CHASE_INTERVAL : ENEMY_WANDER_INTERVAL);
+                changed = true;
             });
 
-      },
+            // 敵が動いたときだけ当たり判定（止まっている敵に重なり続けても連続ヒットしない）
+            if (moved && this.checkEnemyHit()) return;
+            if (changed) this.draw();
+        },
+
+        // ■敵とぶつかったら、いまのエリアのカギが1本へる（カギが無ければスタートに戻る）
+        checkEnemyHit() {
+            const hitEnemy = this.enemies.find(e => e.r === this.player.r && e.c === this.player.c);
+            if (!hitEnemy || Date.now() < this.invincibleUntil) return false;
+
+            const now = Date.now();
+            this.invincibleUntil = now + ENEMY_STUN_TIME;
+            this.playHitSound();
+            this.hitFlashId++;
+
+            // 画面を揺らす（毎回アニメーションをやり直す）
+            const mazeWrap = this.$refs.mazeWrap;
+            mazeWrap.classList.remove("hit-shake");
+            void mazeWrap.offsetWidth;
+            mazeWrap.classList.add("hit-shake");
+
+            // ぶつかった敵はしばらく目を回して止まる
+            hitEnemy.mode = "wander";
+            hitEnemy.stunnedUntil = now + ENEMY_STUN_TIME;
+            hitEnemy.bubble = "💫";
+            hitEnemy.bubbleUntil = now + ENEMY_STUN_TIME;
+
+            if (this.caveKeys[this.area] > 0) {
+                this.caveKeys[this.area]--;
+                saveCaveKeys(this.caveKeys);
+                this.showPop(this.player.r, this.player.c, { icon: "🔑", text: "-1", hit: true });
+                this.keyBumpId++;
+                this.keyBumpLose = true;
+            } else {
+                this.showPop(this.player.r, this.player.c, { icon: "💥", hit: true });
+                this.player = { r: 1, c: 1 };
+            }
+
+            this.draw();
+            return true;
+        },
+
       moveTo(x, y) {
+
+          if (this.isWarping) {
+              return;
+          }
 
           const targetCol = Math.floor(x / this.CELL);
           const targetRow = Math.floor(y / this.CELL);
@@ -538,32 +706,30 @@ export default {
 
                   item.get = true;
 
-                  // ■洞窟共通のカギ確保
-                  this.globalKeyCount++;
-                  localStorage.setItem(
-                    "remainKeys",
-                    this.globalKeyCount
-                );
+                  // ■いまのエリアのカギとして確保
+                  this.caveKeys[this.area]++;
+                  saveCaveKeys(this.caveKeys);
 
-                  if (
-                      this.items.filter(i => i.get).length === 2 &&
-                      !this.enemyAppeared
-                  ) {
+                  this.playKeySound();
+                  this.showKeyPop(item.r, item.c);
 
+                  // ■カギ2本目で1体目、3本目で2体目の敵が出る
+                  const gotKeys = this.items.filter(i => i.get).length;
+
+                  if (gotKeys === 2 && !this.enemyAppeared) {
                       this.enemyAppeared = true;
-
                       this.spawnEnemy();
-
+                  } else if (gotKeys === 3 && this.enemies.length < 2) {
+                      this.spawnEnemy();
                   }
 
               }
 
           });
 
-          if (this.enemyAppeared) {
-
-              this.moveEnemies();
-
+          // 自分から敵にぶつかった場合
+          if (this.checkEnemyHit()) {
+              return;
           }
 
           if (
@@ -586,12 +752,11 @@ export default {
 
               );
 
-              // const keyCount =
-              //     this.items.filter(i => i.get).length;
+              // ■宝箱画面で、このエリアのカギを使うようにする
+              saveLastCaveArea(this.area);
 
-              this.$router.push(
-                  `./cave-end?keys=${this.keyCount}`
-              );
+              // ■カギ数はlocalStorageの"caveKeys"で管理しているため、URLには載せない
+              this.$router.push("./cave-end");
 
               return;
 
@@ -604,6 +769,7 @@ export default {
       // ■追加：ステージ間ワープ
       warpToNextDungeon() {
           const warp = this.$refs.warp;
+          this.isWarping = true;
 
           if (warp) {
               warp.style.width = "300vmax";
@@ -612,19 +778,8 @@ export default {
 
           setTimeout(() => {
 
-              const dungeonData = [
-                  { stage: "cave",   r: 18, c: 3 },
-                  { stage: "forest", r: 10, c: 8 },
-                  { stage: "water",  r: 18, c: 3 },
-                  { stage: "air",    r: 12, c: 5 }
-              ];
-
-              const next =
-                  dungeonData[
-                      Math.floor(Math.random() * dungeonData.length)
-                  ];
-
-              this.selectRandomEmblem(); // ■追加：emblem切り替え
+              // ■別エリアの洞窟へ（洞窟の色もそのエリアのものに切り替わる）
+              this.selectArea(this.area);
 
               this.createMaze();
               this.createForestGate();
@@ -634,7 +789,9 @@ export default {
               this.enemyAppeared = false;
               this.enemyMoveCounter = 0;
 
-              this.stage = next.stage;
+              // ■迷路は毎回作り直すため、固定座標だと壁の中に出てしまうことがある。
+              // 通路のマスからランダムに出現位置を選ぶ
+              const next = this.randomSpawnPoint();
               this.player.r = next.r;
               this.player.c = next.c;
 
@@ -643,11 +800,119 @@ export default {
                   warp.style.height = "0";
               }
 
+              this.isWarping = false;
               this.draw();
 
           }, 700);
       },
       // -----------
+
+      // ■カギ取得音：高い音を3つ続けて「キラーン」
+      playKeySound() {
+          const ctx = getAudioContext();
+          if (!ctx) return;
+
+          const now = ctx.currentTime;
+          [[1318.5, 0], [1975.5, 0.07], [2637, 0.14]].forEach(([freq, delay]) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = "triangle";
+              osc.frequency.value = freq;
+              gain.gain.setValueAtTime(0.0001, now + delay);
+              gain.gain.exponentialRampToValueAtTime(0.25, now + delay + 0.01);
+              gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.4);
+              osc.connect(gain).connect(ctx.destination);
+              osc.start(now + delay);
+              osc.stop(now + delay + 0.45);
+          });
+      },
+
+      // ■カギ取得の演出：取ったマスからカギが飛び出して消える＋右上の本数が弾む
+      showKeyPop(r, c) {
+          this.showPop(r, c, { icon: "🔑", text: "+1" });
+          this.keyBumpId++;
+          this.keyBumpLose = false;
+      },
+
+      // マスの上にアイコンを飛び出させる演出（カギ取得・敵ヒット共通）
+      showPop(r, c, { icon, text = "", hit = false }) {
+          const rect = this.canvas.getBoundingClientRect();
+          const id = ++this.keyPopSeq;
+
+          this.keyPops.push({
+              id,
+              icon,
+              text,
+              hit,
+              x: rect.left + (c + 0.5) * this.CELL,
+              y: rect.top + (r + 0.5) * this.CELL,
+              size: Math.max(22, this.CELL)
+          });
+
+          setTimeout(() => {
+              this.keyPops = this.keyPops.filter(pop => pop.id !== id);
+          }, 1000);
+      },
+
+      // ■敵に気づかれた音：短く2回「ピピッ」
+      playNoticeSound() {
+          const ctx = getAudioContext();
+          if (!ctx) return;
+
+          const now = ctx.currentTime;
+          [[880, 0], [1175, 0.09]].forEach(([freq, delay]) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = "square";
+              osc.frequency.value = freq;
+              gain.gain.setValueAtTime(0.0001, now + delay);
+              gain.gain.exponentialRampToValueAtTime(0.08, now + delay + 0.01);
+              gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.08);
+              osc.connect(gain).connect(ctx.destination);
+              osc.start(now + delay);
+              osc.stop(now + delay + 0.1);
+          });
+      },
+
+      // ■敵にぶつかった音：低い音が下がっていく「ブブッ」
+      playHitSound() {
+          const ctx = getAudioContext();
+          if (!ctx) return;
+
+          const now = ctx.currentTime;
+          [[0, 0.16], [0.18, 0.28]].forEach(([delay, length]) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = "sawtooth";
+              osc.frequency.setValueAtTime(320, now + delay);
+              osc.frequency.exponentialRampToValueAtTime(90, now + delay + length);
+              gain.gain.setValueAtTime(0.0001, now + delay);
+              gain.gain.exponentialRampToValueAtTime(0.2, now + delay + 0.01);
+              gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + length);
+              osc.connect(gain).connect(ctx.destination);
+              osc.start(now + delay);
+              osc.stop(now + delay + length + 0.02);
+          });
+      },
+
+      // ■ワープ後の出現位置：通路で、スタート・ゴール・ワープゲート・カギと重ならないマス
+      randomSpawnPoint() {
+          const candidates = [];
+
+          for (let r = 0; r < this.ROWS; r++) {
+              for (let c = 0; c < this.COLS; c++) {
+                  if (this.maze[r][c]) continue;
+                  if (r === this.home.r && c === this.home.c) continue;
+                  if (r === this.goal.r && c === this.goal.c) continue;
+                  if (r === this.forestGate.r && c === this.forestGate.c) continue;
+                  if (this.items.some(item => item.r === r && item.c === c)) continue;
+
+                  candidates.push({ r, c });
+              }
+          }
+
+          return candidates[Math.floor(Math.random() * candidates.length)];
+      },
 
       handlePointerMove(e) {
           const rect = this.canvas.getBoundingClientRect();
@@ -743,58 +1008,56 @@ export default {
 
               this.ctx.fillText("🎃", x, y);
 
+              // 気づいた「❗」・見失った「❓」
+              if (enemy.bubble) {
+                  this.ctx.font = `${this.CELL * 0.6}px serif`;
+                  this.ctx.fillText(enemy.bubble, x + this.CELL * 0.35, y - this.CELL * 0.6);
+              }
+
           });
 
           // Player
           const playerX = this.player.c * this.CELL + this.CELL / 2;
           const playerY = this.player.r * this.CELL + this.CELL / 2;
 
+          // アバター画像は一度だけ作って使い回す（毎回作ると描画が遅れて残像が出るため）
+          if (!this.avatarImg || !this.avatarImg.complete) return;
+
+          const size = this.CELL * 0.9;
+
+          // 敵にぶつかった直後の無敵中は点滅させる
+          const blinking = Date.now() < this.invincibleUntil && Math.floor(Date.now() / 120) % 2 === 0;
+          this.ctx.globalAlpha = blinking ? 0.25 : 1;
+
+          this.ctx.imageSmoothingEnabled = true;
+          this.ctx.imageSmoothingQuality = "high";
+
+          this.ctx.drawImage(
+              this.avatarImg,
+              playerX - size / 2,
+              playerY - size / 2,
+              size,
+              size
+          );
+
+          this.ctx.globalAlpha = 1;
+
+      },
+      loadAvatar() {
           const currentPlayerData = JSON.parse(localStorage.getItem("playerData"));
           const avatarSvg = this.$buildAvatar(currentPlayerData?.avatar);
-
-          const avatarImg = new Image();
-
-          avatarImg.onload = () => {
-              const size = this.CELL * 0.9;
-
-              this.ctx.imageSmoothingEnabled = true;
-              this.ctx.imageSmoothingQuality = "high";
-
-              this.ctx.drawImage(
-                  avatarImg,
-                  playerX - size / 2,
-                  playerY - size / 2,
-                  size,
-                  size
-              );
-          };
-
           const highResSvg = avatarSvg.replace(
               "<svg",
               '<svg width="300" height="300"'
           );
 
+          const avatarImg = new Image();
+          avatarImg.onload = () => this.draw();
           avatarImg.src =
               `data:image/svg+xml;charset=utf-8,${encodeURIComponent(highResSvg)}`;
-
+          this.avatarImg = avatarImg;
       },
-      getProtectedTarget() {
 
-          const remainingItems = this.items.filter(
-              item => !item.get
-          );
-
-          if (remainingItems.length > 0) {
-
-              return remainingItems[
-                  remainingItems.length - 1
-              ];
-
-          }
-
-          return this.goal;
-
-      },
       nearGoal(r, c) {
 
           return (
@@ -805,40 +1068,35 @@ export default {
           ) <= 1;
 
       },
-      blocksCriticalPath(r, c) {
+      // ■まだ取っていないカギの上・となりには敵が入れない（カギの前で待ちぶせさせない）
+      nearRemainingKey(r, c) {
 
-          const target =
-              this.getProtectedTarget();
-
-          const before =
-
-              Math.abs(
-                  this.player.r - target.r
-              ) +
-
-              Math.abs(
-                  this.player.c - target.c
-              );
-
-          const after =
-
-              Math.abs(
-                  r - target.r
-              ) +
-
-              Math.abs(
-                  c - target.c
-              );
-
-          return after < before;
+          return this.items.some(item =>
+              !item.get &&
+              Math.abs(r - item.r) + Math.abs(c - item.c) <= 1
+          );
 
       },
     },
 
     computed: {
+        areaInfo() {
+            return CAVE_AREAS[this.area] || null;
+        },
+
         keyCount() {
-            return this.globalKeyCount;
-            // ■鍵:return this.items.filter(item => item.get).length;
+            return this.caveKeys[this.area] || 0;
+        },
+
+        legendItems() {
+            if (!this.areaInfo) return [];
+            return [
+                { icon: "🔑", label: `カギ（${this.areaInfo.name}）` },
+                { icon: "🎃", label: "てき" },
+                { icon: (this.stageData[this.stage] || this.stageData.cave).gateIcon, label: "ワープ" },
+                { icon: "🔒", label: "ゴール（カギを取ると🎁）" },
+                { icon: "🏛️", label: "出口" }
+            ];
         }
     },
 
@@ -848,6 +1106,101 @@ export default {
 <style scoped>
 canvas{
     touch-action:none;
+}
+.legend{
+    margin-top:8px;padding:8px 10px;
+    list-style:none;
+    background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);border-radius:10px;
+    font-size:14px;font-weight:bold;line-height:1.2;
+}
+.legend li{display:flex;align-items:center;gap:8px;padding:3px 0}
+.legend-icon{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:1.9em;height:1.9em;font-size:14px;flex:none;
+}
+.legend-bottom{display:none}
+@media (max-width: 767px){
+    .legend-side{display:none}
+    .legend-bottom{
+        display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;
+        margin:10px 12px;color:#fff;font-size:13px;
+    }
+}
+.key-pop{
+    position:fixed;z-index:20;pointer-events:none;
+    width:1em;height:1em;
+    transform:translate(-50%,-50%);
+}
+.key-pop-icon,.key-pop-ring,.key-pop-text{position:absolute;left:50%;top:50%}
+.key-pop-icon{
+    line-height:1;
+    filter:drop-shadow(0 0 6px #ffd84d);
+    animation:key-pop-rise .9s ease-out forwards;
+}
+.key-pop-ring{
+    width:1.2em;height:1.2em;margin:-.6em 0 0 -.6em;
+    border:3px solid #ffd84d;border-radius:50%;
+    box-shadow:0 0 12px #ffd84d;
+    animation:key-pop-ring .6s ease-out forwards;
+}
+.key-pop-text{
+    font-size:.6em;font-weight:900;color:#ffe066;white-space:nowrap;
+    text-shadow:0 0 4px #000,0 0 8px #000;
+    animation:key-pop-text .9s ease-out forwards;
+}
+@keyframes key-pop-rise{
+    0%{transform:translate(-50%,-50%) scale(.6)}
+    25%{transform:translate(-50%,-60%) scale(1.5) rotate(-15deg)}
+    100%{transform:translate(-50%,-190%) scale(1) rotate(10deg);opacity:0}
+}
+@keyframes key-pop-ring{
+    0%{transform:scale(.3);opacity:1}
+    100%{transform:scale(2.4);opacity:0}
+}
+@keyframes key-pop-text{
+    0%{transform:translate(20%,-50%);opacity:0}
+    20%{opacity:1}
+    100%{transform:translate(20%,-260%);opacity:0}
+}
+.key-pop-ring.hit-ring{border-color:#ff4d4d;box-shadow:0 0 14px #ff4d4d}
+.hit-flash{
+    position:fixed;inset:0;z-index:15;pointer-events:none;
+    background:radial-gradient(circle,rgba(255,40,40,.15) 30%,rgba(255,0,0,.55) 100%);
+    animation:hit-flash .45s ease-out forwards;
+}
+@keyframes hit-flash{
+    from{opacity:1}
+    to{opacity:0}
+}
+.hit-shake{animation:hit-shake .35s ease-in-out}
+@keyframes hit-shake{
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-8px)}
+    40%{transform:translateX(7px)}
+    60%{transform:translateX(-5px)}
+    80%{transform:translateX(3px)}
+}
+.key-pop-text.lose-text{color:#ff5a5a}
+.key-count-num{display:inline-block}
+.key-count-num.bump.lose{animation-name:key-count-lose}
+@keyframes key-count-lose{
+    0%{transform:scale(1)}
+    40%{transform:scale(1.7);color:#ff5a5a}
+    100%{transform:scale(1)}
+}
+.key-count-num.bump{animation:key-count-bump .45s ease-out}
+@keyframes key-count-bump{
+    0%{transform:scale(1)}
+    40%{transform:scale(1.7);color:#ffe066}
+    100%{transform:scale(1)}
+}
+@media (prefers-reduced-motion: reduce){
+    .key-pop-icon,.key-pop-ring,.key-pop-text,.key-count-num.bump,.hit-flash,.hit-shake{animation-duration:.01s}
+}
+.key-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:1.6em;height:1.6em;border-radius:50%;
+    border:2px solid #fff;font-size:.8em;vertical-align:middle;
 }
 *{box-sizing:border-box; }
 body{

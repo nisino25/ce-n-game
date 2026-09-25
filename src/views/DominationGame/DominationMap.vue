@@ -38,14 +38,76 @@
             <div class="map-vignette"></div>
         </div>
 
+        <!-- ■地域チュートリアル（初回のみ）：YouTube視聴 → ABゲーム（提案B） -->
+        <div
+            v-if="tutorial"
+            class="fixed inset-0 z-[3000] flex items-center justify-center bg-black/75 p-4"
+        >
+            <div
+                v-show="tutorial.phase === 'video'"
+                class="w-full max-w-3xl rounded-2xl bg-white p-4 shadow-xl"
+            >
+                <p class="mb-3 text-center text-lg font-bold">
+                    {{ tutorial.cityName }}のチュートリアル動画を見よう！
+                </p>
+                <div class="relative w-full overflow-hidden rounded-xl bg-black" style="padding-top: 56.25%;">
+                    <div ref="tutorialPlayer" class="absolute inset-0 h-full w-full"></div>
+                </div>
+                <p class="mt-3 text-center text-sm text-gray-500">
+                    動画が終わるとゲームがはじまるよ
+                </p>
+            </div>
+
+            <!-- TODO: ここでのABゲームは仮置き。後で除去する（docs/TODO.md参照） -->
+            <div
+                v-if="tutorial.phase === 'game'"
+                class="max-h-full w-full max-w-3xl overflow-y-auto rounded-2xl"
+            >
+                <ABGameProposalB
+                    embedded
+                    @finish="finishTutorial"
+                />
+            </div>
+        </div>
+
     </div>
 </template>
 
 <script>
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import db from "@/firebase.js";
+import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
+
+// ■地域ごとのチュートリアル動画（YouTubeの動画ID）
+// TODO: 仮でイントロ（IntroView）と同じ動画を使用中。地域ごとの動画に差し替える（docs/TODO.md参照）
+const TUTORIAL_VIDEOS = {
+    hiratsuka: "xpT411XKhUg",
+    kushiro: "xpT411XKhUg"
+};
+
+let youtubeApiPromise = null;
+
+const loadYouTubeApi = () => {
+    if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+    if (youtubeApiPromise) return youtubeApiPromise;
+
+    youtubeApiPromise = new Promise(resolve => {
+        const prev = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = () => {
+            if (prev) prev();
+            resolve(window.YT);
+        };
+        const script = document.createElement("script");
+        script.src = "https://www.youtube.com/iframe_api";
+        document.head.appendChild(script);
+    });
+    return youtubeApiPromise;
+};
 
 export default {
+
+    components: { ABGameProposalB },
 
     data() {
         return {
@@ -62,7 +124,13 @@ export default {
 
             kushiroMarker: null,
             // ■追加：エリア表示
-            honeycombLayers: []
+            honeycombLayers: [],
+
+            // ■地域チュートリアル
+            uid: null,
+            tutorialCleared: {},
+            userLoading: null,
+            tutorial: null // { location, cityName, phase: "video" | "game", onDone }
 
         };
     },
@@ -156,15 +224,33 @@ export default {
 //         attribution: "© Stadia Maps © OpenMapTiles © OpenStreetMap"
 //     }
 // ).addTo(this.map);
+// Stadia Maps・CARTOはlocalhost以外ではAPIキーが必要でNetlify上では表示されないため
+// キー不要の国土地理院 淡色地図を使用
 L.tileLayer(
-    "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png",
+    "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png",
     {
-        maxZoom: 20,
-        attribution: "© Stadia Maps © OpenMapTiles © OpenStreetMap"
+        maxZoom: 18,
+        // 元のStadia(alidade_smooth)に近いシンプルな見た目にするため、CSSで彩度を落とす
+        className: "simple-tiles",
+        attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>国土地理院</a>"
     }
 ).addTo(this.map);
         this.createStartMarkers();
 
+        this.userLoading = this.loadUser();
+
+        // マウント直後はコンテナの高さが0のことがあり、地図が上端にしか描画されないため
+        // サイズが変わったら再計算する
+        this.resizeObserver = new ResizeObserver(() => {
+            if (this.map) this.map.invalidateSize();
+        });
+        this.resizeObserver.observe(this.$refs.map);
+
+    },
+
+    beforeUnmount() {
+        this.destroyTutorialPlayer();
+        if (this.resizeObserver) this.resizeObserver.disconnect();
     },
 
     methods: {
@@ -246,9 +332,96 @@ L.tileLayer(
         },
 
 
+        // ■ログイン中ユーザーのチュートリアル完了フラグを取得
+        async loadUser() {
+            const cenId = localStorage.getItem("loginCenId");
+            if (!cenId) return;
+
+            try {
+                const snapshot = await db.collection("users")
+                    .where("cenId", "==", cenId)
+                    .get();
+                if (snapshot.empty) return;
+
+                const userDoc = snapshot.docs[0];
+                this.uid = userDoc.id;
+                this.tutorialCleared = userDoc.data().tutorialCleared || {};
+            } catch (error) {
+                console.error("ユーザー情報の取得に失敗しました:", error);
+            }
+        },
+
+        // ■未完了の地域なら、チュートリアル（動画→ABゲーム）を挟んでから進む
+        async withTutorial(location, cityName, onDone) {
+            if (this.tutorial) return;
+
+            await this.userLoading;
+
+            if (this.tutorialCleared[location]) {
+                onDone();
+                return;
+            }
+
+            this.tutorial = { location, cityName, phase: "video", onDone };
+
+            const YT = await loadYouTubeApi();
+            await this.$nextTick();
+
+            const goToGame = () => {
+                this.destroyTutorialPlayer();
+                if (this.tutorial) this.tutorial.phase = "game";
+            };
+
+            // ■YT.PlayerはVueのリアクティブにすると動作が壊れるため、dataに入れず保持する
+            try {
+                this.tutorialPlayer = new YT.Player(this.$refs.tutorialPlayer, {
+                    videoId: TUTORIAL_VIDEOS[location],
+                    width: "100%",
+                    height: "100%",
+                    playerVars: { rel: 0, playsinline: 1 },
+                    events: {
+                        onStateChange: (event) => {
+                            if (event.data === YT.PlayerState.ENDED) goToGame();
+                        },
+                        // 動画が再生できない場合に進めなくならないよう、ゲームへ進める
+                        onError: goToGame
+                    }
+                });
+            } catch (error) {
+                console.error("チュートリアル動画の読み込みに失敗しました:", error);
+                goToGame();
+            }
+        },
+
+        async finishTutorial() {
+            const { location, onDone } = this.tutorial;
+
+            this.tutorialCleared = { ...this.tutorialCleared, [location]: true };
+
+            if (this.uid) {
+                try {
+                    await db.collection("users").doc(this.uid).update({
+                        [`tutorialCleared.${location}`]: true
+                    });
+                } catch (error) {
+                    console.error("チュートリアル完了フラグの保存に失敗しました:", error);
+                }
+            }
+
+            this.tutorial = null;
+            onDone();
+        },
+
+        destroyTutorialPlayer() {
+            if (this.tutorialPlayer) {
+                this.tutorialPlayer.destroy();
+                this.tutorialPlayer = null;
+            }
+        },
+
         startHiratsuka() {
 
-            this.startZoom(
+            this.withTutorial("hiratsuka", "平塚市", () => this.startZoom(
                 "神奈川県",
                 [35.4478, 139.6425],
                 9,
@@ -258,14 +431,14 @@ L.tileLayer(
                 13,
 
             //     "フィールド"
-            );
+            ));
 
         },
 
 
         startKushiro() {
 
-            this.startZoom(
+            this.withTutorial("kushiro", "釧路市", () => this.startZoom(
                 "北海道",
                 [43.2203, 142.8635],
                 7,
@@ -275,7 +448,7 @@ L.tileLayer(
                 13,
 
                 "釧路フィールド"
-            );
+            ));
 
         },
 
@@ -454,6 +627,10 @@ L.tileLayer(
 
 <style scoped>
 
+
+:deep(.simple-tiles) {
+    filter: saturate(0.25) contrast(0.85) brightness(1.08);
+}
 
 #returnGate {
     position: fixed;
