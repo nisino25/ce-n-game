@@ -33,11 +33,13 @@
                 <img src="/images/ABGames/seibi_top.jpg" class="w-full max-w-sm mx-auto rounded-2xl mb-5">
                 <p class="text-emerald-900 font-bold text-lg mb-1">ひらつかの2つのかんきょう問題</p>
                 <p class="text-gray-600 text-sm mb-6">出てくる取り組みが、どっちの問題を解決するかを選んでいこう！</p>
+                <p v-if="loadError" class="text-red-600 text-sm mb-4">{{ loadError }}</p>
                 <button
-                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg px-10 py-3 rounded-2xl shadow-md transition-colors"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg px-10 py-3 rounded-2xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="loading || !questions.length"
                     @click="start"
                 >
-                    はじめる
+                    {{ loading ? "よみこみ中…" : "はじめる" }}
                 </button>
             </div>
 
@@ -80,7 +82,7 @@
                             <span class="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">正解！</span>
                         </div>
                         <div class="flex gap-4 items-start mb-4">
-                            <img :src="`/images/ABGames/${qaImages[qIndex]}`" class="w-28 h-28 object-cover rounded-xl flex-none">
+                            <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-28 h-28 object-cover rounded-xl flex-none">
                             <p class="text-gray-700 text-sm leading-relaxed" v-html="currentQuestion.comment"></p>
                         </div>
                         <div class="flex flex-wrap gap-2 justify-center mb-4">
@@ -130,45 +132,31 @@
 </template>
 
 <script>
+import db from "@/firebase.js";
+
+const QUESTION_LOCATION = "hiratsuka";
+
 export default {
     name: "ABGameProposalB",
+
+    props: {
+        // ■地図画面のモーダル内で遊ぶ場合はtrue。終了時に遷移せずfinishイベントを出す
+        embedded: {
+            type: Boolean,
+            default: false
+        }
+    },
+
+    emits: ["finish"],
 
     data() {
         return {
             // ■元ロジック（ABGame.vue / index10.html）の内容をベースに、
             // 操作感とレイアウトだけを見直した別案。既存のABGame.vueは変更していない
-            questions: [
-                {
-                    bComment: "木を植えて、元気な山によみがえらせるよ！",
-                    imgB: "B1.jpg",
-                    correct: "C",
-                    showIcons: [11, 13, 15, 17],
-                    comment: "かつて平塚には天然記念物のオオムラサキが産卵するエノキの木があったよ。<br><br>オオムサキが戻ってくるように植林しているよ！"
-                },
-                {
-                    bComment: "砂浜にまじっているすいがらや細かいプラスチックをひろうのはたいへんだけど、海の中に流される前に集めるよ！",
-                    imgB: "B2.jpg",
-                    correct: "A",
-                    showIcons: [6, 11, 12, 13, 14, 17],
-                    comment: "海に流れたらほとんど回収できなくなっちゃう。手でひとつひとつとるのは大変だから、プラごみ収集メカを開発しているよ！砂浜で引っ張ってたくさん集めるものだよ！<br><br>画像：ヤマハ発動機株式会社 ウェブサイトより"
-                },
-                {
-                    bComment: "決められた場所にたばこの吸い殻を捨ててもらうようにくふうするよ",
-                    imgB: "B3.jpg",
-                    correct: "A",
-                    showIcons: [6, 9, 11, 12, 14, 17],
-                    comment: "ところが、せっかくすいがら捨てを設置してもめんどうでポイ捨てしてしま人が多い。<br><br>そこで、こんな工夫が！<br>これは「投票できるたばこのすいがら捨て」だよ。好きな方に吸い殻を入れるよ。みんな楽しく捨てにくるから、半分近くたばこのポイ捨てが減った地域もあるよ。"
-                },
-                {
-                    bComment: "里山のふもとに住む農家さんがつくったお米や野菜を買って、たくさん食べるよ！",
-                    imgB: "B4.jpg",
-                    correct: "C",
-                    showIcons: [8, 9, 11, 13, 15, 17],
-                    comment: "里山の自然のめぐみが、農家さんを通してわたしたちの食卓にあがっているんだね。<br><br>畑や水田は、バランスの良い里山の自然環境に欠かせないんだ。"
-                }
-            ],
-
-            qaImages: ["QA1.jpg", "QA2.jpg", "QA3.png", "QA4.jpg"],
+            // 問題はFirestoreの abGameQuestions コレクションから取得する（order順）
+            questions: [],
+            loading: true,
+            loadError: "",
 
             qIndex: -1,
             phase: "intro", // intro | question | correct | finished
@@ -180,6 +168,26 @@ export default {
             correctCountA: 0,
             correctCountC: 0
         };
+    },
+
+    async mounted() {
+        try {
+            const snapshot = await db.collection("abGameQuestions")
+                .where("location", "==", QUESTION_LOCATION)
+                .get();
+            this.questions = snapshot.docs
+                .map(doc => doc.data())
+                .sort((a, b) => a.order - b.order);
+
+            if (!this.questions.length) {
+                this.loadError = "問題が見つかりませんでした。";
+            }
+        } catch (error) {
+            console.error("ABゲームの問題の取得に失敗しました:", error);
+            this.loadError = "問題の読み込みに失敗しました。通信状況を確認してください。";
+        } finally {
+            this.loading = false;
+        }
     },
 
     computed: {
@@ -256,6 +264,11 @@ export default {
         },
 
         goNextStage() {
+            if (this.embedded) {
+                this.$emit("finish");
+                return;
+            }
+
             // ■地図（陣取りゲーム）側への統合は別対応予定。現時点ではモニタールームに戻すだけの仮動作
             this.$router.push({ name: "Home" });
         }

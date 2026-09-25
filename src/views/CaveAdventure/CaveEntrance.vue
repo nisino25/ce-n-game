@@ -16,7 +16,7 @@
         <button
             id="startButton"
             class="absolute inset-0"
-            @click="startGame"
+            @click="showAreaSelect = true"
         ></button>
 
         <img
@@ -24,25 +24,49 @@
             id="entrance"
             class="w-[90vw] rounded-xl"
         >
+
+        <!-- ■どのダンジョンに入るかを選ぶ（入口の画像をクリックすると表示） -->
+        <div v-if="showAreaSelect" id="areaSelectBackdrop" @click.self="showAreaSelect = false">
+        <div id="areaSelect">
+            <p class="area-select-title">どのダンジョンに入る？</p>
+            <div class="area-select-buttons">
+                <button
+                    v-for="(info, id) in areas"
+                    :key="id"
+                    class="area-select-button"
+                    :style="{ '--area-color': info.keyColor }"
+                    @click="startGame(id)"
+                >
+                    <img :src="info.emblem" :alt="info.name" class="area-select-emblem">
+                    <span>{{ info.name }}ダンジョン</span>
+                </button>
+            </div>
+        </div>
+        </div>
     </div>
 
     <!-- ■追加：ダンジョン転送中表示 -->
     <div v-if="showLoading" id="loadingScreen">
         <div id="loadingText">
-            ダンジョン転送中・・・
+            {{ selectedAreaName }}ダンジョン転送中・・・
         </div>
     </div>
 
 </template>
 
 <script>
+import { CAVE_AREAS, saveNextCaveArea } from "./caveAreas.js";
+
 export default {
 
     data() {
         return {
             showStart: true,
             // ■追加：
-            showLoading: false
+            showLoading: false,
+            areas: CAVE_AREAS,
+            showAreaSelect: false,
+            selectedAreaName: ""
         };
     },
 
@@ -62,7 +86,10 @@ export default {
         },
         // ---------
 
-        startGame() {
+        // ■選んだエリアのダンジョンへ（洞窟画面でそのエリアから始める）
+        startGame(areaId) {
+            saveNextCaveArea(areaId);
+            this.selectedAreaName = CAVE_AREAS[areaId].name;
         // 開始ボタン後の演出
             this.showStart = false;
             this.showLoading = true;
@@ -95,6 +122,69 @@ export default {
     cursor: pointer;
     background: transparent;
     border: none;
+}
+
+#areaSelectBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+#areaSelect {
+    width: min(92vw, 720px);
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 200, 80, 0.5);
+    box-shadow: 0 0 24px rgba(255, 200, 80, 0.3);
+    text-align: center;
+}
+
+.area-select-title {
+    margin: 0 0 10px;
+    color: #ffe29a;
+    font-size: 20px;
+    font-weight: 900;
+    text-shadow: 0 0 8px rgba(255, 200, 80, 0.7);
+}
+
+.area-select-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.area-select-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1 1 180px;
+    padding: 8px 10px;
+    border: 2px solid var(--area-color);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+}
+
+.area-select-button:hover {
+    background: rgba(255, 255, 255, 0.18);
+    transform: translateY(-2px);
+}
+
+.area-select-emblem {
+    width: 150px;
+    height: 44px;
+    object-fit: contain;
 }
 
 #entrance {

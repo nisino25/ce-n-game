@@ -18,7 +18,10 @@ import ErrorView from "@/views/ErrorView/ErrorView.vue";
 import ProfileEditor from "@/views/Settings/ProfileEditor.vue";
 
 import ABGame from "@/views/ABGame/ABGame.vue";
+import CardLibrary from "@/views/CardLibrary/CardLibrary.vue";
 import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
+
+import CreatureScan from "@/views/CreatureScan/CreatureScan.vue";
 
 
 const routes = [
@@ -97,11 +100,24 @@ const routes = [
         component: ABGame
     },
 
+    // ■カードライブラリ：登録されている全カードと自分の所持枚数（仮：モニタールームの仮リンクから）
+    {
+        path: "/card-library",
+        name: "CardLibrary",
+        component: CardLibrary
+    },
+
     // ■操作感・レイアウトを見直した別案（既存のABGameはそのまま残し、比較用に並行して置いている）
     {
         path: "/ab-game-b",
         name: "ABGameB",
         component: ABGameProposalB
+    },
+
+    {
+        path: "/creature-scan",
+        name: "CreatureScan",
+        component: CreatureScan
     }
 ];
 
@@ -133,6 +149,12 @@ const router = createRouter({
 
 router.beforeEach((to) => {
     const loginCenId = localStorage.getItem("loginCenId");
+
+    // ■Errorページは未ログイン状態（例：ce-n.orgに存在しないIDでのログイン試行）でも
+    // 表示できる必要があるため、ログイン判定より先に常に許可する
+    if (to.name === "Error") {
+        return true;
+    }
 
     // how do i use these globally
 

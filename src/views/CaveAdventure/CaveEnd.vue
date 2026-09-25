@@ -17,12 +17,48 @@
 
     <div ref="warp" class="warpEffect" id="warpEffect"></div>
 
-    <div id="result">のこりのカギ：{{ remainKeys }}本</div>
+    <div id="result">{{ selectedAreaInfo.name }}のカギ：{{ remainKeys }}本</div>
 
-    <div class="chest" :class="{ open: chestOpen }" @click="openChest">
-        <div class="lid"></div>
-        <div class="base"></div>
+    <!-- ■どのエリアのカギで宝箱を開けるか（初期値は最後に遊んだ洞窟のエリア） -->
+    <div class="area-tabs">
+        <button
+            v-for="(info, id) in areas"
+            :key="id"
+            class="area-tab"
+            :class="{ active: id === selectedArea }"
+            :style="{ '--area-color': info.keyColor }"
+            :disabled="chestPhase !== 'idle'"
+            @click="selectedArea = id"
+        >
+            <span class="area-key">🔑</span>
+            {{ info.name }} {{ caveKeys[id] }}本
+        </button>
+    </div>
+
+    <!-- ■宝箱：カギを差す → 回す → 錠前が外れる → フタが開いて光があふれる → カード登場 -->
+    <div class="chest" :class="'phase-' + chestPhase" @click="openChest">
+        <div class="light-rays"></div>
+        <div class="chest-glow"></div>
+        <div class="base">
+            <div class="inside"></div>
+        </div>
+        <div class="lid">
+            <div class="lid-face lid-front"></div>
+            <div class="lid-face lid-back"></div>
+        </div>
         <div class="lock"></div>
+        <svg class="key" viewBox="0 0 24 64" aria-hidden="true">
+            <circle cx="12" cy="10" r="7.5" fill="none" stroke="#ffd84d" stroke-width="4"/>
+            <rect x="10" y="17" width="4" height="42" rx="1" fill="#ffd84d"/>
+            <rect x="14" y="45" width="7" height="4" fill="#ffd84d"/>
+            <rect x="14" y="53" width="5" height="4" fill="#ffd84d"/>
+        </svg>
+        <span
+            v-for="n in 14"
+            :key="n"
+            class="sparkle"
+            :style="sparkleStyle(n)"
+        ></span>
     </div>
 
     <div class="flex gap-2 mt-4">
@@ -60,7 +96,8 @@
 
             <!-- ■生きもの画像 -->
             <div class="card-image">
-                <img :src="currentCard.icon" :alt="currentCard.name">
+                <img v-if="currentCard.icon" :src="currentCard.icon" :alt="currentCard.name">
+                <div v-else class="no-image">🐾<span>画像じゅんび中</span></div>
             </div>
 
             <!-- ■生きものの名前 -->
@@ -79,9 +116,10 @@
         <div class="bookPanel">
             <h2>獲得カード一覧</h2>
             <div id="collectionGrid">
-                <div v-if="collection.length === 0">まだカードを獲得していません。</div>
+                <div v-if="collectionLoading">よみこみ中…</div>
+                <div v-else-if="collection.length === 0">まだカードを獲得していません。</div>
                 <!-- ■ミニカード表示 -->
-                    <div v-for="(card, index) in collection" :key="index" class="smallCard" :style="{ backgroundImage: `url('/images/card/cardBack.png')` }">
+                    <div v-for="card in collection" :key="card.instanceId" class="smallCard" :style="{ backgroundImage: `url('/images/card/cardBack.png')` }">
                         <!-- 生態系レベル -->
                         <div class="small-eco">
                             <img v-if="card.group === '土'" src="/images/card/チームカラー（土・ブラウン）.png" class="small-team-bg" alt="土">
@@ -104,7 +142,8 @@
                         </div>
                         <!-- 生きもの画像 -->
                         <div class="small-image">
-                            <img :src="card.icon" :alt="card.name">
+                            <img v-if="card.icon" :src="card.icon" :alt="card.name">
+                            <div v-else class="no-image small">🐾</div>
                         </div>
                         <!-- 名前 -->
                         <div class="small-name">{{ card.name }}</div>
@@ -121,15 +160,33 @@
 </template>
 
 <script>
+import {
+    CAVE_AREAS,
+    CAVE_AREA_IDS,
+    loadCaveKeys,
+    saveCaveKeys,
+    loadLastCaveArea
+} from "./caveAreas.js";
+import db from "@/firebase.js";
+import {
+    getCurrentUser,
+    fetchCardLibrary,
+    fetchMyCardInstances,
+    drawCard,
+    addCardInstance,
+    toDisplayCard
+} from "@/utils/cards.js";
+
 export default {
     data() {
         return {         
-          cards:[
-            {id:"l100001",name:"ウサギ",icon:"/images/card/ikimono/usagi.png",owner:"reo",level:"/images/card/生態系レベル１.png",rare:"Ａ",area1:"hokkaido",area2:"/images/card/すみかアイコン（森）.png",group:"土",card:"silver"},
-            {id:"l200001",name:"アカウミガメ",icon:"/images/card/ikimono/akaumigame.png",owner:"reo",level:"/images/card/生態系レベル２.png",rare:"Ｄ",area1:"kanagawa",area2:"/images/card/すみかアイコン（海）.png",group:"土",card:"silver"}
-          ],
-          remainKeys: 0,
-          chestOpen: false,
+          // ■カードはFirestoreのカードライブラリ（cards）から出し、所持カード（cardInstances）として保存する
+          library: [],
+          user: null,
+          areas: CAVE_AREAS,
+          caveKeys: loadCaveKeys(),
+          selectedArea: CAVE_AREA_IDS[0],
+          chestPhase: "idle", // idle | unlocking | opening | open
           showOverlay: false,
           showBook: false,
           currentCard: {
@@ -144,52 +201,126 @@ export default {
               card: ""
           },
           collection: [],
+          collectionLoading: false,
         };
     },
 
+    computed: {
+        selectedAreaInfo() {
+            return CAVE_AREAS[this.selectedArea];
+        },
+
+        remainKeys() {
+            return this.caveKeys[this.selectedArea] || 0;
+        }
+    },
+
     mounted() {
-        const savedKeys = localStorage.getItem("remainKeys");
-        this.remainKeys = savedKeys !== null ? Number(savedKeys) : 0;
-        this.collection = JSON.parse(localStorage.getItem("collection") ||"[]");
+        // 最後に遊んだ洞窟のエリア → 無ければカギを持っているエリア → 無ければ先頭のエリア
+        this.selectedArea =
+            loadLastCaveArea() ||
+            CAVE_AREA_IDS.find(id => this.caveKeys[id] > 0) ||
+            CAVE_AREA_IDS[0];
+
+        this.loadCardData();
     },
 
     methods: {
-        openChest() {
-            if(this.chestOpen) return;
-            if (this.remainKeys <= 0) {
-                alert("カギがありません");
-                return;
+        async loadCardData() {
+            try {
+                [this.library, this.user] = await Promise.all([
+                    fetchCardLibrary(),
+                    getCurrentUser()
+                ]);
+            } catch (error) {
+                console.error("カード情報の読み込みに失敗しました:", error);
             }
-            this.remainKeys--;
-            localStorage.setItem("remainKeys", this.remainKeys);
-
-            const card = this.cards[Math.floor(Math.random() * this.cards.length)];
-            this.saveCard(card);
-            this.currentCard = card;
-            this.chestOpen = true;
-            setTimeout(() => {
-                this.showOverlay = true;
-            }, 800);
         },
 
-        saveCard(card) {
-            const collection = JSON.parse(localStorage.getItem("collection") || "[]");
-            collection.push({
-                ...card,
-                time: new Date().toISOString()
+        async openChest() {
+            if(this.chestPhase !== "idle") return;
+            if (this.remainKeys <= 0) {
+                alert(`${this.selectedAreaInfo.name}のカギがありません`);
+                return;
+            }
+            if (!this.library.length || !this.user) {
+                alert("カード情報を読み込み中です。少し待ってからもう一度開けてください。");
+                return;
+            }
+
+            const areaId = this.selectedArea;
+            const card = drawCard(this.library, areaId);
+
+            this.caveKeys[areaId]--;
+            saveCaveKeys(this.caveKeys);
+
+            // カギを差して回す(〜1.1秒) → 錠前が外れてフタが開く(〜1.9秒) → カード登場
+            // 演出の間に、引いたカードを所持カードとしてDBに保存する
+            this.chestPhase = "unlocking";
+            const saving = addCardInstance({
+                card,
+                user: this.user,
+                obtainedFrom: `cave:${areaId}`
             });
-            localStorage.setItem("collection", JSON.stringify(collection));
-            this.collection = collection;
+            const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+            await wait(1100);
+            this.chestPhase = "opening";
+            await wait(900);
+
+            try {
+                const instance = await saving;
+                this.currentCard = toDisplayCard(card, instance);
+                this.chestPhase = "open";
+                this.showOverlay = true;
+            } catch (error) {
+                console.error("カードの保存に失敗しました:", error);
+                // 保存できなかったらカギを返す
+                this.caveKeys[areaId]++;
+                saveCaveKeys(this.caveKeys);
+                this.chestPhase = "idle";
+                alert("カードを保存できませんでした。通信状況を確認して、もう一度開けてください。");
+            }
+        },
+
+        // 宝箱から飛び出すキラキラの向き・距離・タイミング（上方向に扇状に散らす）
+        sparkleStyle(n) {
+            const angle = (-160 + (140 / 13) * (n - 1)) * Math.PI / 180;
+            const distance = 130 + (n * 37) % 90;
+            return {
+                "--dx": `${Math.cos(angle) * distance}px`,
+                "--dy": `${Math.sin(angle) * distance}px`,
+                "--delay": `${(n * 53) % 250}ms`,
+                "--size": `${6 + (n * 7) % 7}px`
+            };
         },
 
         closeCard() {
             this.showOverlay = false;
-            this.chestOpen = false;
+            this.chestPhase = "idle";
         },
 
-        showCollection() {
-            this.collection = JSON.parse(localStorage.getItem("collection") || "[]");
+        // ■獲得カード一覧：自分の所持カード（cardInstances）をカードライブラリの情報と合わせて表示
+        async showCollection() {
             this.showBook = true;
+            this.collectionLoading = true;
+            try {
+                const user = this.user || await getCurrentUser();
+                const instances = user ? await fetchMyCardInstances(user.uid) : [];
+                const libraryById = Object.fromEntries(this.library.map(card => [card.cardId, card]));
+                this.collection = instances
+                    .filter(instance => libraryById[instance.cardId])
+                    .sort((a, b) => (b.obtainedAt?.seconds || 0) - (a.obtainedAt?.seconds || 0))
+                    .map(instance => ({
+                        instanceId: instance.instanceId,
+                        ...toDisplayCard(libraryById[instance.cardId], instance)
+                    }));
+            } catch (error) {
+                console.error("獲得カードの読み込みに失敗しました:", error);
+                this.collection = [];
+            } finally {
+                this.collectionLoading = false;
+            }
         },
 
         closeCollection() {
@@ -202,9 +333,20 @@ export default {
                 return;
             }
             if (confirm("獲得したカードをすべて消去してもよろしいですか？")) {
-                localStorage.removeItem("collection");
-                this.collection = [];
-                alert("図鑑をリセットしました");
+                // ■テスト用：自分の所持カードをDBから削除する
+                const batch = db.batch();
+                this.collection.forEach(card => {
+                    batch.delete(db.collection("cardInstances").doc(card.instanceId));
+                });
+                batch.commit()
+                    .then(() => {
+                        this.collection = [];
+                        alert("図鑑をリセットしました");
+                    })
+                    .catch(error => {
+                        console.error("カードの削除に失敗しました:", error);
+                        alert("カードを削除できませんでした。");
+                    });
             }
         },
 
@@ -250,23 +392,56 @@ export default {
 
     .chest{
         position:relative;width:340px;height:240px;cursor:pointer;
+        margin-top:70px; /* 開いたフタが上の「のこりのカギ」表示に重ならないように */
+        /* 少し上から見下ろす視点にして、フタが奥に倒れる様子を見せる */
+        perspective:700px;
+        perspective-origin:50% -200px;
     }
-    .lid{
-        position:absolute;top:0;width:100%;height:110px;
-        border:6px solid #d4af37;border-radius:170px 170px 0 0;
-        background:repeating-linear-gradient(90deg,#5a341c 0,#734624 20px,#5a341c 40px);
-        transform-origin:bottom;transition:1s;
-    }
+    .chest.phase-idle:hover{animation:chest-bob 1.2s ease-in-out infinite}
+    .chest.phase-unlocking{animation:chest-shake .35s ease-in-out .75s}
+
     .base{
-        position:absolute;bottom:0;width:100%;height:140px;
+        position:absolute;bottom:0;width:100%;height:140px;z-index:2;
         border:6px solid #d4af37;
         background:repeating-linear-gradient(90deg,#5a341c 0,#734624 20px,#5a341c 40px);
     }
+    /* フタが開いたときに見える箱の中 */
+    .inside{
+        position:absolute;top:0;left:0;right:0;height:34px;
+        background:linear-gradient(#1a0e06,#3a2415);
+        box-shadow:inset 0 -10px 30px rgba(255,210,80,.9);
+        opacity:0;transition:opacity .3s;
+    }
+    .phase-opening .inside,.phase-open .inside{opacity:1}
+
+    .lid{
+        position:absolute;top:0;width:100%;height:110px;z-index:3;
+        transform-origin:50% 100%;
+        transform-style:preserve-3d;
+        transition:transform .45s ease-in;
+    }
+    .lid-face{
+        position:absolute;inset:0;
+        border:6px solid #d4af37;border-radius:170px 170px 0 0;
+        backface-visibility:hidden;
+    }
+    .lid-front{
+        background:repeating-linear-gradient(90deg,#5a341c 0,#734624 20px,#5a341c 40px);
+    }
+    /* フタの裏側（開いたときに見える面） */
+    .lid-back{
+        transform:rotateX(180deg);
+        background:linear-gradient(#2b180c,#4a2c16);
+    }
+    /* フタ：一度ガタッと浮いてから、奥へ倒れながらはね上がる */
+    .phase-opening .lid{animation:lid-open .8s cubic-bezier(.3,1.3,.5,1) forwards}
+    .phase-open .lid{transform:translate(-25px,-80px) rotate(-12deg) rotateX(35deg)}
 
     .lock{
         position:absolute;left:50%;top:118px;transform:translateX(-50%);
-        width:55px;height:70px;border-radius:10px;
+        width:55px;height:70px;border-radius:10px;z-index:4;
         background:gold;
+        transition:transform .5s ease-in,opacity .5s ease-in;
     }
     .lock:before{
         content:"";position:absolute;left:50%;top:16px;transform:translateX(-50%);
@@ -276,9 +451,137 @@ export default {
         content:"";position:absolute;left:50%;top:30px;transform:translateX(-50%);
         width:8px;height:22px;background:#3a2415;border-radius:0 0 4px 4px;
     }
+    .phase-opening .lock,.phase-open .lock{
+        transform:translateX(-50%) translateY(90px) rotate(28deg);
+        opacity:0;
+    }
 
-    .open .lid{transform:rotateX(-125deg)}
+    /* カギ：上から差し込んで回す */
+    .key{
+        position:absolute;left:50%;top:92px;width:24px;height:64px;z-index:5;
+        margin-left:-12px;
+        opacity:0;pointer-events:none;
+        filter:drop-shadow(0 0 6px rgba(255,216,77,.8));
+    }
+    .phase-unlocking .key{animation:key-insert 1.1s ease-out forwards}
+    .phase-opening .key,.phase-open .key{
+        opacity:0;transform:translateY(90px) rotateY(90deg);
+        transition:transform .5s ease-in,opacity .5s ease-in;
+    }
+
+    /* 箱の中からあふれる光 */
+    .chest-glow{
+        position:absolute;left:50%;top:100px;width:420px;height:420px;z-index:1;
+        transform:translate(-50%,-50%) scale(0);
+        border-radius:50%;
+        background:radial-gradient(circle,rgba(255,236,150,.95) 0%,rgba(255,200,60,.55) 30%,transparent 65%);
+        pointer-events:none;
+        transition:transform .6s ease-out;
+    }
+    .phase-opening .chest-glow,.phase-open .chest-glow{transform:translate(-50%,-50%) scale(1)}
+
+    .light-rays{
+        position:absolute;left:50%;top:100px;width:620px;height:620px;z-index:0;
+        margin:-310px 0 0 -310px;
+        border-radius:50%;
+        background:repeating-conic-gradient(rgba(255,225,120,.45) 0 8deg,transparent 8deg 22deg);
+        -webkit-mask-image:radial-gradient(circle,#000 20%,transparent 68%);
+        mask-image:radial-gradient(circle,#000 20%,transparent 68%);
+        opacity:0;transform:scale(.3);
+        pointer-events:none;
+        transition:opacity .5s ease-out,transform .7s ease-out;
+    }
+    .phase-opening .light-rays,.phase-open .light-rays{
+        opacity:1;transform:scale(1);
+        animation:rays-spin 12s linear infinite;
+    }
+
+    .sparkle{
+        position:absolute;left:50%;top:100px;z-index:6;
+        width:var(--size);height:var(--size);
+        margin:calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
+        border-radius:50%;
+        background:#fff6c4;
+        box-shadow:0 0 8px 2px #ffd84d;
+        opacity:0;pointer-events:none;
+    }
+    .phase-opening .sparkle{animation:sparkle-burst .9s ease-out var(--delay) forwards}
+
+    @keyframes chest-bob{
+        0%,100%{transform:translateY(0)}
+        50%{transform:translateY(-4px)}
+    }
+    @keyframes chest-shake{
+        0%,100%{transform:rotate(0)}
+        25%{transform:rotate(-2.5deg)}
+        50%{transform:rotate(2.5deg)}
+        75%{transform:rotate(-1.5deg)}
+    }
+    @keyframes key-insert{
+        0%{opacity:0;transform:translateY(-120px)}
+        40%{opacity:1;transform:translateY(-8px)}
+        50%{opacity:1;transform:translateY(0)}
+        85%,100%{opacity:1;transform:translateY(0) rotateY(90deg)}
+    }
+    @keyframes lid-open{
+        0%{transform:none}
+        20%{transform:translateY(-14px)}
+        30%{transform:translateY(-6px)}
+        100%{transform:translate(-25px,-80px) rotate(-12deg) rotateX(35deg)}
+    }
+    @keyframes rays-spin{
+        from{transform:scale(1) rotate(0)}
+        to{transform:scale(1) rotate(360deg)}
+    }
+    @keyframes sparkle-burst{
+        0%{opacity:0;transform:translate(0,0) scale(.4)}
+        15%{opacity:1}
+        100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1)}
+    }
+
+    /* カード登場：箱の方向から回転しながら飛び出す */
+    .overlay{animation:overlay-in .3s ease-out;perspective:1200px}
+
+    /* 画像がまだ無いカード */
+    .no-image{
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        width:100%;height:100%;min-height:120px;
+        font-size:48px;color:#8a7a5c;background:#f3eee2;border-radius:8px;
+    }
+    .no-image span{font-size:12px;font-weight:bold;margin-top:4px}
+    .no-image.small{min-height:60px;font-size:28px}
+    .overlay .card{animation:card-reveal .85s cubic-bezier(.2,1.25,.4,1)}
+    @keyframes overlay-in{
+        from{background:rgba(0,0,0,0)}
+        to{background:rgba(0,0,0,.75)}
+    }
+    @keyframes card-reveal{
+        0%{opacity:0;transform:translateY(180px) scale(.2) rotateY(540deg)}
+        50%{opacity:1}
+        100%{opacity:1;transform:translateY(0) scale(1) rotateY(0)}
+    }
+
+    @media (prefers-reduced-motion: reduce){
+        .chest,.lid,.key,.sparkle,.light-rays,.overlay,.overlay .card{animation:none !important}
+    }
     button{margin:8px;padding:10px 16px}
+
+    .area-tabs{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+    .area-tab{
+        margin:0;padding:6px 14px;border-radius:999px;
+        display:inline-flex;align-items:center;gap:6px;
+        background:rgba(0,0,0,.35);color:#fff;font-weight:bold;font-size:14px;
+        border:2px solid var(--area-color);
+        opacity:.65;transition:opacity .2s,background .2s;
+    }
+    .area-tab.active{background:var(--area-color);opacity:1}
+    .area-tab.active .area-key{background:rgba(0,0,0,.3)}
+    .area-tab:disabled{cursor:default}
+    .area-key{
+        display:inline-flex;align-items:center;justify-content:center;
+        width:22px;height:22px;border-radius:50%;
+        background:var(--area-color);border:2px solid #fff;font-size:11px;
+    }
 
     /* 全画面オーバーレイ */
     .overlay,.book{

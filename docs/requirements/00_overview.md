@@ -82,19 +82,13 @@ flowchart TD
 
 ## 5. ログイン・セッションの仕様
 
-- 認証方式: パスワードやOAuthは無く、**入力された `cenId` をFirestore `users` コレクションに問い合わせるだけ**の簡易チェックイン方式。
-  - 一致あり → 既存プレイヤーとしてログイン、`Home` へ。
-  - 一致なし → 新規プレイヤー登録フローとして `Intro` へ（`cenId` をクエリで引き継ぐ）。
-- セッション状態は `localStorage` の4キーのみで管理（専用ストアなし）:
+**2026-09-24に仕様変更。詳細は [01_login.md](01_login.md) を参照。**
 
-| キー | セット箇所 | 参照箇所 | 用途 |
-|---|---|---|---|
-| `loginCenId` | LoginPage / IntroView | ルーターガード, ProfileEditor | ログイン判定フラグ |
-| `playerData` | LoginPage / IntroView / ProfileEditor | MonitorRoom, CaveGame | プレイヤー情報のJSONキャッシュ |
-| `myTeam` | LoginPage / IntroView / TeamIntro | MonitorRoom, TeamIntro | 所属チーム（water/earth/air） |
-| `playerUid` | IntroView（新規登録時のみ） | （現状未参照） | FirestoreドキュメントID |
-
-- ルーターガード（`src/router/index.js`）: `loginCenId` が無ければ保護ルートから `LoginPage` へリダイレクト。逆に `loginCenId` がある状態で `LoginPage`/`Intro` に来ると `Error` へリダイレクトする。
+- 会員の実体は外部サイト `ce-n.org`（子ども環境ネットワーク）側にあり、このアプリは`ce-n.org`からの`?cenId=`付きリンクで入ってくる前提に変更。手入力フォームは廃止し、ログイン画面はローディング表示のみ
+- ログイン判定は2段階：①`ce-n.org`の`findMe` APIで会員として実在するか　②Firestore `users`コレクションでこのゲームに登録済みか
+- セッションは`localStorage`の5キーで管理（`loginCenId`/`playerData`/`myTeam`/`playerUid`/`loginDate`）。`loginDate`はMonitorRoom訪問ごとに更新され、7日以上更新が無いと自動ログアウトする
+- MonitorRoomの「ゲームを終了する」（旧ログアウト）は、ログアウト後に`ce-n.org`の会員プロフィールページへリダイレクトする
+- ルーターガード（`src/router/index.js`）: `loginCenId` が無ければ保護ルートから `LoginPage` へリダイレクト。逆に `loginCenId` がある状態で `LoginPage`/`Intro` に来ると `Error` へリダイレクトする（この部分は変更なし）
 
 ## 6. データモデル概要（Firestore）
 
@@ -130,7 +124,8 @@ flowchart TD
 | 項目 | 内容 |
 |---|---|
 | `Recruitment` 画面 | ファイルが空。ルート未登録。未実装のプレースホルダー |
-| モニタールームの「生きもの修復」「生き物スキャン」 | ボタンは表示されるが無効化・コメントアウトされており未実装 |
+| モニタールームの「生きもの修復」 | ボタンは表示されるが無効化・コメントアウトされており未実装 |
+| モニタールームの「生き物スキャン」 | 画面・外部API連携は実装済みだが、2026-09-24時点でボタンをコメントアウトして非表示（公開判断待ち）。詳細は [03_creature_scan.md](03_creature_scan.md) 参照 |
 | ~~陣取りゲームの永続化~~ | **2026-09-19に対応済み。** `dominationGames/{ルームコード}` にFirestore保存され、離脱・再訪しても再開できる。AI操作(2チーム)追加、UI刷新も実施。詳細は [02_domination_game.md](02_domination_game.md) 参照 |
 | チーム別専用ルーム（`goTeamRoom`） | スタブ止まりで未実装 |
 | `collection`（洞窟探検で集めたカード）の永続化 | **現状は `localStorage` のみで管理されており、Firestoreに保存されていない。** ブラウザ/端末を変えると消える。安藤氏より「ちゃんとFirestoreに保存する必要がある」との課題認識あり。対応方針は別途検討・実装予定 |
@@ -145,8 +140,9 @@ flowchart TD
 以下は画面・モード別の詳細要件定義書の候補。どれを作るか・優先順位は別途相談して決定する。
 
 - モニタールーム（ハブ画面）要件定義書
-- ログイン／新規登録（LoginPage・IntroView・TeamIntro）要件定義書
+- ~~ログイン／新規登録（LoginPage・IntroView・TeamIntro）要件定義書~~ → [01_login.md](01_login.md) 作成済み（LoginPage部分のみ。IntroView/TeamIntroの詳細は未着手）
 - プロフィール編集（ProfileEditor）要件定義書
 - 洞窟探検ゲーム（CaveEntrance / CaveGame / CaveEnd）要件定義書
 - ~~陣取りゲーム（DominationMap / DominationGame）要件定義書~~ → [02_domination_game.md](02_domination_game.md) 作成済み
-- カード収集・所持データ（`collection`）のFirestore移行 要件定義書
+- ~~生き物スキャン（CreatureScan）要件定義書~~ → [03_creature_scan.md](03_creature_scan.md) 作成済み
+- ~~カード収集・所持データ（`collection`）のFirestore移行 要件定義書~~ → [04_cards.md](04_cards.md) 作成中（たたき台）

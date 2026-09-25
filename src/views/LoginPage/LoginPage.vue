@@ -1,25 +1,20 @@
 <template>
-    <div class="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow p-8 w-full max-w-md">
-            <h1 class="text-2xl font-bold mb-6">ログイン</h1>
-            <label class="block mb-2 font-semibold">User ID</label>
-            <input
-                v-model="inputCenId"
-                type="text"
-                placeholder="User IDを入力してください"
-                class="w-full border border-gray-300 rounded-lg px-4 py-3 mb-4"
-                @keyup.enter="checkUser"
-            >
-            <button
-                class="w-full p-3 bg-sky-600 hover:bg-sky-700 text-white rounded-lg"
-                @click="checkUser"
-                :disabled="checking"
-            >
-                {{ checking ? "確認中..." : "ログイン" }}
-            </button>
-            <p v-if="errorMessage" class="text-red-500 mt-4">
-                {{ errorMessage }}
-            </p>
+    <div class="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+        <div class="text-center">
+            <template v-if="!errorMessage">
+                <div class="loader mx-auto mb-6"></div>
+                <p class="text-gray-500">よみこみ中...</p>
+            </template>
+
+            <template v-else>
+                <p class="text-red-500 mb-6">{{ errorMessage }}</p>
+                <button
+                    class="px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-lg"
+                    @click="backToCeN"
+                >
+                    ce-n.orgにもどる
+                </button>
+            </template>
         </div>
     </div>
 </template>
@@ -27,35 +22,45 @@
 <script>
 import db from "@/firebase.js";
 
+// ■このアプリは基本的にce-n.org側の会員ページから ?cenId=... 付きのリンクで
+// アクセスされる前提のため、手入力フォームは廃止し、確認中はローディング表示のみにする。
+// cenIdが無い状態でこの画面に来た場合は、正しい入口であるce-n.orgへ案内する
 export default {
     data() {
         return {
-            inputCenId: "",
-            checking: false,
             errorMessage: ""
         };
     },
     mounted() {
         const cenId = new URLSearchParams(window.location.search).get("cenId");
 
-        if (cenId) {
-            this.inputCenId = cenId;
-            this.checkUser();
+        if (!cenId) {
+            this.backToCeN();
+            return;
         }
+
+        this.checkUser(cenId);
     },
     methods: {
-        async checkUser() {
+        backToCeN() {
+            window.location.href = "https://www.ce-n.org/";
+        },
+
+        async checkUser(cenId) {
             this.errorMessage = "";
-            const cenId = this.inputCenId.trim();
-
-            if (!cenId) {
-                this.errorMessage = "User IDを入力してください。";
-                return;
-            }
-
-            this.checking = true;
 
             try {
+                // ■ce-n.org側の会員IDとして有効かをまず確認する。
+                // 存在しなければこのアプリには入れず、ce-n.orgへ案内する
+                const findMeUrl = `https://www.ce-n.org/_functions/findMe?id=${encodeURIComponent(cenId)}`;
+                const findMeResponse = await fetch(findMeUrl);
+                const findMeResult = await findMeResponse.json();
+
+                if (findMeResult.message) {
+                    this.$router.push({ name: "Error" });
+                    return;
+                }
+
                 const snapshot = await db
                     .collection("users")
                     .where("cenId", "==", cenId)
@@ -75,11 +80,24 @@ export default {
                 });
             } catch (error) {
                 console.error("Failed to check user:", error);
-                this.errorMessage = "ユーザーの確認に失敗しました。";
-            } finally {
-                this.checking = false;
+                this.errorMessage = "確認に失敗しました。通信状況を確認してください。";
             }
         }
     }
 };
 </script>
+
+<style scoped>
+.loader {
+    width: 48px;
+    height: 48px;
+    border: 5px solid #e5e7eb;
+    border-top-color: #0284c7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
