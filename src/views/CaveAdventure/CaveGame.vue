@@ -49,6 +49,7 @@ export default {
 
             COLS: 15,
             ROWS: 25,
+            globalKeyCount: 0,  // ■鍵保有対応
 
             home: {
                 r: 1,
@@ -113,6 +114,11 @@ export default {
 
         this.canvas = this.$refs.canvas;
         this.ctx = this.canvas.getContext("2d");
+        // ■全洞窟共通のカギ数を読み込む
+        const savedKeys = localStorage.getItem("remainKeys");
+        this.globalKeyCount = savedKeys !== null
+        ? Number(savedKeys)  : 0;
+
 
         this.resize();
 
@@ -532,6 +538,13 @@ export default {
 
                   item.get = true;
 
+                  // ■洞窟共通のカギ確保
+                  this.globalKeyCount++;
+                  localStorage.setItem(
+                    "remainKeys",
+                    this.globalKeyCount
+                );
+
                   if (
                       this.items.filter(i => i.get).length === 2 &&
                       !this.enemyAppeared
@@ -824,7 +837,8 @@ export default {
 
     computed: {
         keyCount() {
-            return this.items.filter(item => item.get).length;
+            return this.globalKeyCount;
+            // ■鍵:return this.items.filter(item => item.get).length;
         }
     },
 
