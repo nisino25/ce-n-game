@@ -20,7 +20,7 @@
         <img
             :src="areaInfo.emblem"
             :alt="areaInfo.name"
-            class="w-[180px] h-[80px] object-contain mt-2"
+            class="w-[110px] h-[48px] sm:w-[180px] sm:h-[80px] object-contain mt-2"
         />
 
         <!-- ■この洞窟のアイコンの見方（エリアごとに変わる）。スマホ幅では迷路の下に表示 -->
@@ -778,8 +778,8 @@ export default {
 
           setTimeout(() => {
 
-              // ■別エリアの洞窟へ（洞窟の色もそのエリアのものに切り替わる）
-              this.selectArea(this.area);
+              // ■同じエリアのまま、迷路だけ新しく作り直す（エリアが変わるとカギの進捗が混乱するため）
+              this.selectArea(null, this.area);
 
               this.createMaze();
               this.createForestGate();
@@ -1332,6 +1332,27 @@ width:95%;height:80%;background:white;border-radius:16px;padding:16px;
     inset 0 0 20px #ff00ff;
   animation: pulse 2s infinite;
   z-index: 1000;
+}
+
+/* ■スマホ幅：ゲートボタンとカギ表示が迷路の邪魔にならないよう、アイコンだけの小さい表示にする */
+@media (max-width: 767px){
+    .top-info{ top:6px !important; left:6px !important; }
+
+    #returnGate,
+    #forestWarpGate{
+        width:44px !important;
+        height:44px !important;
+        border-width:2px !important;
+        margin-bottom:8px !important;
+    }
+    /* 文字ラベルは非表示にして◉アイコンだけ残す */
+    #returnGate > div,
+    #forestWarpGate > div{
+        display:none;
+    }
+
+    .keyCount{ top:6px !important; right:6px !important; font-size:12px !important; }
+    .keyCount img{ display:none; }
 }
 
 @keyframes pulse {

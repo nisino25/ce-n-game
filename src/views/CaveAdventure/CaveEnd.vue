@@ -35,6 +35,11 @@
         </button>
     </div>
 
+    <!-- ■宝箱：タップで開くことが伝わりにくかったので、開く前だけヒントを出す -->
+    <div v-if="chestPhase === 'idle'" class="tap-hint">
+        👆 タップしてあけよう！
+    </div>
+
     <!-- ■宝箱：カギを差す → 回す → 錠前が外れる → フタが開いて光があふれる → カード登場 -->
     <div class="chest" :class="'phase-' + chestPhase" @click="openChest">
         <div class="light-rays"></div>
@@ -397,7 +402,18 @@ export default {
         perspective:700px;
         perspective-origin:50% -200px;
     }
-    .chest.phase-idle:hover{animation:chest-bob 1.2s ease-in-out infinite}
+    /* ■常にうっすら揺れて「押せる」ことが伝わるようにする（タッチ端末はhoverが効かないため） */
+    .chest.phase-idle{animation:chest-bob 1.6s ease-in-out infinite}
+
+    .tap-hint{
+        color:#fff;font-weight:900;font-size:18px;margin-top:16px;
+        text-shadow:2px 2px 0 #000,0 0 10px #000;
+        animation:tap-hint-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes tap-hint-pulse{
+        0%,100%{opacity:.65;transform:scale(1)}
+        50%{opacity:1;transform:scale(1.06)}
+    }
     .chest.phase-unlocking{animation:chest-shake .35s ease-in-out .75s}
 
     .base{
@@ -562,7 +578,7 @@ export default {
     }
 
     @media (prefers-reduced-motion: reduce){
-        .chest,.lid,.key,.sparkle,.light-rays,.overlay,.overlay .card{animation:none !important}
+        .chest,.lid,.key,.sparkle,.light-rays,.overlay,.overlay .card,.tap-hint{animation:none !important}
     }
     button{margin:8px;padding:10px 16px}
 
@@ -986,6 +1002,29 @@ export default {
         50%  { transform: scale(1.1); }
         100% { transform: scale(1); }
     }
+
+    /* ■スマホ幅：ゲートボタン・見出し・エリアタブが邪魔にならないよう小さくする */
+    @media (max-width: 767px){
+        .top-info{ top:6px !important; left:6px !important; }
+
+        #returnGate,
+        #forestWarpGate{
+            width:44px !important;
+            height:44px !important;
+            border-width:2px !important;
+            margin-bottom:8px !important;
+        }
+        #returnGate > div,
+        #forestWarpGate > div{
+            display:none;
+        }
+
+        #result{ font-size:18px !important; letter-spacing:1px; margin-bottom:8px; }
+
+        .area-tab{ padding:4px 10px; font-size:12px; }
+        .area-key{ width:18px; height:18px; font-size:9px; }
+    }
+
     #warpEffect {
         position: fixed; left: 50%; top: 50%; width: 0; height: 0;
         border-radius: 50%; background: black;

@@ -1,5 +1,4 @@
 <template>
-    <!-- <button class="m-2 px-3 py-1 bg-blue-500 text-white rounded-md text-sm" @click="changeMode()">Change Mode</button> -->
     <template v-if="dominationMode == 'standard'">
         <div class="domination-app min-h-screen bg-slate-100">
 
@@ -308,12 +307,9 @@
         </div>
     </template>
     <template v-else>
-        <div class="map-control-mode p-6">
-            <h2 class="text-2xl font-bold mb-4">Map Control Mode</h2>
-            <img v-if="mapStep == 0" src="https://cdn.qleanmarket.amanaimages.com/uploads/items/049/874/36/preview/FYI04987436.jpg" @click="mapStep++">
-            <img v-if="mapStep == 1" src="https://img.jtrip.co.jp/uploads/210720185839_hokkaido.jpg" @click="mapStep++">
-            <img v-if="mapStep == 2" src="https://www.kushiro.pref.hokkaido.lg.jp/fs/2/5/9/8/5/5/3/_/map350_kushiro.gif" @click="changeMode()">
-            <!-- Add your Map Control Mode specific UI here -->
+        <!-- ■データ読み込み中（tiles/handsの準備ができるまで）のプレースホルダー -->
+        <div class="flex items-center justify-center h-screen text-white text-lg font-bold">
+            よみこみ中...
         </div>
     </template>
 </template>
@@ -426,9 +422,8 @@ export default {
         // プレイヤーごとの手札
         hands: {},
 
-        // dominationMode: 'standard',
-        dominationMode: 'mapControl',
-        mapStep: 0,
+        // ■tiles/handsの準備が整うまでの読み込み中プレースホルダー表示に使う。mounted()で'standard'に切り替わる
+        dominationMode: 'loading',
 
         selectedCard: null,
         modalCard: null,
@@ -1198,15 +1193,6 @@ export default {
                         })
                     )
                 }));
-        },
-
-        changeMode() {
-            if(this.dominationMode === 'standard') {
-                this.dominationMode = 'mapControl';
-                this.mapStep = 0;
-            } else {
-                this.dominationMode = 'standard';
-            }
         },
 
         // ------------------------
