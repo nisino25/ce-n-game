@@ -21,6 +21,7 @@
 
 <script>
 import db from "@/firebase.js";
+import { setSession } from "@/utils/session.js";
 
 // ■このアプリは基本的にce-n.org側の会員ページから ?cenId=... 付きのリンクで
 // アクセスされる前提のため、手入力フォームは廃止し、確認中はローディング表示のみにする。
@@ -67,9 +68,9 @@ export default {
                     .get();
 
                 if (!snapshot.empty) {
-                    localStorage.setItem("loginCenId", cenId);
-                    localStorage.setItem("playerData", JSON.stringify(snapshot.docs[0].data()));
-                    localStorage.setItem("myTeam", snapshot.docs[0].data().team);
+                    setSession("loginCenId", cenId);
+                    setSession("playerData", JSON.stringify(snapshot.docs[0].data()));
+                    setSession("myTeam", snapshot.docs[0].data().team);
                     this.$router.push({ name: "Home" });
                     return;
                 }

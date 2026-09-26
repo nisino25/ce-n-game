@@ -60,6 +60,7 @@
     // import db from './../../firebase.js';
     // import { arrayUnion } from "firebase/firestore";
     import db, { firebase } from './../../firebase.js';
+    import { setSession } from '@/utils/session.js';
 
     export default {
         name: "IntroView",
@@ -208,7 +209,7 @@
                     this.result = teamNames[this.potentialTeam];
 
                     setTimeout(() => {
-                        localStorage.setItem("myTeam", this.potentialTeam);
+                        setSession("myTeam", this.potentialTeam);
                         this.$router.push(`/teamIntro?team=${this.potentialTeam}`);
                     }, 2500);
                 }, 3000);
@@ -240,10 +241,10 @@
                         members: firebase.firestore.FieldValue.arrayUnion(uid)
                     });
 
-                localStorage.setItem("playerUid", uid);
-                localStorage.setItem("playerData", JSON.stringify(  userData));
-                localStorage.setItem("myTeam", this.potentialTeam);
-                localStorage.setItem("loginCenId", this.cenId);
+                setSession("playerUid", uid);
+                setSession("playerData", JSON.stringify(userData));
+                setSession("myTeam", this.potentialTeam);
+                setSession("loginCenId", this.cenId);
 
                 console.log("Account created:", uid);
 

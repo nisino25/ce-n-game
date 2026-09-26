@@ -29,14 +29,16 @@
 </template>
 
 <script>
+    import { removeSession } from "@/utils/session.js";
+
     export default {
         mounted() {
             // mounted時にログアウト（セッションをクリアしておく）
-            localStorage.removeItem("playerUid");
-            localStorage.removeItem("playerData");
-            localStorage.removeItem("myTeam");
-            localStorage.removeItem("loginCenId");
-            localStorage.removeItem("loginDate");
+            removeSession("playerUid");
+            removeSession("playerData");
+            removeSession("myTeam");
+            removeSession("loginCenId");
+            removeSession("loginDate");
         },
         methods: {
             backToCeN() {

@@ -78,6 +78,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import db from "@/firebase.js";
 import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
+import { getSession } from "@/utils/session.js";
 
 // ■地域ごとのチュートリアル動画（YouTubeの動画ID）
 // TODO: 仮でイントロ（IntroView）と同じ動画を使用中。地域ごとの動画に差し替える（docs/TODO.md参照）
@@ -334,7 +335,7 @@ L.tileLayer(
 
         // ■ログイン中ユーザーのチュートリアル完了フラグを取得
         async loadUser() {
-            const cenId = localStorage.getItem("loginCenId");
+            const cenId = getSession("loginCenId");
             if (!cenId) return;
 
             try {

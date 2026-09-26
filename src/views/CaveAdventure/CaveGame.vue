@@ -74,6 +74,7 @@ import {
     saveLastCaveArea,
     takeNextCaveArea
 } from "./caveAreas.js";
+import { getSession } from "@/utils/session.js";
 
 // ■敵の動き
 const ENEMY_DIRS = [[0, 1], [1, 0], [0, -1], [-1, 0]];
@@ -1044,7 +1045,7 @@ export default {
 
       },
       loadAvatar() {
-          const currentPlayerData = JSON.parse(localStorage.getItem("playerData"));
+          const currentPlayerData = JSON.parse(getSession("playerData"));
           const avatarSvg = this.$buildAvatar(currentPlayerData?.avatar);
           const highResSvg = avatarSvg.replace(
               "<svg",

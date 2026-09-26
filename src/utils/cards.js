@@ -3,6 +3,7 @@
 // - cards/{cardId}              … カードライブラリ（生きものの種類ごとの情報。名前・画像・レベルなどはここにだけある）
 // - cardInstances/{instanceId}  … プレイヤーが持っている1枚ごとのカード（cardId でカードライブラリを参照する）
 import db, { firebase } from "@/firebase.js";
+import { getSession } from "@/utils/session.js";
 
 // ■野生にもどそう！（陣取りゲーム）を遊ぶのに必要な手元のカード枚数
 export const MIN_CARDS_FOR_DOMINATION = 10;
@@ -37,7 +38,7 @@ let currentUserPromise = null;
 export function getCurrentUser() {
     if (!currentUserPromise) {
         currentUserPromise = (async () => {
-            const cenId = localStorage.getItem("loginCenId");
+            const cenId = getSession("loginCenId");
             if (!cenId) return null;
 
             const snapshot = await db.collection("users")

@@ -41,12 +41,14 @@
 </template>
 
 <script>
+import { getSession, setSession } from "@/utils/session.js";
+
 export default {
     name: "TeamIntro",
 
     computed: {
         team() {
-            return this.$route.params.team || this.$route.query.team || localStorage.getItem("myTeam") || "water";
+            return this.$route.params.team || this.$route.query.team || getSession("myTeam") || "water";
         },
 
         teamConfig() {
@@ -110,7 +112,7 @@ export default {
 
     methods: {
         setAvatar() {
-            localStorage.setItem("myTeam", this.team);
+            setSession("myTeam", this.team);
             this.$router.push({
 							name: "ProfileEditor"
 					});
