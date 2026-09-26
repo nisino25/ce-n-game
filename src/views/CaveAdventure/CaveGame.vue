@@ -778,8 +778,8 @@ export default {
 
           setTimeout(() => {
 
-              // ■別エリアの洞窟へ（洞窟の色もそのエリアのものに切り替わる）
-              this.selectArea(this.area);
+              // ■同じエリアのまま、迷路だけ新しく作り直す（エリアが変わるとカギの進捗が混乱するため）
+              this.selectArea(null, this.area);
 
               this.createMaze();
               this.createForestGate();
