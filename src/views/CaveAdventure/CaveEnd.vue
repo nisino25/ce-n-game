@@ -986,6 +986,29 @@ export default {
         50%  { transform: scale(1.1); }
         100% { transform: scale(1); }
     }
+
+    /* ■スマホ幅：ゲートボタン・見出し・エリアタブが邪魔にならないよう小さくする */
+    @media (max-width: 767px){
+        .top-info{ top:6px !important; left:6px !important; }
+
+        #returnGate,
+        #forestWarpGate{
+            width:44px !important;
+            height:44px !important;
+            border-width:2px !important;
+            margin-bottom:8px !important;
+        }
+        #returnGate > div,
+        #forestWarpGate > div{
+            display:none;
+        }
+
+        #result{ font-size:18px !important; letter-spacing:1px; margin-bottom:8px; }
+
+        .area-tab{ padding:4px 10px; font-size:12px; }
+        .area-key{ width:18px; height:18px; font-size:9px; }
+    }
+
     #warpEffect {
         position: fixed; left: 50%; top: 50%; width: 0; height: 0;
         border-radius: 50%; background: black;

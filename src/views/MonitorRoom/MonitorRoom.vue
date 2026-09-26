@@ -17,7 +17,7 @@
         ></div> -->
 
         <!-- Top Monitors -->
-        <div class="flex justify-evenly items-center">
+        <div class="top-monitors-row flex justify-evenly items-center flex-wrap gap-2">
             <!-- Planet -->
             <div class="monitor">
                 <div class="flex flex-col items-center">
@@ -100,9 +100,10 @@
 
         </div>
 
-        <!-- ■仮リンク集約：本来はそれぞれの本来の画面（地図側など）に組み込む予定の暫定導線をまとめておく場所 -->
-        <div class="fixed bottom-4 right-4 z-[450] bg-black/40 border border-dashed border-yellow-400/60 rounded-lg p-2 flex flex-col gap-1.5 backdrop-blur-sm">
-            <div class="text-yellow-300 text-[10px] font-bold tracking-wider px-1">🚧 仮リンク</div>
+        <!-- ■仮リンク集約：本来はそれぞれの本来の画面（地図側など）に組み込む予定の暫定導線をまとめておく場所
+             ■スマホ幅で画面を覆ってしまわないよう、<details>で普段は折りたたんでおく -->
+        <details class="fixed bottom-4 right-4 z-[450] bg-black/40 border border-dashed border-yellow-400/60 rounded-lg p-2 flex flex-col gap-1.5 backdrop-blur-sm max-w-[85vw]">
+            <summary class="text-yellow-300 text-[10px] font-bold tracking-wider px-1 cursor-pointer select-none">🚧 仮リンク</summary>
             <button
                 class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
                 @click="$router.push({ name: 'DominationGame' })"
@@ -133,7 +134,7 @@
             >
                 カードライブラリ（仮）
             </button>
-        </div>
+        </details>
 
         <!-- ■野生にもどそう！はカードが足りないと遊べない -->
         <div
@@ -824,5 +825,17 @@ export default {
   @keyframes flicker {
       0%,100% { opacity: 1; }
       50% { opacity: .4; }
+  }
+
+  /* ■スマホ幅：上部モニター群が横に収まりきらず見切れていたので2列に折り返す */
+  @media (max-width: 640px){
+      .top-monitors-row{
+          gap:8px 6px;
+      }
+      .monitor{
+          width:calc(50% - 6px);
+          min-width:0;
+          font-size:clamp(11px,3.2vw,16px);
+      }
   }
 </style>
