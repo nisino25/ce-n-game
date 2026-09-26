@@ -38,6 +38,7 @@
 
 <script>
 import db from './../../firebase.js';
+import { getSession, setSession } from '@/utils/session.js';
 export default {
 
     data(){
@@ -71,7 +72,7 @@ export default {
 
     mounted(){
         console.clear()
-        this.loginCenId = localStorage.getItem("loginCenId");
+        this.loginCenId = getSession("loginCenId");
         this.initialCheck()
         // this.randomAll();
     },
@@ -112,7 +113,7 @@ export default {
                 ...this.currentUser
             });
 
-            localStorage.setItem("playerData", JSON.stringify(this.currentUser));
+            setSession("playerData", JSON.stringify(this.currentUser));
 
             // go to home
             this.$router.push({ name: "Home" });

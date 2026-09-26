@@ -317,6 +317,7 @@
 <script>
 import db from '../../firebase.js';
 import CreatureCard from './CreatureCard.vue';
+import { getSession } from '@/utils/session.js';
 import {
     fetchCardLibrary,
     fetchTeamCollectionInstances,
@@ -362,7 +363,7 @@ export default {
       const cols = 30
       const rows = 15
 
-      const humanPlayerId = TEAM_ID_BY_NAME[localStorage.getItem('myTeam')] || 1
+      const humanPlayerId = TEAM_ID_BY_NAME[getSession('myTeam')] || 1
 
       const roomCode = localStorage.getItem(ROOM_CODE_STORAGE_KEY) || generateRoomCode()
       localStorage.setItem(ROOM_CODE_STORAGE_KEY, roomCode)

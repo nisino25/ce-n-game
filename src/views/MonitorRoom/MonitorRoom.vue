@@ -263,13 +263,14 @@ import {
     getCurrentUser,
     countCollectionCards
 } from "@/utils/cards.js";
+import { getSession, setSession, removeSession } from "@/utils/session.js";
 
 export default {
     name: "MonitorRoom",
-		
+
     data() {
-			const myTeam = localStorage.getItem("myTeam");
-			const currentPlayerData = JSON.parse(localStorage.getItem("playerData"));
+			const myTeam = getSession("myTeam");
+			const currentPlayerData = JSON.parse(getSession("playerData"));
 			const currentPlayerName = currentPlayerData?.name;
 			const avatarSvg = this.$buildAvatar(currentPlayerData?.avatar);
 		
@@ -608,36 +609,36 @@ export default {
 				// 期限内であれば、今回のアクセスとして日時を更新して続行する
 				checkSessionExpired() {
 					const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-					const storedLoginDate = localStorage.getItem("loginDate");
+					const storedLoginDate = getSession("loginDate");
 
 					if (storedLoginDate && Date.now() - Number(storedLoginDate) > SEVEN_DAYS_MS) {
 						this.logout();
 						return true;
 					}
 
-					localStorage.setItem("loginDate", String(Date.now()));
+					setSession("loginDate", String(Date.now()));
 					return false;
 				},
 
 				logout() {
-					localStorage.removeItem("playerUid");
-					localStorage.removeItem("playerData");
-					localStorage.removeItem("myTeam");
-					localStorage.removeItem("loginCenId");
-					localStorage.removeItem("loginDate");
+					removeSession("playerUid");
+					removeSession("playerData");
+					removeSession("myTeam");
+					removeSession("loginCenId");
+					removeSession("loginDate");
 					this.$router.push({ name: "LoginPage" });
 				},
 
 				// ■プロフィールメニューの「ゲームを終了する」。ログアウトした上で、
 				// ce-n.org側の会員プロフィールページへ送る
 				endGame() {
-					const cenId = this.currentPlayerData?.cenId || localStorage.getItem("loginCenId");
+					const cenId = this.currentPlayerData?.cenId || getSession("loginCenId");
 
-					localStorage.removeItem("playerUid");
-					localStorage.removeItem("playerData");
-					localStorage.removeItem("myTeam");
-					localStorage.removeItem("loginCenId");
-					localStorage.removeItem("loginDate");
+					removeSession("playerUid");
+					removeSession("playerData");
+					removeSession("myTeam");
+					removeSession("loginCenId");
+					removeSession("loginDate");
 
 					if (cenId) {
 						window.location.href = `https://www.ce-n.org/hui-yuan-purohuiru/${cenId}`;

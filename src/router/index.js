@@ -23,6 +23,8 @@ import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
 
 import CreatureScan from "@/views/CreatureScan/CreatureScan.vue";
 
+import { getSession } from "@/utils/session.js";
+
 
 const routes = [
     {
@@ -148,7 +150,7 @@ const router = createRouter({
 // });
 
 router.beforeEach((to) => {
-    const loginCenId = localStorage.getItem("loginCenId");
+    const loginCenId = getSession("loginCenId");
 
     // ■Errorページは未ログイン状態（例：ce-n.orgに存在しないIDでのログイン試行）でも
     // 表示できる必要があるため、ログイン判定より先に常に許可する
