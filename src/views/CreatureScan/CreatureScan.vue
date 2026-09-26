@@ -75,6 +75,7 @@
 
             <!-- 生き物が写っていない / 特定できない -->
             <div v-else-if="phase === 'no_creature' || phase === 'uncertain'" class="bg-white rounded-2xl shadow-sm p-8 text-center">
+                <img v-if="previewUrl" :src="previewUrl" class="w-full max-h-56 object-contain rounded-xl mb-4">
                 <div class="text-5xl mb-4">🤔</div>
                 <p class="text-emerald-800 font-bold mb-1">
                     {{ phase === 'no_creature' ? '生き物が写っていないみたい' : '生き物はいそうだけど、特定できなかったよ' }}
@@ -90,6 +91,7 @@
 
             <!-- エラー -->
             <div v-else-if="phase === 'error'" class="bg-white rounded-2xl shadow-sm p-8 text-center">
+                <img v-if="previewUrl" :src="previewUrl" class="w-full max-h-56 object-contain rounded-xl mb-4">
                 <div class="text-5xl mb-4">⚠️</div>
                 <p class="text-rose-700 font-bold mb-1">はんていできませんでした</p>
                 <p class="text-slate-500 text-sm mb-5">{{ errorMessage }}</p>
@@ -103,6 +105,10 @@
 
             <!-- 結果 -->
             <div v-else-if="phase === 'identified'" class="flex flex-col gap-4">
+                <div v-if="previewUrl" class="bg-white rounded-2xl shadow-sm p-3">
+                    <img :src="previewUrl" class="w-full max-h-64 object-contain rounded-xl">
+                </div>
+
                 <div
                     v-for="candidate in candidates"
                     :key="candidate.rank"

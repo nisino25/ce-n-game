@@ -3,21 +3,20 @@ module.exports = defineConfig({
   transpileDependencies: true,
 
   pwa: {
-    // ■洞窟ゲーム専用のPWAとしてホーム画面に追加できるようにする
-    // （アプリ全体は1つのSPAなので中身は同じバンドルだが、アイコン・名前・起動直後の画面を
-    //   洞窟ゲームに固定することで、ユーザー体験としては洞窟ゲーム専用アプリに見せる）
-    name: '洞窟たんけん隊',
+    // ■ホーム画面に追加できるPWAとしての設定
+    // （起動先はモニタールーム＝アプリのホーム。/loginPageにすると未ログイン時に
+    //   ce-n.orgへ即リダイレクトされる問題は解消できないため、Homeのままにしている）
+    name: 'ちきゅうたんけん隊',
     themeColor: '#0b1220',
     msTileColor: '#0b1220',
     appleMobileWebAppCapable: 'yes',
     appleMobileWebAppStatusBarStyle: 'black-translucent',
 
     manifestOptions: {
-      short_name: '洞窟たんけん',
+      short_name: 'ちきゅうたんけん',
       background_color: '#0b1220',
       display: 'standalone',
-      // ■ホーム画面から起動すると、モニタールームではなく洞窟探検の入り口に直接入る
-      start_url: '/cave-adventure/cave-entrance'
+      start_url: '/'
     },
 
     workboxPluginMode: 'GenerateSW',

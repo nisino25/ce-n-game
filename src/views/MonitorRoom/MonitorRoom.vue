@@ -19,7 +19,7 @@
         <!-- Top Monitors -->
         <div class="top-monitors-row flex justify-evenly items-center flex-wrap gap-2">
             <!-- Planet -->
-            <div class="monitor">
+            <div class="monitor monitor-globe">
                 <div class="flex flex-col items-center">
                     <div class="text-6xl animate-bounce my-4">🌍</div>
 
@@ -31,7 +31,7 @@
 
             <!-- Cave -->
             <button
-                class="monitor"
+                class="monitor monitor-cave"
                 @click="changeMode('cave-adventure/cave-entrance')"
             >
                 洞窟探検
@@ -45,7 +45,7 @@
                 生きもの修復
             </button> -->
             <button
-                class="monitor"
+                class="monitor monitor-wild"
                 :class="{ offline: cardCountsLoaded && personalCards < minCardsForWild }"
                 @click="goWild"
             >
@@ -64,7 +64,7 @@
 
             <!-- Team -->
             <button
-                class="monitor"
+                class="monitor monitor-team"
                 @click="goTeamRoom"
             >
                 <template v-if="myTeam">
@@ -261,7 +261,8 @@ import db from './../../firebase.js';
 import {
     MIN_CARDS_FOR_DOMINATION,
     getCurrentUser,
-    countCollectionCards
+    countCollectionCards,
+    resetCurrentUserCache
 } from "@/utils/cards.js";
 import { getSession, setSession, removeSession } from "@/utils/session.js";
 
@@ -431,6 +432,10 @@ export default {
             return;
         }
 
+        // ■名前・アバターはログイン時にキャッシュしたものを使い続けていたため、
+        // ProfileEditorで保存した変更が反映されないことがあった。毎回Firestoreの最新値で上書きする
+        this.refreshPlayerData();
+
         this.loadCardCounts();
 
         this.teamMembers = await this.getTeamMembers();
@@ -444,6 +449,21 @@ export default {
     },
 
     methods: {
+        // ■ProfileEditor等で更新された名前・アバターをFirestoreから取り直し、
+        // 表示中のデータとセッションキャッシュの両方を最新化する
+        async refreshPlayerData() {
+            try {
+                const user = await getCurrentUser();
+                if (!user) return;
+                this.currentPlayerData = user;
+                this.currentPlayerName = user.name;
+                this.avatarSvg = this.$buildAvatar(user.avatar);
+                setSession("playerData", JSON.stringify(user));
+            } catch (error) {
+                console.error("プレイヤー情報の更新に失敗しました:", error);
+            }
+        },
+
         async loadCardCounts() {
             try {
                 const user = await getCurrentUser();
@@ -626,6 +646,7 @@ export default {
 					removeSession("myTeam");
 					removeSession("loginCenId");
 					removeSession("loginDate");
+					resetCurrentUserCache();
 					this.$router.push({ name: "LoginPage" });
 				},
 
@@ -639,6 +660,7 @@ export default {
 					removeSession("myTeam");
 					removeSession("loginCenId");
 					removeSession("loginDate");
+					resetCurrentUserCache();
 
 					if (cenId) {
 						window.location.href = `https://www.ce-n.org/hui-yuan-purohuiru/${cenId}`;
@@ -828,7 +850,8 @@ export default {
       50% { opacity: .4; }
   }
 
-  /* ■スマホ幅：上部モニター群が横に収まりきらず見切れていたので2列に折り返す */
+  /* ■スマホ幅：上部モニター群が横に収まりきらず見切れていたので2列に折り返す
+       1段目＝地球・ようこそ（チーム情報）、2段目＝洞窟探検・野生にもどそう、の順に並べ替える */
   @media (max-width: 640px){
       .top-monitors-row{
           gap:8px 6px;
@@ -838,5 +861,9 @@ export default {
           min-width:0;
           font-size:clamp(11px,3.2vw,16px);
       }
+      .monitor-globe{ order:1; }
+      .monitor-team{ order:2; }
+      .monitor-cave{ order:3; }
+      .monitor-wild{ order:4; }
   }
 </style>

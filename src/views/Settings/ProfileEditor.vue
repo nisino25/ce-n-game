@@ -12,8 +12,12 @@
                     <div class="w-40 aspect-square mx-auto" v-html="avatarSvg"></div>
                     <div>
                         <input type="text" placeholder="ぼうけんしゃの名前" class="border-gray-800 w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-400" v-model="playerName">
+                        <p v-if="nameError" class="text-red-600 text-sm mt-1">名前を入力してください</p>
                         <button class="my-3 p-3 bg-sky-600 text-white rounded-lg mr-2" @click="randomAll">🎲 シャッフル</button>
-                        <button @click="goNext()" class="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg">モニタールームに進む</button>
+                        <div class="flex gap-2 mt-2">
+                            <button @click="goNext()" class="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg">保存して進む</button>
+                            <button @click="skipSave()" class="p-3 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">保存しないで進む</button>
+                        </div>
                     </div>
                 </div>
 
@@ -32,6 +36,17 @@
                 </div>
             </div>
         </div>
+
+        <!-- ■確認ダイアログ：ネイティブのconfirm()は環境によって動作しないため、画面内モーダルで代用する -->
+        <div v-if="pendingAction" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+            <div class="bg-white rounded-xl p-6 max-w-sm w-full text-center shadow-xl">
+                <p class="mb-5 whitespace-pre-line">{{ pendingAction.message }}</p>
+                <div class="flex gap-3 justify-center">
+                    <button @click="confirmPendingAction" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">はい</button>
+                    <button @click="pendingAction = null" class="px-5 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">キャンセル</button>
+                </div>
+            </div>
+        </div>
     </div>
 
 </template>
@@ -39,6 +54,7 @@
 <script>
 import db from './../../firebase.js';
 import { getSession, setSession } from '@/utils/session.js';
+import { resetCurrentUserCache } from '@/utils/cards.js';
 export default {
 
     data(){
@@ -61,6 +77,8 @@ export default {
                 { key:"top", label:"かみ" }
             ],
             playerName:"",
+            nameError: false,
+            pendingAction: null,
 
             loginCenId: null,
             hasInitialized: false,
@@ -99,13 +117,19 @@ export default {
 
             this.avatarSvg = this.$buildAvatar(this.avatar);
         },
-        async goNext(){
+        goNext(){
             if(this.playerName.trim() === ""){
-                alert("名前を入力してください");
+                this.nameError = true;
                 return;
             }
+            this.nameError = false;
 
-            if (!confirm("モニタールームに進みますか？")) return;
+            this.pendingAction = {
+                message: "この内容を保存してモニタールームに進みますか？",
+                run: () => this.saveAndGoHome()
+            };
+        },
+        async saveAndGoHome(){
             this.currentUser.name = this.playerName;
             this.currentUser.avatar = this.avatar;
 
@@ -114,9 +138,23 @@ export default {
             });
 
             setSession("playerData", JSON.stringify(this.currentUser));
+            // ■MonitorRoom側のgetCurrentUser()が古い内容をキャッシュしたままにならないようにする
+            resetCurrentUserCache();
 
             // go to home
             this.$router.push({ name: "Home" });
+        },
+        // ■変更を保存せずにモニタールームへ戻る（名前・アバターの編集内容は破棄）
+        skipSave(){
+            this.pendingAction = {
+                message: "保存せずにモニタールームへ戻りますか？\n名前・アバターの変更内容は破棄されます。",
+                run: () => this.$router.push({ name: "Home" })
+            };
+        },
+        confirmPendingAction(){
+            const action = this.pendingAction;
+            this.pendingAction = null;
+            if (action) action.run();
         },
         async initialCheck(){
 

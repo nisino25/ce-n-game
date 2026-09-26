@@ -56,6 +56,12 @@ export function getCurrentUser() {
     return currentUserPromise;
 }
 
+// ■プロフィール保存直後・ログイン/ログアウト直後など、次回のgetCurrentUser()を
+// 必ずFirestoreへ取りに行かせたいときに呼ぶ（呼ばないとSPA内では古い内容がキャッシュされ続ける）
+export function resetCurrentUserCache() {
+    currentUserPromise = null;
+}
+
 // ■カードライブラリ（公開中のカード）
 export async function fetchCardLibrary() {
     const snapshot = await db.collection("cards")
