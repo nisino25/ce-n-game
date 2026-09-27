@@ -158,9 +158,17 @@ router.beforeEach((to) => {
         return true;
     }
 
-    // how do i use these globally
+    // ■LoginPageはPWAの起動先やce-n.org側のリンクから何度でも訪れる想定のため、
+    // ログイン済みでもErrorにはせず、そのままHomeへ通す（再度findMeを叩き直す必要は無い）
+    if (to.name === "LoginPage") {
+        if (loginCenId) {
+            return { name: "Home" };
+        }
+        return true;
+    }
 
-    const publicRoutes = ["LoginPage", "Intro"];
+    // ■Introは新規登録フローなので、ログイン済みでの再訪はErrorへ（誤って登録し直すのを防ぐ）
+    const publicRoutes = ["Intro"];
 
     if (publicRoutes.includes(to.name)) {
         if (loginCenId) {
