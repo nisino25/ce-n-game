@@ -4,8 +4,10 @@ module.exports = defineConfig({
 
   pwa: {
     // ■ホーム画面に追加できるPWAとしての設定
-    // （起動先はモニタールーム＝アプリのホーム。/loginPageにすると未ログイン時に
-    //   ce-n.orgへ即リダイレクトされる問題は解消できないため、Homeのままにしている）
+    // 起動先は本番のハブサイト（shineki-game）が「洞窟ゲーム」リンクで使っているのと同じ
+    // /loginPage?cenId=... 形式にしている。cenIdをURLに埋め込むことで、iOSのstandalone
+    // モードでlocalStorage/Cookieが引き継がれない場合でも、毎回このIDでログインし直せる
+    // （LoginPage自体はログイン済みでも安全に再訪できるようrouter側を調整済み）
     name: 'ちきゅうたんけん隊',
     themeColor: '#0b1220',
     msTileColor: '#0b1220',
@@ -16,7 +18,7 @@ module.exports = defineConfig({
       short_name: 'ちきゅうたんけん',
       background_color: '#0b1220',
       display: 'standalone',
-      start_url: '/'
+      start_url: '/loginPage?cenId=33d85b19-663f-4849-87ae-a7232ff33fda'
     },
 
     workboxPluginMode: 'GenerateSW',
