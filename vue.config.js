@@ -12,7 +12,9 @@ module.exports = defineConfig({
     themeColor: '#0b1220',
     msTileColor: '#0b1220',
     appleMobileWebAppCapable: 'yes',
-    appleMobileWebAppStatusBarStyle: 'black-translucent',
+    // ■black-translucentだと画面がノッチの下まで敷き詰められ、ノッチ周りの余白が無くなってしまうため、
+    // ステータスバー分をきちんと余白として確保できるblackに変更
+    appleMobileWebAppStatusBarStyle: 'black',
 
     manifestOptions: {
       short_name: 'ちきゅうたんけん',

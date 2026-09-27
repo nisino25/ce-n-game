@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="icon" href="<%= BASE_URL %>favicon.ico">
     <title><%= htmlWebpackPlugin.options.title %></title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,7 +11,7 @@
 
     <script src="https://unpkg.com/@multiavatar/multiavatar/multiavatar.min.js"></script>
     <style>
-      /* ■PWAのstandalone表示でノッチ周り（セーフエリア）が白く見えないよう、背景を先に塗っておく */
+      /* ■PWAのstandalone表示で、アプリ本体が読み込まれる前の余白部分が白く見えないようにしておく */
       html, body { background: #0b1220; }
     </style>
   </head>
