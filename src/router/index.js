@@ -25,6 +25,8 @@ import CreatureScan from "@/views/CreatureScan/CreatureScan.vue";
 
 import { getSession } from "@/utils/session.js";
 
+import CardAdmin from "@/views/Admin/CardAdmin.vue";
+
 
 const routes = [
     {
@@ -116,6 +118,13 @@ const routes = [
         component: ABGameProposalB
     },
 
+    // ■カード管理画面
+    { 
+        path: "/card-admin", 
+        name: "CardAdmin", 
+        component: CardAdmin 
+    },
+    
     {
         path: "/creature-scan",
         name: "CreatureScan",
