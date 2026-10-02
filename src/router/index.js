@@ -207,6 +207,12 @@ router.beforeEach((to) => {
         return true;
     }
 
+    // ■ドキュメントページは、ログインしていない人にも、URLで見せられるようにする（共有用）。
+    //   ページには検索エンジンに出さない指定（noindex）を付けている（DocsView.vue）
+    if (to.name === "Docs") {
+        return true;
+    }
+
     // ■LoginPageはPWAの起動先やce-n.org側のリンクから何度でも訪れる想定のため、
     // ログイン済みでもErrorにはせず、そのままHomeへ通す（再度findMeを叩き直す必要は無い）
     if (to.name === "LoginPage") {

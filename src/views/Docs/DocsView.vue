@@ -2,7 +2,8 @@
     <!-- ■ドキュメント一覧：docs/ 以下のmdファイルをまとめて読めるページ（仮リンクから） -->
     <div class="docs-page">
         <header class="docs-header">
-            <button class="docs-back" @click="$router.push({ name: 'Home' })">← <span class="docs-back-label">モニタールームにもどる</span></button>
+            <!-- ■ログインしていない人（URLで共有されて見に来た人）には、モニタールームへのボタンは出さない -->
+            <button v-if="loggedIn" class="docs-back" @click="$router.push({ name: 'Home' })">← <span class="docs-back-label">モニタールームにもどる</span></button>
             <h1>ドキュメント</h1>
             <button class="docs-menu-toggle" @click="menuOpen = !menuOpen">☰ 一覧</button>
         </header>
@@ -31,6 +32,7 @@
 
 <script>
 import { marked } from "marked";
+import { getSession } from "@/utils/session.js";
 
 // ■docs/ 以下のmdをビルド時に取り込む（cost.mdはコストの内部資料なので画面には出さない）
 const context = require.context("../../../docs", true, /^\.\/(?!cost\.md$).*\.md$/);
@@ -69,8 +71,24 @@ export default {
     data() {
         return {
             menuOpen: false,
+            loggedIn: !!getSession("loginCenId"),
             currentPath: this.initialPath()
         };
+    },
+
+    mounted() {
+        // ■URLで共有するページなので、検索エンジンには出さない（noindex）。タブのタイトルは、開いているドキュメントの名前に
+        this.originalTitle = document.title;
+        this.robotsMeta = document.createElement("meta");
+        this.robotsMeta.name = "robots";
+        this.robotsMeta.content = "noindex, nofollow";
+        document.head.appendChild(this.robotsMeta);
+        this.updateTitle();
+    },
+
+    beforeUnmount() {
+        if (this.robotsMeta) this.robotsMeta.remove();
+        document.title = this.originalTitle;
     },
 
     computed: {
@@ -95,8 +113,14 @@ export default {
             return docs.some(doc => doc.path === wanted) ? wanted : docs.length ? docs[0].path : "";
         },
 
+        updateTitle() {
+            const doc = docs.find(item => item.path === this.currentPath);
+            document.title = doc ? `${doc.title} | ドキュメント` : "ドキュメント";
+        },
+
         openDoc(path) {
             this.currentPath = path;
+            this.$nextTick(() => this.updateTitle());
             this.menuOpen = false;
             this.$router.replace({ query: { doc: path } });
             window.scrollTo(0, 0);

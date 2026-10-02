@@ -68,6 +68,14 @@
 
 ## 【ドキュメントページ（`/docs`）】（新規）
 - `docs/` の md を、画面の中で読める（一覧・リンクの移動・スマホ対応）。この「更新内容」もここ
+- **ログインしなくても、URLだけで開ける**（共有用）。特定のドキュメントは、`?doc=ファイル名` で直接開ける：
+  - 更新内容：`https://ce-n-game.netlify.app/docs?doc=release-notes.md`
+  - 地図・陣取りゲーム：`https://ce-n-game.netlify.app/docs?doc=requirements/05_map_habitat.md`
+  - テラ（通貨）：`https://ce-n-game.netlify.app/docs?doc=currency.md`
+  - 端末の統計：`https://ce-n-game.netlify.app/docs?doc=device-stats.md`
+  - （そのほかのファイル名は、ドキュメントページの一覧から選ぶと、URLの `?doc=` に出る）
+- 検索エンジンには出さない指定（`noindex`）つき。ログインしていない人には、「モニタールームにもどる」ボタンは出さない
+- 注意：`data-access.md`（データの取得・更新の一覧）には、「Firestore のルールが開いていること」などの注意点も書いてある。公開したくない場合は、その節か、ドキュメント自体を外す
 
 ## 【端末の集計（`/device-stats`）】（新規・管理者用の仮画面）
 - どんな端末で使われているかを、**個人を特定しない、粗い分類だけ**（端末の種類・画面の幅の区分・OSの名前・ホーム画面アプリか）、**1つの端末につき1日1回、回数だけ**数える。外部の解析サービスには送らない
