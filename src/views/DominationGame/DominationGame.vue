@@ -98,13 +98,20 @@
                                 class="animate-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] rounded-full aspect-square bg-yellow-200"
                             ></div>
 
+                            <!-- ■置いたカードの形（Lv1=三角／Lv2=四角／Lv3=丸／Lv4=★）。
+                                 SVGで作って、マスの大きさ（虫眼鏡・スマホ・PC）に合わせて拡大・縮小し、黒縁はどの大きさでも同じ太さで付ける -->
                             <div v-if="tile.ownerTeam" class="flex justify-center items-center w-full h-full">
-                                <div
-                                    :class="tierShapeClass(tile)"
-                                    :style="tierShapeStyle(tile.placedCard?.tier, tile.ownerTeam, tile.eatenByPlayerId)"
+                                <svg
+                                    class="tile-shape"
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                    :style="{ fill: shapeFill(tile), fillOpacity: tile.eatenByPlayerId ? 0.55 : 1 }"
                                 >
-                                    <span v-if="tile.placedCard?.tier === 4">★</span>
-                                </div>
+                                    <polygon v-if="tile.placedCard?.tier === 1" points="12,3 22.5,21 1.5,21" />
+                                    <rect v-else-if="tile.placedCard?.tier === 2" x="3" y="3" width="18" height="18" rx="1.5" />
+                                    <circle v-else-if="tile.placedCard?.tier === 3" cx="12" cy="12" r="9" />
+                                    <polygon v-else points="12,1.5 14.9,8.4 22.4,9 16.7,13.9 18.5,21.3 12,17.4 5.5,21.3 7.3,13.9 1.6,9 9.1,8.4" />
+                                </svg>
                             </div>
                         </div>
                     </div>
@@ -324,9 +331,47 @@
             class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
             @click.self="isShowingTuorial = false"
         >
-            <div class="relative w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-xl">
-                <button class="absolute -top-3 -right-3 rounded-full bg-white px-2 py-1 text-sm shadow" @click="isShowingTuorial = false">✕</button>
-                <p class="text-center text-base font-black text-slate-700">地形と レベルの せつめい</p>
+            <div class="relative w-full max-w-sm">
+                <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" @click="isShowingTuorial = false">✕</button>
+                <div class="max-h-[85vh] space-y-4 overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
+                <p class="text-center text-lg font-black text-slate-700">あそびかた</p>
+
+                <!-- ■ゲームの仕組み（やさしい言葉で） -->
+                <ol class="space-y-2.5 text-left text-[13px] leading-relaxed text-slate-700">
+                    <li class="flex gap-2">
+                        <span class="rule-no">1</span>
+                        <span><b>めざせ ナンバー1！</b> 3チームで、カードを ばんめんに おいて ポイントを あつめるよ。いちばん ポイントが たかい チームが かち。</span>
+                    </li>
+                    <li class="flex gap-2">
+                        <span class="rule-no">2</span>
+                        <span><b>じゅんばんに 1まい ずつ。</b> じぶんの ばんに、てふだを えらんで、<b>きいろく ひかる マス</b>を タップ。おけない ときは「スキップ」。</span>
+                    </li>
+                    <li class="flex gap-2">
+                        <span class="rule-no">3</span>
+                        <span><b>おける ばしょ。</b> りくの いきものは <b>町・森・土</b>、みずの いきものは <b>川・海</b>。<b>くろい マス</b>（未開発地）には おけないよ。</span>
+                    </li>
+                    <li class="flex gap-2">
+                        <span class="rule-no">4</span>
+                        <span><b>レベルの ルール。</b> <b>Lv1（▲）</b>は どこにでも おける。<b>Lv2（■）</b>は、まわりに <b>Lv1が 2こ いじょう</b> ある マスだけ。Lv3は Lv2が 2こ、Lv4は Lv3が 2こ いるところに おけるよ。（まわり ＝ たて・よこ・ななめの 8マス）</span>
+                    </li>
+                    <li class="flex gap-2">
+                        <span class="rule-no">5</span>
+                        <span><b>たべる！</b> レベルの たかい カードを おくと、まわりの <b>ひくい レベルの カード</b>を たべるよ。たべられた カードは はいいろに なって、おくための かずにも ならなくなる。</span>
+                    </li>
+                    <li class="flex gap-2">
+                        <span class="rule-no">6</span>
+                        <span><b>ポイント。</b> おいた カードの レベルで きまるよ（下の ひょう）。</span>
+                    </li>
+                    <li class="flex gap-2">
+                        <span class="rule-no">7</span>
+                        <span><b>おわり。</b> てふだが なくなる、ぜんいんが スキップする、または「まけました」を おすと おわり。</span>
+                    </li>
+                </ol>
+
+                <div class="border-t border-slate-200 pt-3">
+                    <p class="mb-2 text-center text-sm font-black text-slate-600">地形と レベルの ひょう</p>
+                </div>
+
                         <div>
                             <div class="grid grid-cols-2 gap-2">
                                 <template v-for="item in terrainList" :key="item.key">
@@ -356,7 +401,8 @@
                                 </div>
                             </div>
                         </div>
-                                </div>
+                                    </div>
+            </div>
         </div>
 
         <!-- ■スキップの確認（画面の中のダイアログ） -->
@@ -1514,41 +1560,9 @@ export default {
           return Math.max(...this.players.map(p => p.score))
         },
 
-        tierShapeClass(tile) {
-
-            if (tile.placedCard?.tier === 1) return "triangle"
-            if (tile.placedCard?.tier === 2) return "w-5 h-5"
-            if (tile.placedCard?.tier === 3) return "w-5 h-5 rounded-full"
-            if (tile.placedCard?.tier === 4) return "text-3xl"
-
-        },
-        tierShapeStyle(tier,color, isEaten) {
-            const fillColor = isEaten ? '#66666688' : this.teamColor(color)
-
-            // ■置いたアイコンが背景の地形色に埋もれて見づらいため、
-            // アイコンそのものに黒フチを付けてくっきり見えるようにする
-            if (tier === 1) {
-                // 三角形はborder-trickで作っているため、drop-shadowを4方向に重ねてフチを再現する
-                return {
-                    borderBottomColor: fillColor,
-                    filter: 'drop-shadow(1px 0 0 #000) drop-shadow(-1px 0 0 #000) drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #000)'
-                }
-            }
-
-            if (tier === 4) {
-                return {
-                    color: fillColor,
-                    WebkitTextStroke: '1.5px #000',
-                    textShadow: '0 0 2px rgba(0,0,0,0.6)'
-                }
-            }
-
-            // tier 2（四角）・tier 3（丸）
-            return {
-                background: fillColor,
-                border: '2px solid #000',
-                boxSizing: 'border-box'
-            }
+        // ■置いたカードの形の色：自分のチームの色。食べられたカードは、うすい灰色
+        shapeFill(tile) {
+            return tile.eatenByPlayerId ? '#666666' : this.teamColor(tile.ownerTeam)
         },
 
         // ■スキップ：画面の中の確認ダイアログを出す（標準の confirm は、埋め込みのブラウザなどで出ずに止まることがあるため）
@@ -2016,4 +2030,46 @@ export default {
       color: #0369a1;
   }
 
+  /* ■置いたカードの形（SVG）。マスの大きさの約78%。黒縁は、拡大・縮小しても同じ太さ（2px）にする */
+  .tile-shape{
+      width: 78%;
+      height: 78%;
+      overflow: visible;
+  }
+  .tile-shape *{
+      stroke: #000;
+      stroke-width: 2px;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+  }
+
+  /* ■以前のCSS整理で消えてしまっていた、もとのアニメーションの指定（AIが考え中の帯のフェードなど）を復元 */
+  @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.7; }
+  }
+
+  .fade-enter-active,
+  .fade-leave-active{
+      transition: opacity .2s ease;
+  }
+
+  .fade-enter-from,
+  .fade-leave-to{
+      opacity: 0;
+  }
+  /* ■あそびかたの番号 */
+  .rule-no{
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #0e7490;
+      font-size: 12px;
+      font-weight: 900;
+      color: #fff;
+  }
 </style>
