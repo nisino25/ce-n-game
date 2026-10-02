@@ -45,6 +45,7 @@ const docs = context.keys().map(key => {
 
 // ■上から並べる順番（ここに無いものは最後にファイル名順）
 const ORDER = [
+    "release-notes.md",
     "currency.md",
     "TODO.md",
     "data-access.md",
