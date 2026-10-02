@@ -1,9 +1,9 @@
 <template>
     <template v-if="dominationMode == 'standard'">
-        <div class="domination-app min-h-screen bg-slate-100 pb-44 lg:pb-0">
+        <div class="domination-app app-shell bg-slate-100">
 
             <!-- Header: title + scoreboard -->
-            <header class="bg-white border-b border-slate-200 shadow-sm">
+            <header class="app-header bg-white">
                 <div class="max-w-[1500px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
                     <div class="flex min-w-0 items-center gap-3">
                         <h1 class="whitespace-nowrap text-lg font-bold text-slate-700">陣取りゲーム</h1>
@@ -20,18 +20,6 @@
                             <span v-else class="text-slate-400 font-sans font-normal">📋</span>
                         </button>
 
-                        <!-- ■説明（地形・レベル）を見る：はてなボタン → モーダル -->
-                        <button class="round-button flex-none" aria-label="地形・レベルの説明を見る" @click="isShowingTuorial = true">?</button>
-
-                        <!-- ■虫眼鏡：盤面ぜんたいが1画面に収まる大きさにする／もとの大きさにもどす（スマホのみ） -->
-                        <button
-                            class="round-button flex-none sm:hidden"
-                            :class="{ 'round-button-on': boardOverview }"
-                            :aria-label="boardOverview ? 'もとの大きさにもどす' : '盤面ぜんたいを見る'"
-                            @click="toggleOverview"
-                        >
-                            🔍
-                        </button>
                     </div>
 
                     <!-- ■チーム名と点数は、スマホでも必ず1行（3チームが横一列）。スマホでは「風 0点」のように短くする -->
@@ -72,6 +60,21 @@
                 </div>
             </transition>
 
+            <div class="app-body">
+            <!-- ■右がわに浮かせる丸いボタン：？（説明をモーダルで）／🔍（盤面ぜんたい、スマホのみ） -->
+            <div class="float-tools">
+                <button class="float-button" aria-label="地形・レベルの説明を見る" @click="isShowingTuorial = true">?</button>
+                <button
+                    class="float-button sm:hidden"
+                    :class="{ 'float-button-on': boardOverview }"
+                    :aria-label="boardOverview ? 'もとの大きさにもどす' : '盤面ぜんたいを見る'"
+                    @click="toggleOverview"
+                >
+                    🔍
+                </button>
+            </div>
+
+            <div ref="mainArea" class="app-main">
             <div class="max-w-[1500px] mx-auto px-1.5 py-2 sm:p-4 flex flex-col lg:flex-row gap-3 sm:gap-4 items-start">
 
                 <!-- Board（スマホでは、枠をなくして画面いっぱいに。縦長の盤面にして、マスを大きくする） -->
@@ -85,7 +88,7 @@
                             :key="tile.id"
                             class="board-tile relative rounded-[2px] cursor-pointer transition-transform duration-150"
                             :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected }"
-                            @click="onTileClick(tile, $event)"
+                            @click="onTileClick(tile)"
                             :style="[tileStyle(tile), { '--tr': tile.row + 1, '--tc': tile.col + 1 }]"
                         >
                             <div
@@ -194,69 +197,66 @@
                     </div>
                 </div>
             </div>
+            </div>
+            </div>
 
             <!-- ■スマホ・タブレット：手札とボタンを、画面の下にまとめて固定する（盤面をスクロールしても、いつでも使える） -->
             <div class="game-dock lg:hidden" :style="{ '--turn-color': currentPlayer ? currentPlayer.color : '#64748b' }">
-                <template v-if="gameState === 'playing' && currentPlayer">
-                    <div v-if="currentPlayer.isAI" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</div>
-                    <template v-else>
-                        <div v-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」を えらんだよ → きいろく ひかる マスに おけるよ</div>
-                        <!-- ■手札は2行（横にスクロール）。チップの先頭の小さい数字がレベル -->
-                        <div class="dock-hand">
-                            <template v-for="group in groupHandByTier(hands[currentPlayerId])" :key="group.tier">
-                                <button
-                                    v-for="card in group.cards"
-                                    :key="card.id"
-                                    class="dock-chip border"
-                                    :class="areaBadgeClass(card, currentPlayerId)"
-                                    @click="previewCard(card, currentPlayerId)"
-                                >
-                                    <span class="dock-lv">{{ group.tier }}</span>{{ card.label }}<small>×{{ card.holdingCount }}</small>
-                                </button>
-                            </template>
-                            <span v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0" class="dock-empty">手札がありません</span>
-                        </div>
-                    </template>
-                </template>
+                <!-- ■あなたの手札（ほかの部分と見分けがつくよう、枠・タイトルつきの別のエリア） -->
+                <div class="dock-panel dock-hand-panel">
+                    <div class="dock-panel-title">
+                        <span>🃏 あなたの手札</span>
+                        <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</span>
+                        <span v-else-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」→ きいろい マスに おけるよ</span>
+                    </div>
+                    <div v-if="gameState === 'playing' && currentPlayer && !currentPlayer.isAI" class="dock-hand">
+                        <template v-for="group in groupHandByTier(hands[currentPlayerId])" :key="group.tier">
+                            <button
+                                v-for="card in group.cards"
+                                :key="card.id"
+                                class="dock-chip border"
+                                :class="areaBadgeClass(card, currentPlayerId)"
+                                @click="previewCard(card, currentPlayerId)"
+                            >
+                                <span class="dock-lv">{{ group.tier }}</span>{{ card.label }}<small>×{{ card.holdingCount }}</small>
+                            </button>
+                        </template>
+                        <span v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0" class="dock-empty">手札がありません</span>
+                    </div>
+                </div>
 
-                <div class="dock-actions">
-                    <button
-                        v-if="gameState === 'playing'"
-                        class="dock-button"
-                        :disabled="currentPlayer?.isAI"
-                        @click="confirmSkip()"
-                    >
-                        ⏭ スキップ
-                    </button>
-                    <button
-                        v-if="gameState === 'playing'"
-                        class="dock-button dock-button-danger"
-                        @click="showResignConfirm = true"
-                    >
-                        🏳 まけました
-                    </button>
-                    <button class="dock-button dock-button-back" @click="backFromGame()">
-                        {{ backLabelText() }}
-                    </button>
+                <!-- ■そうさボタン（手札とは別の、色のちがうエリア） -->
+                <div class="dock-panel dock-actions-panel">
+                    <div class="dock-actions">
+                        <button
+                            v-if="gameState === 'playing'"
+                            class="dock-button"
+                            :disabled="currentPlayer?.isAI"
+                            @click="confirmSkip()"
+                        >
+                            ⏭ スキップ
+                        </button>
+                        <button
+                            v-if="gameState === 'playing'"
+                            class="dock-button dock-button-danger"
+                            @click="showResignConfirm = true"
+                        >
+                            🏳 まけました
+                        </button>
+                        <button class="dock-button dock-button-back" @click="backFromGame()">
+                            {{ backLabelText() }}
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- tile preview overlay (placed card on the board) -->
-            <div
+            <!-- ■タイルをタップ：置かれているカードを、共通のカードの見た目（カードライブラリと同じ）で大きく表示 -->
+            <GameCardFocus
                 v-if="tilePreviewCard"
-                class="fixed inset-0 z-50 bg-black/40"
-                @click.self="tilePreviewCard = null; previewStyle = {}"
-            >
-                <div class="absolute transition-all duration-300 ease-out z-[100]" :style="previewStyle">
-                    <button
-                        class="absolute -top-3 -right-3 bg-white rounded-full shadow px-2 py-1 text-sm"
-                        @click="tilePreviewCard = null; previewStyle = {}"
-                    >
-                        ✕
-                    </button>
-                    <CreatureCard :creature="tilePreviewCard" class="w-full h-full rounded-lg shadow-xl" />
-                </div>
-            </div>
+                :card="tilePreviewCard"
+                :display="focusDisplay(tilePreviewCard, tilePreviewTeam)"
+                @close="tilePreviewCard = null"
+            />
 
             <!-- finished game modal -->
             <div v-if="gameState === 'finished'" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
@@ -357,30 +357,15 @@
                                 </div>
         </div>
 
-        <!-- card select modal -->
-        <div
+        <!-- ■手札のカードをタップ：同じ共通のカード表示で、「選択する」ボタンつき -->
+        <GameCardFocus
             v-if="modalCard && isPreviewing"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-            @click.self="closePreview"
-          >
-            <div class="relative p-4 bg-white rounded-2xl shadow-xl w-full max-w-sm">
-
-                <!-- Close Button -->
-                <button
-                    class="absolute -top-3 -right-3 bg-white rounded-full shadow px-2 py-1 text-sm"
-                    @click="closePreview"
-                >
-                    ✕
-                </button>
-
-                <CreatureCard :creature="modalCard" class="mx-auto"/>
-
-                <div class="button-container flex justify-center mt-4">
-                    <button @click="useCard()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition">選択する</button>
-                </div>
-
-            </div>
-        </div>
+            :card="modalCard"
+            :display="focusDisplay(modalCard, currentPlayerId)"
+            selectable
+            @close="closePreview"
+            @select="useCard()"
+        />
     </template>
     <template v-else>
         <!-- ■データ読み込み中（tiles/handsの準備ができるまで）のプレースホルダー -->
@@ -392,13 +377,14 @@
 
 <script>
 import db from '../../firebase.js';
-import CreatureCard from './CreatureCard.vue';
+import GameCardFocus from './GameCardFocus.vue';
 import { getSession } from '@/utils/session.js';
 import { generateSpotBoard } from './habitatBoard.js';
 import { isFresh } from '@/utils/dominationSlots.js';
 import {
     fetchCardLibrary,
     getCurrentUser,
+    toDisplayCard,
     fetchTeamCollectionInstances,
     placeCardInstance,
     markCardInstancesEaten,
@@ -515,6 +501,7 @@ export default {
         isPreviewing: false,
 
         tilePreviewCard: null,
+        tilePreviewTeam: null, // タイルにあるカードの持ち主のチーム（プレイヤーID）
         previewStyle: {},
 
         skipCount: 0,
@@ -547,33 +534,13 @@ export default {
         backToMonitorRoom() {
             this.$router.push({ name: 'Home' });
         },
-        async onTileClick(tile, event) {
+        async onTileClick(tile) {
           if (this.currentPlayer?.isAI) return // AIの手番中は操作不可
           if (this.isPlacingCard) return // カードの保存中は操作不可
 
           if(tile.placedCard) {
-            const rect = event.currentTarget.getBoundingClientRect()
-
-            this.previewStyle = {
-                top: rect.top + 'px',
-                left: rect.left + 'px',
-                width: rect.width + 'px',
-                height: rect.height + 'px'
-            }
-
+            this.tilePreviewTeam = tile.ownerTeam
             this.tilePreviewCard = tile.placedCard
-
-            this.$nextTick(() => {
-                // アニメーションで中央へ
-                this.previewStyle = {
-                    top: '50%',
-                    left: '50%',
-                    width: '260px',
-                    height: 'auto',
-                    transform: 'translate(-50%, -50%)'
-                }
-            })
-
             return
           }
           if(!this.selectedCard) {
@@ -748,11 +715,22 @@ export default {
             return place.cityName || ''
         },
 
+        // ■カードを共通のカード表示（カードライブラリ・宝箱と同じ）で出すためのデータ。
+        //   カードライブラリにないカード（古い保存）は null を返し、旧表示にもどる
+        focusDisplay(card, teamId) {
+            const library = this.cardLibrary.find(item => item.cardId === card.cardId)
+            if (!library) return null
+            const player = this.players.find(item => item.id === teamId)
+            const ownerName = player && player.isAI ? 'AI' : ((this.slotOwner && this.slotOwner.name) || 'あなた')
+            return toDisplayCard(library, { team: TEAM_NAME_BY_ID[teamId], ownerName })
+        },
+
         // ■虫眼鏡：盤面ぜんたい（縦長の15列×30行）が、上の見出しと下のバーのあいだに収まる幅にする
         toggleOverview() {
             this.boardOverview = !this.boardOverview
             if (this.boardOverview) {
-                const room = window.innerHeight - 270
+                const area = this.$refs.mainArea
+                const room = (area ? area.clientHeight : window.innerHeight - 300) - 34
                 this.overviewWidth = Math.max(180, Math.min(window.innerWidth - 12, Math.floor(room * this.rows / this.cols)))
             }
         },
@@ -1679,7 +1657,7 @@ export default {
         this.dominationMode = 'standard';
     },
     components: {
-        CreatureCard
+        GameCardFocus
     },
     computed: {
       currentPlayer() {
@@ -1725,29 +1703,132 @@ export default {
       }
   }
 
-  /* ■下に固定する、手札とボタン（スマホ・タブレット）。
-     盤面（明るい色のマス）とはっきり分けるため、濃い色にして、上に今の手番のチームの色の線をひく */
-  .game-dock{
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
+  /* ■画面のつくり：スマホ・タブレットでは、画面全体はスクロールさせない。
+     上（見出し）と下（手札・ボタン）は固定で、まん中の盤面の部分だけがスクロールする */
+  .app-shell{
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+  }
+  /* 上の部分：ずっと見えるようにして、下とのさかいめを太い線とかげではっきりさせる */
+  .app-header{
+      position: sticky;
+      top: 0;
       z-index: 30;
-      background: #0f172a;
+      border-bottom: 3px solid #64748b;
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
+  }
+  .app-body{
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+  }
+  @media (max-width: 1023px){
+      .app-shell{
+          height: 100vh;
+          height: 100dvh;
+          min-height: 0;
+          overflow: hidden;
+      }
+      .app-main{
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+      }
+  }
+
+  /* ■右がわに浮かせる丸いボタン（？・🔍）。盤面をスクロールしても、同じ場所に見える */
+  .float-tools{
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+  }
+  @media (min-width: 1024px){
+      .float-tools{
+          position: fixed;
+          top: 130px;
+          right: 16px;
+      }
+  }
+  .float-button{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border: 2px solid #94a3b8;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
+      font-size: 20px;
+      font-weight: 900;
+      line-height: 1;
+      color: #475569;
+  }
+  .float-button:active{ transform: scale(0.93); }
+  .float-button-on{
+      border-color: #0ea5e9;
+      background: #e0f2fe;
+      color: #0369a1;
+  }
+
+  /* ■下の手札・ボタン（スマホ・タブレット）。盤面の明るい色のマスとはっきり分けるため、濃い色にして、
+     上に今の手番のチームの色の線をひく。さらに、「手札」と「ボタン」は、色もわくも別のエリアにする */
+  .game-dock{
+      flex: none;
+      background: #0b1220;
       border-top: 4px solid var(--turn-color, #64748b);
       border-radius: 14px 14px 0 0;
       box-shadow: 0 -10px 24px rgba(15, 23, 42, 0.35);
       padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+  }
+  /* 広い画面（1024px以上）では、右のサイドバーに手札とボタンがあるので、下のバーは出さない */
+  @media (min-width: 1024px){
+      .game-dock{ display: none; }
+  }
+  .dock-panel{
+      border-radius: 12px;
+      padding: 6px 8px;
+  }
+  /* 手札エリア：うすい紺色の、枠つきの面。タイトルつき */
+  .dock-hand-panel{
+      background: #1e293b;
+      border: 1px solid #475569;
+  }
+  .dock-panel-title{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      color: #cbd5e1;
   }
   .dock-note{
-      margin-bottom: 6px;
       font-size: 11px;
       font-weight: 700;
       color: #94a3b8;
-      text-align: center;
+      text-align: right;
   }
   .dock-note-ok{
       color: #6ee7b7;
+  }
+  /* ボタンエリア：もっと濃い面。手札とは色もわくもちがう */
+  .dock-actions-panel{
+      background: #020617;
+      border: 1px solid #1e293b;
+      padding: 6px;
   }
   /* 手札：2行。はみ出す分は横にスクロール */
   .dock-hand{
@@ -1756,7 +1837,6 @@ export default {
       grid-auto-flow: column;
       grid-auto-columns: max-content;
       gap: 6px 5px;
-      margin-bottom: 8px;
       overflow-x: auto;
       padding-bottom: 2px;
       -webkit-overflow-scrolling: touch;
