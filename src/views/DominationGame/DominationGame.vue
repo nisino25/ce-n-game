@@ -199,6 +199,7 @@
                         </button>
                         <button
                             class="px-2 py-2.5 rounded-lg border border-rose-300 bg-rose-100 hover:bg-rose-200 text-sm font-medium transition"
+                            :class="{ 'back-glow': mustSkip }"
                             @click="backFromGame()"
                         >
                             {{ backLabelText() }}
@@ -254,7 +255,7 @@
                         >
                             🏳 まけました
                         </button>
-                        <button class="dock-button dock-button-back" @click="backFromGame()">
+                        <button class="dock-button dock-button-back" :class="{ 'back-glow': mustSkip }" @click="backFromGame()">
                             {{ backLabelText() }}
                         </button>
                     </div>
@@ -392,7 +393,7 @@
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">4</span>
-                        <span><b>かんきょうチャレンジ！</b> <b>くろい マス</b>を タップすると、かんきょうクイズ（<b>2もん</b>）が できるよ。<b>ぜんぶ 1かいで</b> あてたら せいこう！ マスが なおって <b>+3てん</b>、そこに Lv1の カードを おけるよ。しっぱいすると ばんが つぎの チームに うつるよ。（その マスに あう Lv1の カードが ないと ちょうせん できないよ）</span>
+                        <span><b>かんきょうチャレンジ！</b> <b>くろい マス</b>を タップすると、かんきょうクイズ（<b>2もん</b>）が できるよ。<b>ぜんぶ 1かいで</b> あてたら せいこう！ マスが <b>となりの マスと おなじ ちけい</b>に なおって <b>+3てん</b>。（その ばんは、なおした マスには おけないよ。つぎの ばんから おけるよ）しっぱいすると ばんが つぎの チームに うつるよ。（なおる ちけいに あう Lv1の カードが ないと ちょうせん できないよ）</span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">5</span>
@@ -412,40 +413,38 @@
                     </li>
                 </ol>
 
+                <!-- ■ちけい（すむ ばしょ）：盤面と同じ色・もようの見本つき -->
                 <div class="border-t border-slate-200 pt-3">
-                    <p class="mb-2 text-center text-sm font-black text-slate-600">地形と レベルの ひょう</p>
+                    <p class="legend-title">🗺 ちけい（いきものの すむ ばしょ）</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div v-for="item in terrainList" :key="item.key" class="legend-terrain">
+                            <span class="legend-swatch" :style="terrainSwatchStyle(item.key)"></span>
+                            <span class="text-left leading-tight">
+                                <b class="block text-[13px] text-slate-700">{{ item.label }}</b>
+                                <small class="block text-[10px] font-bold text-slate-500">{{ item.hint }}</small>
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
-                        <div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <template v-for="item in terrainList" :key="item.key">
-                                    <div class="flex items-center gap-1.5">
-                                        <div class="w-3.5 h-3.5 rounded-full flex-none" :style="{ background: areaColors[item.key] }"></div>
-                                        <span class="text-xs whitespace-nowrap">{{ item.label }}</span>
-                                    </div>
-                                </template>
-                            </div>
+                <!-- ■レベルと ポイント：盤面と同じ形。おける ばしょの ルールつき -->
+                <div class="border-t border-slate-200 pt-3">
+                    <p class="legend-title">⭐ レベルと ポイント</p>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="legend-level">
+                            <svg class="legend-shape" viewBox="0 0 24 24" aria-hidden="true" :style="{ fill: teamColor(humanPlayerId) }">
+                                <polygon v-if="tier === 1" points="12,3 22.5,21 1.5,21" />
+                                <rect v-else-if="tier === 2" x="3" y="3" width="18" height="18" rx="1.5" />
+                                <circle v-else-if="tier === 3" cx="12" cy="12" r="9" />
+                                <polygon v-else points="12,1.5 14.9,8.4 22.4,9 16.7,13.9 18.5,21.3 12,17.4 5.5,21.3 7.3,13.9 1.6,9 9.1,8.4" />
+                            </svg>
+                            <b class="text-[13px] text-slate-700">Lv{{ tier }}</b>
+                            <span class="legend-points">{{ getScoreForTile(tier) }}点</span>
+                            <small class="text-[9px] font-bold leading-tight text-slate-500">{{ tier === 1 ? 'どこでも' : `まわりに Lv${tier - 1}が 2こ` }}</small>
                         </div>
-
-                        <div>
-                            <div class="text-xs font-bold text-slate-600 mb-2">レベルとポイント</div>
-                            <div class="grid grid-cols-4 gap-1.5">
-                                <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="text-center bg-slate-100 rounded-lg p-2">
-                                    <div
-                                        v-if="tier === 2 || tier === 3"
-                                        class="mx-auto mb-1.5 w-5 h-5 bg-slate-600"
-                                        :class="{ 'rounded-full': tier === 3 }"
-                                    ></div>
-                                    <div class="text-xs leading-tight">
-                                        <strong v-if="tier === 1" class="text-lg block">&#9650;</strong>
-                                        <strong v-if="tier === 4" class="text-lg block">★</strong>
-                                        <strong>Lv{{ tier }}</strong>
-                                        <div class="text-[10px] text-slate-500">{{ getScoreForTile(tier) }}点</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                                    </div>
+                    </div>
+                </div>
+                </div>
             </div>
         </div>
 
@@ -608,6 +607,8 @@ export default {
         showChallenge: false, // 黒いマスの「かんきょうチャレンジ」（ABゲーム）を開いている
         challengeTile: null,
         challengeStarted: false,
+        challengeArea: null, // チャレンジに成功したら、黒いマスがなる地形
+        blockedTileId: null, // チャレンジでなおしたマス。その自分の番のあいだは、カードを置けない
         rewardTera: 0, // 1位でもらったテラ（もらえたときだけ）
         rewardState: '', // '' | 'pending' | 'error'
         showTerritory: false, // ゲームのおわりに、じんち（チームごとのマス）を盤面で見る
@@ -643,12 +644,12 @@ export default {
             undeveloped: '#666666'
         },
         terrainList: [
-            { key: 'town', label: '町' },
-            { key: 'forest', label: '森' },
-            { key: 'dirt', label: '土' },
-            { key: 'river', label: '川' },
-            { key: 'sea', label: '海' },
-            { key: 'undeveloped', label: '未開発地' },
+            { key: 'town', label: '町', hint: 'りくの いきもの' },
+            { key: 'forest', label: '森', hint: 'りくの いきもの' },
+            { key: 'dirt', label: '土', hint: 'りくの いきもの' },
+            { key: 'river', label: '川', hint: 'みずの いきもの' },
+            { key: 'sea', label: '海', hint: 'みずの いきもの' },
+            { key: 'undeveloped', label: '未開発地（くろい）', hint: 'タップで クイズ→なおす' },
         ],
 
         // ■カードはFirestoreのカードライブラリ（cards）と所持カード（cardInstances）から作る
@@ -723,6 +724,10 @@ export default {
 
           if(tile.ownerTeam !== null) return; // already owned
 
+          if (tile.id === this.blockedTileId) {
+            this.showToast("このマスは、いま なおしたばかり。つぎの ばんから おけるよ")
+            return
+          }
           if (!tile.validForSelection) {
             this.showToast("このタイルにはこのカードは置けないよ")
             return // not valid for selection
@@ -858,6 +863,8 @@ export default {
                 this.resigned = !!(data.result && data.result.resigned)
                 this.rewardTera = (data.result && data.result.rewardTera) || 0
                 this.tiles = data.tiles
+                // 保存されていた「置ける場所の印」「選択中の印」は、読み込み直したときは消す（カードを選び直すまで出さない）
+                this.tiles.forEach(tile => { tile.validForSelection = false; tile.selected = false })
                 this.hands = data.hands || {}
                 this.skipCount = data.skipCount || 0
                 this.gameState = data.gameState || 'playing'
@@ -1209,6 +1216,7 @@ export default {
             if (!this.players.length) return
             this.currentType = null
             this.selectedCard = null
+            this.blockedTileId = null // 番がうつったら、なおしたマスにも置ける
 
             const currentIndex = this.players.findIndex(
                 (p) => p.id === this.currentPlayerId
@@ -1236,6 +1244,7 @@ export default {
 
         // ■1マスが、あるカードを置けるかどうかの判定（人間の手札選択・AIの候補探索どちらからも使う）
         isTileValidForCard(t, card) {
+            if (t.id === this.blockedTileId) return false // チャレンジでなおしたばかりのマス（この番は置けない）
             if (t.area === "undeveloped") return false
             if (t.ownerTeam !== null) return false
 
@@ -1691,6 +1700,15 @@ export default {
           return Math.max(...this.players.map(p => p.score))
         },
 
+        // ■説明の「ちけい」の見本：盤面と同じ色・もよう
+        terrainSwatchStyle(key) {
+            return {
+                background: this.areaColors[key],
+                backgroundImage: AREA_PATTERNS[key] || 'none',
+                backgroundSize: '100% 100%'
+            }
+        },
+
         // ■このカードは、いま置ける場所があるか
         isPlaceable(card) {
             return this.placeableKeys.has(`${card.area}-${card.tier}`)
@@ -1791,14 +1809,10 @@ export default {
             return move ? this.teamColor(move.teamId) : undefined
         },
 
-        // ■黒いマスをなおしたあとの地形：まわりのマス（8マス）でいちばん多い地形（黒いマスは数えない）。まわりに無ければ「土」
+        // ■黒いマスをなおしたあとの地形：となりあうマス（8マス）のうち、適当な1つと同じ地形（黒いマスは数えない）。まわりに無ければ「土」
         developedAreaFor(tile) {
-            const counts = {}
-            this.getNeighbors(tile).forEach(n => {
-                if (n.area && n.area !== 'undeveloped') counts[n.area] = (counts[n.area] || 0) + 1
-            })
-            const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0]
-            return top || 'dirt'
+            const areas = this.getNeighbors(tile).map(n => n.area).filter(area => area && area !== 'undeveloped')
+            return areas.length ? areas[Math.floor(Math.random() * areas.length)] : 'dirt'
         },
 
         // ■黒いマスをタップ：「かんきょうチャレンジ」（ABゲーム2問）。
@@ -1806,6 +1820,7 @@ export default {
         startChallenge(tile) {
             if (this.gameState !== 'playing' || this.currentPlayer?.isAI) return
             const area = this.developedAreaFor(tile)
+            this.challengeArea = area // なおったあとの地形は、ここで決めておく（成功したときに、この地形になる）
             const water = area === 'river' || area === 'sea'
             const hand = this.hands[this.currentPlayerId] || []
             if (!hand.some(card => card.tier === 1 && card.area === (water ? 'water' : 'land'))) {
@@ -1838,13 +1853,14 @@ export default {
             this.challengeStarted = false
 
             if (result && result.success && tile && tile.area === 'undeveloped') {
-                const area = this.developedAreaFor(tile)
+                const area = this.challengeArea || this.developedAreaFor(tile)
                 tile.area = area
+                this.blockedTileId = tile.id // この番は、なおしたマスには、カードを置けない（つぎの番から置ける）
                 this.currentPlayer.score += AB_CHALLENGE_POINTS
                 this.selectedCard = null
                 this.updateValidTiles()
                 sfx.win()
-                this.showToast(`かんきょうを なおせた！ +${AB_CHALLENGE_POINTS}てん。「${AREA_NAMES[area]}」に なったよ。Lv1の カードを、ここに おいてみよう`, true)
+                this.showToast(`かんきょうを なおせた！ +${AB_CHALLENGE_POINTS}てん。「${AREA_NAMES[area]}」に なったよ。このマスには、つぎの ばんから おけるよ`, true)
                 this.saveGame()
                 return
             }
@@ -2470,6 +2486,38 @@ export default {
       color: #7dd3fc;
   }
 
+  /* ■置けるカードがないとき：スキップと「もどる」ボタンを、キラキラ光らせる（✦がまたたく） */
+  .skip-glow,
+  .back-glow{
+      position: relative;
+  }
+  .back-glow{
+      animation: back-glow 1.1s ease-in-out infinite;
+      border-color: #4ade80 !important;
+  }
+  @keyframes back-glow{
+      0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+      50% { box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.9), 0 0 14px 4px rgba(74, 222, 128, 0.8); }
+  }
+  .skip-glow::after,
+  .back-glow::after{
+      content: '✦';
+      position: absolute;
+      top: -7px;
+      right: -3px;
+      z-index: 2;
+      font-size: 13px;
+      line-height: 1;
+      color: #fff;
+      text-shadow: 0 0 4px #fff, 0 0 9px #7dd3fc;
+      pointer-events: none;
+      animation: ai-sparkle 1.1s ease-in-out infinite;
+  }
+  .back-glow::after{
+      text-shadow: 0 0 4px #fff, 0 0 9px #4ade80;
+      animation-delay: 0.4s;
+  }
+
   /* ■ゲーム終了の順位バッジ・じんちを見るときの帯 */
   .rank-badge{
       display: inline-block;
@@ -2514,5 +2562,57 @@ export default {
       font-weight: 800;
       color: #e2e8f0;
       white-space: nowrap;
+  }
+  /* ■説明の画面：ちけい・レベルと ポイント */
+  .legend-title{
+      margin: 0 0 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 900;
+      color: #475569;
+  }
+  .legend-terrain{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      padding: 6px 8px;
+  }
+  .legend-swatch{
+      flex: none;
+      width: 38px;
+      height: 38px;
+      border-radius: 6px;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  }
+  .legend-level{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      padding: 8px 2px 6px;
+      text-align: center;
+  }
+  .legend-shape{
+      width: 30px;
+      height: 30px;
+      overflow: visible;
+  }
+  .legend-shape *{
+      stroke: #000;
+      stroke-width: 2px;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+  }
+  .legend-points{
+      border-radius: 999px;
+      background: #0e7490;
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: 900;
+      color: #fff;
   }
 </style>
