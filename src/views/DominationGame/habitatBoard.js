@@ -59,9 +59,10 @@ export const HABITATS = {
 // ふつうの盤面の地形の割合（すみかの影響がないときの基準）
 export const BASE_WEIGHTS = { town: 0.26, forest: 0.24, dirt: 0.14, river: 0.08, sea: 0.14, undeveloped: 0.14 };
 
-// ■場所のゲーム用：すみかの影響は「少しだけ」。基準の割合に、すみかの割合を influence の分だけ混ぜる
-//   （influence=0.4 なら、海の場所でも海は2〜3割ほどで、ほかの地形もちゃんと残る）
-export const SPOT_INFLUENCE = 0.4;
+// ■場所のゲーム用：基準の割合に、すみかの割合を influence の分だけ混ぜる
+//   （influence=0.65 なら、海の場所で海が約4割、森の場所で森が約4〜5割。ほかの地形もちゃんと残る。
+//     以前は0.4（海の場所で海が約3割）だったが、場所の違いが分かりにくいので、強くした）
+export const SPOT_INFLUENCE = 0.65;
 
 // 同じseedなら同じ盤面になる乱数（比較のときに、押すたびに変わらないようにする）
 export function createRng(seed) {

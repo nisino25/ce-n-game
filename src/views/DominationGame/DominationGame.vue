@@ -393,7 +393,7 @@
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">4</span>
-                        <span><b>かんきょうチャレンジ！</b> <b>くろい マス</b>を タップすると、かんきょうクイズ（<b>2もん</b>）が できるよ。<b>ぜんぶ 1かいで</b> あてたら せいこう！ マスが <b>となりの マスと おなじ ちけい</b>に なおって <b>+3てん</b>。（その ばんは、なおした マスには おけないよ。つぎの ばんから おけるよ）しっぱいすると ばんが つぎの チームに うつるよ。（なおる ちけいに あう Lv1の カードが ないと ちょうせん できないよ）</span>
+                        <span><b>かんきょうチャレンジ！</b> <b>くろい マス</b>を タップすると、かんきょうクイズ（<b>2もん</b>）が できるよ。<b>ぜんぶ 1かいで</b> あてたら せいこう！ マスが <b>となりの マスと おなじ ちけい</b>に なおって <b>+3てん</b>。（その ばんは、なおした マスには おけないよ。つぎの ばんから おけるよ）しっぱいすると ばんが つぎの チームに うつるよ。カードが なくても ちょうせん できるよ。</span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">5</span>
@@ -607,7 +607,6 @@ export default {
         showChallenge: false, // 黒いマスの「かんきょうチャレンジ」（ABゲーム）を開いている
         challengeTile: null,
         challengeStarted: false,
-        challengeArea: null, // チャレンジに成功したら、黒いマスがなる地形
         blockedTileId: null, // チャレンジでなおしたマス。その自分の番のあいだは、カードを置けない
         rewardTera: 0, // 1位でもらったテラ（もらえたときだけ）
         rewardState: '', // '' | 'pending' | 'error'
@@ -1815,18 +1814,9 @@ export default {
             return areas.length ? areas[Math.floor(Math.random() * areas.length)] : 'dirt'
         },
 
-        // ■黒いマスをタップ：「かんきょうチャレンジ」（ABゲーム2問）。
-        //   なおったあとの地形に合う Lv1 のカードを持っていないと、ちょうせんできない（なおしても、おけないので）
+        // ■黒いマスをタップ：「かんきょうチャレンジ」（ABゲーム2問）。カードを持っていなくても、ちょうせんできる
         startChallenge(tile) {
             if (this.gameState !== 'playing' || this.currentPlayer?.isAI) return
-            const area = this.developedAreaFor(tile)
-            this.challengeArea = area // なおったあとの地形は、ここで決めておく（成功したときに、この地形になる）
-            const water = area === 'river' || area === 'sea'
-            const hand = this.hands[this.currentPlayerId] || []
-            if (!hand.some(card => card.tier === 1 && card.area === (water ? 'water' : 'land'))) {
-                this.showToast(`ここは「${AREA_NAMES[area]}」に なるよ。${water ? 'みず' : 'りく'}の いきもの（Lv1）の カードが ないと、ちょうせん できないよ`)
-                return
-            }
             this.challengeTile = tile
             this.challengeStarted = false
             this.showChallenge = true
@@ -1853,7 +1843,7 @@ export default {
             this.challengeStarted = false
 
             if (result && result.success && tile && tile.area === 'undeveloped') {
-                const area = this.challengeArea || this.developedAreaFor(tile)
+                const area = this.developedAreaFor(tile) // となりあうマスの、適当な1つと同じ地形
                 tile.area = area
                 this.blockedTileId = tile.id // この番は、なおしたマスには、カードを置けない（つぎの番から置ける）
                 this.currentPlayer.score += AB_CHALLENGE_POINTS
