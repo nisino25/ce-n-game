@@ -26,6 +26,10 @@ import CreatureScan from "@/views/CreatureScan/CreatureScan.vue";
 import { getSession } from "@/utils/session.js";
 
 import CardAdmin from "@/views/Admin/CardAdmin.vue";
+import DocsView from "@/views/Docs/DocsView.vue";
+import NoticeBoard from "@/views/NoticeBoard/NoticeBoard.vue";
+import CommentsAdmin from "@/views/Admin/CommentsAdmin.vue";
+import HabitatCompare from "@/views/HabitatCompare/HabitatCompare.vue";
 
 
 const routes = [
@@ -125,6 +129,34 @@ const routes = [
         component: CardAdmin 
     },
     
+    // ■かんばん：これからのアップデートのお知らせと、みんなの声（コメント）を送る場所
+    {
+        path: "/notice-board",
+        name: "NoticeBoard",
+        component: NoticeBoard
+    },
+
+    // ■みんなの声を読む画面（管理者用の仮画面。モニタールームの仮リンクから）
+    {
+        path: "/comments-admin",
+        name: "CommentsAdmin",
+        component: CommentsAdmin
+    },
+
+    // ■試作：すみか（海・町・森）で盤面がどう変わるかの比較ページ（比較が終わったら削除する）
+    {
+        path: "/habitat-compare",
+        name: "HabitatCompare",
+        component: HabitatCompare
+    },
+
+    // ■ドキュメント一覧（docs/ のmdを表示。モニタールームの仮リンクから）
+    {
+        path: "/docs",
+        name: "Docs",
+        component: DocsView
+    },
+
     {
         path: "/creature-scan",
         name: "CreatureScan",

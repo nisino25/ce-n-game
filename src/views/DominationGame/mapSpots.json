@@ -1,0 +1,400 @@
+{
+  "cities": {
+    "hiratsuka": {
+      "name": "平塚市",
+      "center": [
+        35.325,
+        139.3497
+      ]
+    },
+    "kushiro": {
+      "name": "釧路市",
+      "center": [
+        42.9849,
+        144.3814
+      ]
+    }
+  },
+  "spots": [
+    {
+      "id": "hiratsuka-station",
+      "city": "hiratsuka",
+      "name": "平塚駅前",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 1,
+      "q": 0,
+      "r": 0
+    },
+    {
+      "id": "hiratsuka-sagami",
+      "city": "hiratsuka",
+      "name": "相模川（馬入）",
+      "icon": "🌊",
+      "habitat": "river",
+      "order": 2,
+      "q": 1,
+      "r": 0
+    },
+    {
+      "id": "hiratsuka-komayama",
+      "city": "hiratsuka",
+      "name": "高麗山",
+      "icon": "🌲",
+      "habitat": "forest",
+      "order": 3,
+      "q": -1,
+      "r": 0
+    },
+    {
+      "id": "hiratsuka-field",
+      "city": "hiratsuka",
+      "name": "北部の田んぼ",
+      "icon": "🌾",
+      "habitat": "dirt",
+      "order": 4,
+      "q": 1,
+      "r": -1
+    },
+    {
+      "id": "hiratsuka-park",
+      "city": "hiratsuka",
+      "name": "総合公園",
+      "icon": "🌳",
+      "habitat": "forest",
+      "order": 5,
+      "q": 0,
+      "r": -1
+    },
+    {
+      "id": "hiratsuka-hanamizu",
+      "city": "hiratsuka",
+      "name": "花水川の河口",
+      "icon": "🏞",
+      "habitat": "river",
+      "order": 6,
+      "q": -1,
+      "r": 1
+    },
+    {
+      "id": "hiratsuka-coast",
+      "city": "hiratsuka",
+      "name": "平塚の海岸",
+      "icon": "🌅",
+      "habitat": "sea",
+      "order": 7,
+      "q": 0,
+      "r": 1
+    },
+    {
+      "id": "kushiro-station",
+      "city": "kushiro",
+      "name": "釧路の町",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 1,
+      "q": 0,
+      "r": 0
+    },
+    {
+      "id": "kushiro-river",
+      "city": "kushiro",
+      "name": "釧路川",
+      "icon": "🏞",
+      "habitat": "river",
+      "order": 2,
+      "q": 1,
+      "r": 0
+    },
+    {
+      "id": "kushiro-harukotan",
+      "city": "kushiro",
+      "name": "春採湖",
+      "icon": "🦆",
+      "habitat": "river",
+      "order": 3,
+      "q": -1,
+      "r": 0
+    },
+    {
+      "id": "kushiro-marsh",
+      "city": "kushiro",
+      "name": "釧路湿原",
+      "icon": "🦢",
+      "habitat": "dirt",
+      "order": 4,
+      "q": 1,
+      "r": -1
+    },
+    {
+      "id": "kushiro-akan",
+      "city": "kushiro",
+      "name": "阿寒の森",
+      "icon": "🌲",
+      "habitat": "forest",
+      "order": 5,
+      "q": 0,
+      "r": -1
+    },
+    {
+      "id": "kushiro-coast",
+      "city": "kushiro",
+      "name": "太平洋の海岸",
+      "icon": "🌅",
+      "habitat": "sea",
+      "order": 6,
+      "q": -1,
+      "r": 1
+    },
+    {
+      "id": "kushiro-port",
+      "city": "kushiro",
+      "name": "釧路港",
+      "icon": "⚓",
+      "habitat": "sea",
+      "order": 7,
+      "q": 0,
+      "r": 1
+    },
+    {
+      "id": "hiratsuka-kanome",
+      "city": "hiratsuka",
+      "name": "金目の田園",
+      "icon": "🌾",
+      "habitat": "dirt",
+      "q": 1,
+      "r": -2,
+      "order": 8
+    },
+    {
+      "id": "hiratsuka-samukawa",
+      "city": "hiratsuka",
+      "name": "寒川の畑",
+      "icon": "🥬",
+      "habitat": "dirt",
+      "q": 2,
+      "r": -2,
+      "order": 9
+    },
+    {
+      "id": "hiratsuka-shonandaira",
+      "city": "hiratsuka",
+      "name": "湘南平",
+      "icon": "🌲",
+      "habitat": "forest",
+      "q": 0,
+      "r": -2,
+      "order": 10
+    },
+    {
+      "id": "hiratsuka-chigasaki",
+      "city": "hiratsuka",
+      "name": "茅ヶ崎の町",
+      "icon": "🏘",
+      "habitat": "town",
+      "q": 2,
+      "r": -1,
+      "order": 11
+    },
+    {
+      "id": "hiratsuka-bamen-park",
+      "city": "hiratsuka",
+      "name": "馬入ふれあい公園",
+      "icon": "🌳",
+      "habitat": "forest",
+      "q": 2,
+      "r": 0,
+      "order": 12
+    },
+    {
+      "id": "hiratsuka-surf",
+      "city": "hiratsuka",
+      "name": "サーファーの海",
+      "icon": "🏄",
+      "habitat": "sea",
+      "q": 1,
+      "r": 1,
+      "order": 13
+    },
+    {
+      "id": "hiratsuka-sagami-bay",
+      "city": "hiratsuka",
+      "name": "相模湾（沖）",
+      "icon": "🌊",
+      "habitat": "sea",
+      "q": 0,
+      "r": 2,
+      "order": 14
+    },
+    {
+      "id": "hiratsuka-offshore",
+      "city": "hiratsuka",
+      "name": "平塚沖",
+      "icon": "⛵",
+      "habitat": "sea",
+      "q": -1,
+      "r": 2,
+      "order": 15
+    },
+    {
+      "id": "hiratsuka-oiso-sea",
+      "city": "hiratsuka",
+      "name": "大磯の海",
+      "icon": "🐚",
+      "habitat": "sea",
+      "q": -2,
+      "r": 2,
+      "order": 16
+    },
+    {
+      "id": "hiratsuka-oiso-town",
+      "city": "hiratsuka",
+      "name": "大磯の街並み",
+      "icon": "🏘",
+      "habitat": "town",
+      "q": -2,
+      "r": 1,
+      "order": 17
+    },
+    {
+      "id": "hiratsuka-oiso-hills",
+      "city": "hiratsuka",
+      "name": "大磯丘陵",
+      "icon": "🌲",
+      "habitat": "forest",
+      "q": -2,
+      "r": 0,
+      "order": 18
+    },
+    {
+      "id": "hiratsuka-ninomiya",
+      "city": "hiratsuka",
+      "name": "二宮の里山",
+      "icon": "🌳",
+      "habitat": "forest",
+      "q": -1,
+      "r": -1,
+      "order": 19
+    },
+    {
+      "id": "kushiro-tsurui",
+      "city": "kushiro",
+      "name": "鶴居の牧場",
+      "icon": "🐄",
+      "habitat": "dirt",
+      "q": 1,
+      "r": -2,
+      "order": 8
+    },
+    {
+      "id": "kushiro-shiranuka-forest",
+      "city": "kushiro",
+      "name": "白糠の森",
+      "icon": "🌲",
+      "habitat": "forest",
+      "q": 2,
+      "r": -2,
+      "order": 9
+    },
+    {
+      "id": "kushiro-akan-lake",
+      "city": "kushiro",
+      "name": "阿寒湖",
+      "icon": "🏞",
+      "habitat": "river",
+      "q": 0,
+      "r": -2,
+      "order": 10
+    },
+    {
+      "id": "kushiro-shiranuka-town",
+      "city": "kushiro",
+      "name": "白糠の町",
+      "icon": "🏘",
+      "habitat": "town",
+      "q": 2,
+      "r": -1,
+      "order": 11
+    },
+    {
+      "id": "kushiro-shiranuka-coast",
+      "city": "kushiro",
+      "name": "白糠の海岸",
+      "icon": "🌊",
+      "habitat": "sea",
+      "q": 2,
+      "r": 0,
+      "order": 12
+    },
+    {
+      "id": "kushiro-pacific",
+      "city": "kushiro",
+      "name": "太平洋（沖）",
+      "icon": "⛵",
+      "habitat": "sea",
+      "q": 1,
+      "r": 1,
+      "order": 13
+    },
+    {
+      "id": "kushiro-offshore",
+      "city": "kushiro",
+      "name": "釧路沖",
+      "icon": "🚢",
+      "habitat": "sea",
+      "q": 0,
+      "r": 2,
+      "order": 14
+    },
+    {
+      "id": "kushiro-fog-sea",
+      "city": "kushiro",
+      "name": "霧の海",
+      "icon": "🌫",
+      "habitat": "sea",
+      "q": -1,
+      "r": 2,
+      "order": 15
+    },
+    {
+      "id": "kushiro-otanoshike-coast",
+      "city": "kushiro",
+      "name": "大楽毛の海岸",
+      "icon": "🐚",
+      "habitat": "sea",
+      "q": -2,
+      "r": 2,
+      "order": 16
+    },
+    {
+      "id": "kushiro-otanoshike-town",
+      "city": "kushiro",
+      "name": "大楽毛の町",
+      "icon": "🏘",
+      "habitat": "town",
+      "q": -2,
+      "r": 1,
+      "order": 17
+    },
+    {
+      "id": "kushiro-hills",
+      "city": "kushiro",
+      "name": "釧路の丘陵",
+      "icon": "🌲",
+      "habitat": "forest",
+      "q": -2,
+      "r": 0,
+      "order": 18
+    },
+    {
+      "id": "kushiro-shin-kushiro",
+      "city": "kushiro",
+      "name": "新釧路川",
+      "icon": "🏞",
+      "habitat": "river",
+      "q": -1,
+      "r": -1,
+      "order": 19
+    }
+  ]
+}

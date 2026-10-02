@@ -5,51 +5,45 @@
             <!-- Header: title + scoreboard -->
             <header class="bg-white border-b border-slate-200 shadow-sm">
                 <div class="max-w-[1500px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
-                    <div class="flex items-center gap-3">
-                        <h1 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+                    <div class="flex min-w-0 items-center gap-3">
+                        <h1 class="whitespace-nowrap text-lg font-bold text-slate-700 flex items-center gap-2">
                             <span>🗺️</span><span>陣取りゲーム</span>
                         </h1>
 
                         <button
-                            class="flex items-center gap-1.5 text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-full pl-3 pr-2.5 py-1 font-mono font-bold tracking-wider text-slate-600 transition"
+                            class="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-full pl-3 pr-2.5 py-1 font-mono font-bold tracking-wider text-slate-600 transition"
                             title="クリックでコピー"
                             @click="copyRoomCode"
                         >
-                            <span class="text-slate-400">🔑ルーム</span>
-                            <span>{{ roomCode }}</span>
+                            <span class="text-slate-400">{{ roomLabelText() ? '📍' : '🔑ルーム' }}</span>
+                            <span class="truncate">{{ roomLabelText() || roomCode }}</span>
                             <span v-if="roomCodeCopied" class="text-emerald-600 font-sans font-normal">コピーしました！</span>
                             <span v-else class="text-slate-400 font-sans font-normal">📋</span>
                         </button>
-
-                        <button
-                            class="text-xs text-slate-400 hover:text-slate-600 underline whitespace-nowrap"
-                            @click="changeRoom"
-                        >
-                            ルームを変える
-                        </button>
                     </div>
 
-                    <div class="flex flex-wrap gap-2">
+                    <!-- ■チーム名と点数は、スマホでも必ず1行（3チームが横一列）。スマホでは「風 0点」のように短くする -->
+                    <div class="flex w-full flex-nowrap gap-1.5 sm:w-auto sm:gap-2">
                         <div
                             v-for="player in players"
                             :key="player.id"
-                            class="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border-2 text-sm transition-all"
-                            :class="player.id === currentPlayerId ? 'shadow-md scale-105' : 'opacity-60'"
+                            class="flex min-w-0 flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full border-2 px-1.5 py-1.5 text-xs transition-all sm:flex-none sm:gap-2 sm:pl-2 sm:pr-3 sm:text-sm"
+                            :class="player.id === currentPlayerId ? 'shadow-md' : 'opacity-60'"
                             :style="{
                                 borderColor: player.color,
                                 background: player.id === currentPlayerId ? player.color + '1a' : 'transparent'
                             }"
                         >
-                            <span class="w-3 h-3 rounded-full flex-none" :style="{ background: player.color }"></span>
-                            <span class="font-semibold whitespace-nowrap">{{ player.name }}</span>
+                            <span class="h-2.5 w-2.5 flex-none rounded-full sm:h-3 sm:w-3" :style="{ background: player.color }"></span>
+                            <span class="font-semibold">{{ player.name.replace('チーム', '') }}<span class="hidden sm:inline">チーム</span></span>
                             <span v-if="player.isAI" class="text-xs" title="AIが操作します">🤖</span>
-                            <span class="font-bold whitespace-nowrap">{{ player.score }}点</span>
+                            <span class="font-bold">{{ player.score }}点</span>
                             <span
                                 v-if="player.id === currentPlayerId"
-                                class="text-xs font-bold whitespace-nowrap"
+                                class="text-xs font-bold"
                                 :style="{ color: player.color }"
                             >
-                                ▶手番
+                                ▶<span class="hidden sm:inline">手番</span>
                             </span>
                         </div>
                     </div>
@@ -213,22 +207,17 @@
                             スキップ
                         </button>
                         <button
-                            class="px-2 py-2.5 rounded-lg border border-emerald-300 bg-emerald-100 hover:bg-emerald-200 text-sm font-medium transition"
-                            @click="confirmFinish()"
+                            v-if="gameState === 'playing'"
+                            class="px-2 py-2.5 rounded-lg border border-red-400 bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition"
+                            @click="showResignConfirm = true"
                         >
-                            ゲーム終了
+                            🏳 まけました
                         </button>
                         <button
                             class="px-2 py-2.5 rounded-lg border border-rose-300 bg-rose-100 hover:bg-rose-200 text-sm font-medium transition"
-                            @click="backToMonitorRoom()"
+                            @click="backFromGame()"
                         >
-                            🏠 ホームにもどる
-                        </button>
-                        <button
-                            class="col-span-2 px-2 py-2.5 rounded-lg border border-orange-300 bg-orange-100 hover:bg-orange-200 text-sm font-medium transition"
-                            @click="startNewMap()"
-                        >
-                            🔄 新規マップで再開
+                            {{ backLabelText() }}
                         </button>
                     </div>
                 </div>
@@ -255,6 +244,9 @@
             <div v-if="gameState === 'finished'" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
                 <div class="bg-white p-6 rounded-2xl shadow-xl text-center max-w-sm w-full">
                     <h2 class="text-2xl font-bold mb-1">ゲーム終了！</h2>
+                    <p v-if="finishedResult" class="mb-1 text-lg font-black" :style="{ color: finishedResult.humanWon ? '#059669' : '#dc2626' }">
+                        {{ finishedResult.humanWon ? 'かったよ！' : (finishedResult.resigned ? 'まけました…' : 'AIが かったよ') }}
+                    </p>
                     <p class="text-sm text-slate-500 mb-4">最終スコア</p>
                     <ul class="text-left mb-5 space-y-2">
                         <li
@@ -271,12 +263,37 @@
                             <span class="font-bold">{{ player.score }}点</span>
                         </li>
                     </ul>
+                    <!-- ■地図の場所のゲームは、おわった枠はそのまま残る（もう一回はできない）ので、街の画面にもどる -->
                     <button
+                        v-if="isSlotGame()"
+                        class="w-full px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold transition"
+                        @click="backFromGame()"
+                    >
+                        {{ backLabelText() }}
+                    </button>
+                    <button
+                        v-else
                         class="w-full px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold transition"
                         @click="resetTiles()"
                     >
                         もう一回遊ぶ
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ■まけました：確認（画面の中のダイアログ） -->
+        <div
+            v-if="showResignConfirm"
+            class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+            @click.self="showResignConfirm = false"
+        >
+            <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+                <p class="mb-1 text-xl font-black">まけましたに する？</p>
+                <p class="mb-5 text-sm text-slate-600">AIの かちに なって、このゲームは おわるよ。</p>
+                <div class="flex flex-col gap-2">
+                    <button class="rounded-xl bg-red-500 px-4 py-3 font-bold text-white hover:bg-red-600" @click="resign()">まけました</button>
+                    <button class="rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showResignConfirm = false">やめる</button>
                 </div>
             </div>
         </div>
@@ -318,8 +335,11 @@
 import db from '../../firebase.js';
 import CreatureCard from './CreatureCard.vue';
 import { getSession } from '@/utils/session.js';
+import { generateSpotBoard } from './habitatBoard.js';
+import { isFresh } from '@/utils/dominationSlots.js';
 import {
     fetchCardLibrary,
+    getCurrentUser,
     fetchTeamCollectionInstances,
     placeCardInstance,
     markCardInstancesEaten,
@@ -379,10 +399,14 @@ export default {
 
         roomCode,
         roomCodeCopied: false,
+        slotOwner: null, // 地図のゲーム枠を遊んでいる人 { uid, name, team }
+        resigned: false, // 「まけました」で終わったか
+        showResignConfirm: false,
+        savedPlace: null, // ルームに保存されていた場所（地図から入り直さなかったときに引き継ぐ）
 
         players: [
             { id: 1, name: '水チーム', color: '#00BFA6', score: 0, isAI: humanPlayerId !== 1 }, // teal (water but not blue)
-            { id: 2, name: '空気チーム', color: '#9B5DE5', score: 0, isAI: humanPlayerId !== 2 }, // purple (air = light / abstract)
+            { id: 2, name: '風チーム', color: '#9B5DE5', score: 0, isAI: humanPlayerId !== 2 }, // purple (air = light / abstract)
             { id: 3, name: '土チーム', color: '#FFB97A', score: 0, isAI: humanPlayerId !== 3 }  // sand/orange (earth)
         ],
 
@@ -444,6 +468,21 @@ export default {
       }
     },
     methods: {
+        // ■地図の場所から始めたゲームは、「ホーム」ではなく、その街（平塚市など）の六角形の画面にもどる
+        backFromGame() {
+            const place = this.loadPlace()
+            if (place && place.city) {
+                this.$router.push({ name: 'DominationMap', query: { city: place.city } })
+                return
+            }
+            this.backToMonitorRoom()
+        },
+
+        backLabelText() {
+            const place = this.loadPlace()
+            return place && place.cityName ? `📍 ${place.cityName}にもどる` : '🏠 ホームにもどる'
+        },
+
         backToMonitorRoom() {
             this.$router.push({ name: 'Home' });
         },
@@ -582,6 +621,7 @@ export default {
         async resetTiles() {
             if (!confirm("本当にタイルをリセットしますか？現在の進行状況は失われます。")) return;
 
+            this.resigned = false
             this.generateTiles()
             await this.initializeHands()
             this.gameState = 'playing'
@@ -607,6 +647,9 @@ export default {
 
                 if (!data || !Array.isArray(data.tiles) || data.tiles.length === 0) return false
 
+                this.savedPlace = data.place || null
+                this.slotOwner = data.ownerUid ? { uid: data.ownerUid, name: data.ownerName || '', team: data.ownerTeam || '', updatedAt: data.updatedAt || '', gameState: data.gameState || 'playing' } : null
+                this.resigned = !!(data.result && data.result.resigned)
                 this.tiles = data.tiles
                 this.hands = data.hands || {}
                 this.skipCount = data.skipCount || 0
@@ -627,6 +670,47 @@ export default {
             }
         },
 
+        // ■最後に地図から入った場所（{city, cityName}）。ルームの「場所」として一緒に保存する
+        loadPlace() {
+            try {
+                return JSON.parse(localStorage.getItem('dominationPlace')) || this.savedPlace
+            } catch (e) {
+                return this.savedPlace
+            }
+        },
+
+        // ■地図の場所から始めたゲームは、長いルームコードの代わりに「場所 ゲーム番号」を表示する
+        roomLabelText() {
+            const place = this.loadPlace()
+            return place && place.spotName && place.gameNo ? `${place.spotName} ゲーム${place.gameNo}` : ''
+        },
+
+        // ■場所とゲーム番号から、盤面の元になる数（同じ場所・同じ番号なら必ず同じ数）
+        spotSeed(spotId, gameNo) {
+            let hash = 0
+            for (let i = 0; i < spotId.length; i++) {
+                hash = (hash * 31 + spotId.charCodeAt(i)) % 1000003
+            }
+            return hash * 10 + gameNo
+        },
+
+        // ■ゲームが終わったときの結果。得点が一番高いチームが勝ち。地図の六角形を塗るのに使う
+        //   humanWon=false（AIチームの勝ち）なら、地図では灰色になる
+        computeResult() {
+            if (this.gameState !== 'finished') return null
+            // 「まけました」のときは、得点にかかわらずAIの勝ち（得点が一番高いAIチームを勝ちにする）
+            const winner = this.resigned
+                ? (this.sortedPlayersByScore.find(player => player.isAI) || this.sortedPlayersByScore[0])
+                : this.sortedPlayersByScore[0]
+            if (!winner) return null
+            return {
+                winnerId: winner.id,
+                winnerTeam: TEAM_NAME_BY_ID[winner.id],
+                humanWon: winner.id === this.humanPlayerId,
+                resigned: this.resigned
+            }
+        },
+
         // ■現在の進行状況をまるごと保存する
         async saveGame() {
             try {
@@ -637,16 +721,113 @@ export default {
                     currentPlayerId: this.currentPlayerId,
                     skipCount: this.skipCount,
                     gameState: this.gameState,
+                    place: this.loadPlace(),
+                    result: this.computeResult(),
+                    ownerUid: this.slotOwner ? this.slotOwner.uid : null,
+                    ownerName: this.slotOwner ? this.slotOwner.name : null,
+                    ownerTeam: this.slotOwner ? this.slotOwner.team : null,
                     updatedAt: new Date().toISOString()
                 })
             } catch (e) {
                 console.error('陣取りゲームの保存に失敗しました', e)
             }
+
+            if (this.isSlotGame()) this.saveSlotStatus()
         },
 
-        // ■仮：保存済みの進行状況を破棄して、完全に新しいマップで最初から遊び直す（ルームは変えない）
-        startNewMap() {
-            this.resetTiles()
+        // ■地図に出す「ゲーム枠のようす」（誰が遊び中か・勝ったチーム）を、軽いドキュメントにも書く
+        async saveSlotStatus() {
+            const place = this.loadPlace()
+            if (!place || !this.slotOwner) return
+            const result = this.computeResult()
+            try {
+                await db.collection('mapSlots').doc(this.roomCode).set({
+                    city: place.city,
+                    spotId: place.spotId,
+                    gameNo: place.gameNo,
+                    state: this.gameState === 'finished' ? 'finished' : 'playing',
+                    ownerUid: this.slotOwner.uid,
+                    ownerName: this.slotOwner.name,
+                    ownerTeam: this.slotOwner.team,
+                    winnerTeam: result ? result.winnerTeam : null,
+                    humanWon: result ? result.humanWon : null,
+                    updatedAt: new Date().toISOString()
+                })
+            } catch (e) {
+                console.error('ゲーム枠のようすの保存に失敗しました', e)
+            }
+        },
+
+        // ■ゲーム枠に入ってよいかの判断に使う情報を読む（ユーザー・この枠のようす・自分があそび中の枠）。
+        //   他の読み込みと同時に進める
+        async fetchSlotContext() {
+            let user = null
+            try {
+                user = await getCurrentUser()
+                if (!user) return { user: null }
+                const [slotDoc, mine] = await Promise.all([
+                    db.collection('mapSlots').doc(this.roomCode).get(),
+                    db.collection('mapSlots').where('ownerUid', '==', user.uid).where('state', '==', 'playing').get()
+                ])
+                return { user, slot: slotDoc.exists ? slotDoc.data() : null, mineDocs: mine.docs }
+            } catch (e) {
+                console.error('ゲーム枠のようすの確認に失敗しました', e)
+                return { user, slot: null, mineDocs: [] }
+            }
+        },
+
+        // ■ゲーム枠に入ってよいか調べる（通信はしない。fetchSlotContext の結果で決める）。
+        //   入れないときは、理由つきで街の画面にもどして blocked:true を返す。
+        //   loaded は「保存されたゲームを読み込めたか」。前の人がやめた枠は読み込まなかったことにして、最初からやり直す
+        checkSlotAccess(loaded, context) {
+            const place = this.loadPlace()
+            const user = context.user
+            const goBack = notice => {
+                this.$router.replace({ name: 'DominationMap', query: { city: place.city, notice } })
+                return { blocked: true, loaded }
+            }
+            if (!user) return goBack('busy')
+
+            const me = { uid: user.uid, name: user.name || '', team: TEAM_NAME_BY_ID[this.humanPlayerId] }
+
+            if (loaded && this.slotOwner && this.slotOwner.uid !== user.uid) {
+                if (this.slotOwner.gameState === 'finished') return goBack('done')
+                if (isFresh(this.slotOwner.updatedAt)) return goBack('busy')
+                loaded = false // 前の人がやめたまま長く動いていない枠は、最初からやり直して使う
+            }
+
+            if (loaded) {
+                // 持ち主の記録が無い古い保存は、自分のものにする
+                if (!this.slotOwner) this.slotOwner = me
+                return { blocked: false, loaded: true }
+            }
+
+            // 新しく始める枠：すでにほかの人のものになっていないか（地図に出ている枠のようす）
+            const slot = context.slot
+            if (slot && slot.ownerUid && slot.ownerUid !== user.uid) {
+                if (slot.state === 'finished') return goBack('done')
+                if (isFresh(slot.updatedAt)) return goBack('busy')
+            }
+
+            // 自分がほかの枠であそび中なら、始められない
+            const other = context.mineDocs.find(doc => doc.id !== this.roomCode && isFresh(doc.data().updatedAt))
+            if (other) return goBack('active')
+
+            this.slotOwner = me
+            return { blocked: false, loaded: false }
+        },
+
+        // ■地図の「場所」から始めたゲーム（ゲーム枠）かどうか
+        isSlotGame() {
+            const place = this.loadPlace()
+            return !!(place && place.spotId && place.gameNo)
+        },
+
+        // ■「まけました」：AIの勝ちとして、このゲームを終わらせる
+        resign() {
+            this.showResignConfirm = false
+            this.resigned = true
+            this.finishGame()
         },
 
         async copyRoomCode() {
@@ -663,55 +844,60 @@ export default {
             }, 1500)
         },
 
-        // ■別のルームコードに参加する（存在しなければそのコードで新しいルームが作られる）
-        async changeRoom() {
-            const input = prompt(
-                '参加したいルームコードを入力してください。\n存在しないコードを入力すると、新しいルームが作られます。',
-                this.roomCode
-            )
-
-            if (!input) return
-
-            const code = input.trim().toUpperCase()
-
-            if (!code || code === this.roomCode) return
-
-            this.roomCode = code
-            localStorage.setItem(ROOM_CODE_STORAGE_KEY, code)
-
-            await this.loadOrInitGame()
-        },
-
         // ■現在のroomCodeのゲームを読み込む。無ければ新規に生成して保存する
         async loadOrInitGame() {
+            this.savedPlace = null
+            this.slotOwner = null
+            this.resigned = false
             this.isAiThinking = false
             this.selectedCard = null
             this.tilePreviewCard = null
 
-            if (!this.cardLibrary.length) {
-                try {
-                    this.cardLibrary = await fetchCardLibrary()
-                } catch (e) {
-                    console.error('カードライブラリの読み込みに失敗しました', e)
-                }
-            }
+            const slot = this.isSlotGame()
+            const team = TEAM_NAME_BY_ID[this.humanPlayerId]
 
-            const loaded = await this.loadSavedGame()
+            // ■読み込みは、1つずつ順番に待たず、いっぺんに始める。
+            //   （順番に待つと、通信が遅いスマホでは、待ち時間がそのまま積み上がって、読み込み中が長くなる）
+            const [library, savedLoaded, instances, slotContext] = await Promise.all([
+                this.cardLibrary.length
+                    ? Promise.resolve(this.cardLibrary)
+                    : fetchCardLibrary().catch(e => {
+                        console.error('カードライブラリの読み込みに失敗しました', e)
+                        return []
+                    }),
+                this.loadSavedGame(),
+                fetchTeamCollectionInstances(team).catch(e => {
+                    console.error('チームの所持カードの読み込みに失敗しました', e)
+                    return []
+                }),
+                slot ? this.fetchSlotContext() : Promise.resolve(null)
+            ])
+            this.cardLibrary = library
+
+            let loaded = savedLoaded
+
+            // ■地図のゲーム枠：ほかの人が遊んでいる・遊び終えた枠には入れない。自分はどこか1つのゲームでしか遊べない
+            if (slot) {
+                const access = this.checkSlotAccess(loaded, slotContext)
+                if (access.blocked) return
+                loaded = access.loaded
+            }
 
             if (loaded) {
                 // ■保存後にメンバーが新しくカードを集めたり、別のゲームで使ったりしているので、
                 // 人間チームの手札はDBの所持カードから作り直す
-                await this.refreshHumanHand()
-                await this.saveGame()
+                this.hands[this.humanPlayerId] = this.shuffleArray(this.handFromInstances(instances))
             } else {
-                await this.initializeHands()
+                await this.initializeHands(instances)
                 this.generateTiles()
                 this.gameState = 'playing'
                 this.currentPlayerId = this.players[0].id
                 this.skipCount = 0
                 this.players.forEach(p => (p.score = 0))
-                await this.saveGame()
             }
+
+            // ■保存の完了は待たない（画面を先に出す。保存の失敗は saveGame の中で記録する）
+            this.saveGame()
 
             this.maybeTriggerAI()
         },
@@ -825,6 +1011,16 @@ export default {
             return list[Math.floor(Math.random() * list.length)]
         },
         generateTiles() {
+                // ■地図の「場所」から始めたゲームは、その場所のすみかを少しだけ反映した盤面にする。
+                //   場所・ゲーム番号ごとに盤面は固定（同じ場所の同じゲームは、何度開いても同じ盤面）
+                const place = this.loadPlace()
+                if (place && place.habitat && place.spotId) {
+                    const seed = this.spotSeed(place.spotId, place.gameNo || 1)
+                    this.tiles = generateSpotBoard(place.habitat, { rows: this.rows, cols: this.cols, seed })
+                        .map(tile => ({ ...tile, type: 'none', selected: false, ownerTeam: null }))
+                    return
+                }
+
                 this.tiles = []
                 let id = 1
 
@@ -1064,14 +1260,18 @@ export default {
         },
 
         // ■人間チームの手札：チームのメンバー全員の、手元にある所持カード
+        // ■チームの所持カード（DBの cardInstances）から、人間チームの手札を作る
+        handFromInstances(instances) {
+            const libraryById = Object.fromEntries(this.cardLibrary.map(card => [card.cardId, card]))
+            return instances
+                .filter(instance => libraryById[instance.cardId])
+                .map(instance => toDominationCard(libraryById[instance.cardId], instance.instanceId))
+        },
+
         async fetchHumanHand() {
             const team = TEAM_NAME_BY_ID[this.humanPlayerId]
-            const libraryById = Object.fromEntries(this.cardLibrary.map(card => [card.cardId, card]))
             try {
-                const instances = await fetchTeamCollectionInstances(team)
-                return instances
-                    .filter(instance => libraryById[instance.cardId])
-                    .map(instance => toDominationCard(libraryById[instance.cardId], instance.instanceId))
+                return this.handFromInstances(await fetchTeamCollectionInstances(team))
             } catch (e) {
                 console.error('チームの所持カードの読み込みに失敗しました', e)
                 return []
@@ -1101,8 +1301,9 @@ export default {
             })
         },
 
-        async initializeHands() {
-            const humanHand = this.shuffleArray(await this.fetchHumanHand())
+        // instances を渡すと、通信せずにその所持カードで手札を作る（読み込みを同時に進めるため）
+        async initializeHands(instances) {
+            const humanHand = this.shuffleArray(instances ? this.handFromInstances(instances) : await this.fetchHumanHand())
             const aiHandSize = Math.max(humanHand.length, AI_MIN_HAND_SIZE)
 
             this.players.forEach(player => {
@@ -1280,12 +1481,6 @@ export default {
             }
         },
 
-        confirmFinish() {
-            if (confirm("本当にゲームを終了しますか？現在のスコアが表示されます。")) {
-                this.finishGame();
-            }
-        },
-
         finishGame(){
           this.gameState = 'finished'
           this.currentPlayerId = null
@@ -1417,6 +1612,10 @@ export default {
       currentPlayer() {
           return this.players.find(p => p.id === this.currentPlayerId)
       },
+      finishedResult() {
+          return this.computeResult()
+      },
+
       sortedPlayersByScore() {
           return [...this.players].sort((a, b) => b.score - a.score)
       }
