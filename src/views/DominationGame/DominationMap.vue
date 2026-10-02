@@ -141,19 +141,8 @@
                     <div ref="tutorialPlayer" class="absolute inset-0 h-full w-full"></div>
                 </div>
                 <p class="mt-3 text-center text-sm text-gray-500">
-                    動画が終わるとゲームがはじまるよ
+                    動画が終わると、ちずが ひらくよ
                 </p>
-            </div>
-
-            <!-- TODO: ここでのABゲームは仮置き。後で除去する（docs/TODO.md参照） -->
-            <div
-                v-if="tutorial.phase === 'game'"
-                class="max-h-full w-full max-w-3xl overflow-y-auto rounded-2xl"
-            >
-                <ABGameProposalB
-                    embedded
-                    @finish="finishTutorial"
-                />
             </div>
         </div>
 
@@ -164,7 +153,6 @@
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import db from "@/firebase.js";
-import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
 import { getSession } from "@/utils/session.js";
 import mapSpotsSeed from "./mapSpots.json";
 import { slotId, isFresh, TEAM_COLORS, TEAM_NAMES, AI_COLOR } from "@/utils/dominationSlots.js";
@@ -206,8 +194,6 @@ const loadYouTubeApi = () => {
 
 export default {
 
-    components: { ABGameProposalB },
-
     data() {
         return {
 
@@ -244,7 +230,7 @@ export default {
             userLoading: null,
             // ■最後に入った場所（平塚市・釧路市）。ハチの巣をタップして陣取りゲームに入るときに保存し、モニタールームの「つづきから」で使う
             currentPlace: null,
-            tutorial: null // { location, cityName, phase: "video" | "game", onDone }
+            tutorial: null // { location, cityName, phase: "video", onDone }
 
         };
     },
@@ -531,7 +517,8 @@ L.tileLayer(
 
             const goToGame = () => {
                 this.destroyTutorialPlayer();
-                if (this.tutorial) this.tutorial.phase = "game";
+                // ■動画が終わったら、そのまま地図へ（以前はここでABゲームを挟んでいたが、黒いマスのチャレンジに移した）
+                if (this.tutorial) this.finishTutorial();
             };
 
             // ■YT.PlayerはVueのリアクティブにすると動作が壊れるため、dataに入れず保持する

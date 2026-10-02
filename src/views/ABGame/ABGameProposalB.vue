@@ -1,11 +1,12 @@
 <template>
-    <div class="min-h-screen bg-[#f4f1e8] flex justify-center px-4 py-8">
+    <!-- ■embedded（モーダルの中で遊ぶ）のときは、画面いっぱいにせず、まわりの余白だけにする -->
+    <div class="flex justify-center" :class="embedded ? 'px-2 py-3' : 'min-h-screen bg-[#f4f1e8] px-4 py-8'">
         <div class="w-full max-w-2xl">
 
             <!-- Header -->
             <header class="flex items-center justify-between mb-5">
                 <h1 class="text-xl font-bold text-emerald-900 tracking-wide">
-                    ひらつか かんきょうチャレンジ<span class="text-sm font-normal text-emerald-700 ml-1">（提案B）</span>
+                    ひらつか かんきょうチャレンジ<span v-if="!challenge" class="text-sm font-normal text-emerald-700 ml-1">（提案B）</span>
                 </h1>
                 <div v-if="phase === 'question' || phase === 'correct'" class="bg-emerald-800 text-white text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap">
                     Q. {{ progressIndex }} / {{ questions.length }}
@@ -31,8 +32,15 @@
             <!-- Intro -->
             <div v-if="phase === 'intro'" class="bg-white rounded-3xl shadow-md p-8 text-center">
                 <img src="/images/ABGames/seibi_top.jpg" class="w-full max-w-sm mx-auto rounded-2xl mb-5">
-                <p class="text-emerald-900 font-bold text-lg mb-1">ひらつかの2つのかんきょう問題</p>
-                <p class="text-gray-600 text-sm mb-6">出てくる取り組みが、どっちの問題を解決するかを選んでいこう！</p>
+                <template v-if="challenge">
+                    <p class="text-emerald-900 font-bold text-lg mb-1">かんきょうを なおそう！</p>
+                    <p class="text-gray-600 text-sm mb-1">{{ questions.length || questionCount }}もん、<b>ぜんぶ 1かいで</b> あてたら せいこう！</p>
+                    <p class="text-gray-600 text-sm mb-6">せいこうすると、この ばしょが いきものの すめる ところに なおるよ。</p>
+                </template>
+                <template v-else>
+                    <p class="text-emerald-900 font-bold text-lg mb-1">ひらつかの2つのかんきょう問題</p>
+                    <p class="text-gray-600 text-sm mb-6">出てくる取り組みが、どっちの問題を解決するかを選んでいこう！</p>
+                </template>
                 <p v-if="loadError" class="text-red-600 text-sm mb-4">{{ loadError }}</p>
                 <button
                     class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg px-10 py-3 rounded-2xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -107,24 +115,44 @@
 
             <!-- Finished -->
             <div v-else class="bg-white rounded-3xl shadow-md p-8 text-center">
-                <p class="text-emerald-900 font-bold text-xl mb-2">おわり！よく考えてくれたね。</p>
-                <p class="text-gray-600 text-sm mb-5">
-                    海ごみ対策 {{ correctCountA }}問 ／ 里山再生 {{ correctCountC }}問、解決に貢献したよ。
-                </p>
-                <div class="flex flex-wrap gap-2 justify-center mb-6">
-                    <img
-                        v-for="n in 17"
-                        :key="n"
-                        :src="`/images/ABGames/SDGs${n}.png`"
-                        class="w-10 h-10 rounded-md"
+                <!-- ■チャレンジ（陣取りゲームの黒いマス）：全部1回で正解なら成功 -->
+                <template v-if="challenge">
+                    <p class="font-bold text-2xl mb-2" :class="challengeSuccess ? 'text-emerald-700' : 'text-rose-600'">
+                        {{ challengeSuccess ? 'せいこう！' : 'ざんねん…' }}
+                    </p>
+                    <p class="text-gray-600 text-sm mb-6">
+                        {{ questions.length }}もん中 {{ firstTryCorrect }}もん、1かいで せいかいしたよ。<br>
+                        <template v-if="challengeSuccess">かんきょうを なおせたよ！</template>
+                        <template v-else>ぜんぶ 1かいで あてないと せいこうに ならないよ。つぎは がんばろう！</template>
+                    </p>
+                    <button
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg px-10 py-3 rounded-2xl shadow-md transition-colors"
+                        @click="goNextStage"
                     >
-                </div>
-                <button
-                    class="bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg px-10 py-4 rounded-2xl shadow-md transition-colors"
-                    @click="goNextStage"
-                >
-                    NEXT STAGE<br>いきものを戻そう
-                </button>
+                        ゲームに もどる
+                    </button>
+                </template>
+
+                <template v-else>
+                    <p class="text-emerald-900 font-bold text-xl mb-2">おわり！よく考えてくれたね。</p>
+                    <p class="text-gray-600 text-sm mb-5">
+                        海ごみ対策 {{ correctCountA }}問 ／ 里山再生 {{ correctCountC }}問、解決に貢献したよ。
+                    </p>
+                    <div class="flex flex-wrap gap-2 justify-center mb-6">
+                        <img
+                            v-for="n in 17"
+                            :key="n"
+                            :src="`/images/ABGames/SDGs${n}.png`"
+                            class="w-10 h-10 rounded-md"
+                        >
+                    </div>
+                    <button
+                        class="bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg px-10 py-4 rounded-2xl shadow-md transition-colors"
+                        @click="goNextStage"
+                    >
+                        NEXT STAGE<br>いきものを戻そう
+                    </button>
+                </template>
             </div>
 
         </div>
@@ -144,10 +172,21 @@ export default {
         embedded: {
             type: Boolean,
             default: false
+        },
+
+        // ■チャレンジモード（陣取りゲームの黒いマスをタップしたとき）：問題をランダムに questionCount 問えらび、
+        //   「ぜんぶ1回で正解」なら成功。終了時に finish イベントで結果（success）を渡す
+        challenge: {
+            type: Boolean,
+            default: false
+        },
+        questionCount: {
+            type: Number,
+            default: 2
         }
     },
 
-    emits: ["finish"],
+    emits: ["finish", "start"],
 
     data() {
         return {
@@ -166,7 +205,11 @@ export default {
             hint: "",
 
             correctCountA: 0,
-            correctCountC: 0
+            correctCountC: 0,
+
+            // ■チャレンジ用：1回で正解できた問題の数／いまの問題でまちがえたか
+            firstTryCorrect: 0,
+            missedThis: false
         };
     },
 
@@ -178,6 +221,15 @@ export default {
             this.questions = snapshot.docs
                 .map(doc => doc.data())
                 .sort((a, b) => a.order - b.order);
+
+            // ■チャレンジのときは、問題をランダムに questionCount 問だけえらぶ
+            if (this.challenge) {
+                this.questions = this.questions
+                    .map(question => ({ question, key: Math.random() }))
+                    .sort((a, b) => a.key - b.key)
+                    .slice(0, this.questionCount)
+                    .map(item => item.question);
+            }
 
             if (!this.questions.length) {
                 this.loadError = "問題が見つかりませんでした。";
@@ -199,6 +251,11 @@ export default {
             return this.qIndex + 1;
         },
 
+        // ■チャレンジの成功：全部の問題を、1回で正解した
+        challengeSuccess() {
+            return this.questions.length > 0 && this.firstTryCorrect >= this.questions.length;
+        },
+
         impactAPercent() {
             return Math.round((this.correctCountA / this.questions.length) * 100);
         },
@@ -210,6 +267,7 @@ export default {
 
     methods: {
         start() {
+            this.$emit("start");
             this.qIndex = 0;
             this.phase = "question";
         },
@@ -225,6 +283,7 @@ export default {
                 this.selectedSide = side;
                 this.phase = "correct";
                 this.hint = "";
+                if (!this.missedThis) this.firstTryCorrect++;
 
                 if (side === "A") {
                     this.correctCountA++;
@@ -236,6 +295,7 @@ export default {
             }
 
             this.wrongSide = side;
+            this.missedThis = true;
             this.hint = "ちがうかも…もう一度読んでみよう！";
 
             setTimeout(() => {
@@ -251,6 +311,7 @@ export default {
         },
 
         next() {
+            this.missedThis = false;
             this.selectedSide = null;
             this.hint = "";
             this.qIndex++;
@@ -265,7 +326,8 @@ export default {
 
         goNextStage() {
             if (this.embedded) {
-                this.$emit("finish");
+                // チャレンジのときは、成功したか（success）を渡す
+                this.$emit("finish", { success: this.challengeSuccess, correct: this.firstTryCorrect, total: this.questions.length });
                 return;
             }
 

@@ -274,28 +274,29 @@
                 <div class="bg-white p-5 rounded-2xl shadow-xl text-center max-w-sm w-full max-h-[92vh] overflow-y-auto">
                     <h2 class="text-2xl font-bold mb-1">ゲーム終了！</h2>
                     <p v-if="finishedResult" class="mb-1 text-lg font-black" :style="{ color: finishedResult.humanWon ? '#059669' : '#dc2626' }">
-                        {{ finishedResult.humanWon ? '1位！ かったよ！' : (finishedResult.resigned ? 'まけました…' : 'AIが かったよ') }}
+                        {{ finishedResult.humanWon ? '1位！ かったよ！' : (finishedResult.resigned ? 'まけました…' : `${finishedResult.humanRank}位 だったよ`) }}
                     </p>
 
                     <!-- ■1位のごほうび（テラ） -->
                     <p v-if="rewardTera" class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-4 py-1 text-base font-black text-amber-700">
-                        🎉 +{{ rewardTera }}テラ
+                        🎉 {{ finishedResult ? finishedResult.humanRank : '' }}位 +{{ rewardTera }}テラ
                         <img src="/images/coin.png" alt="テラ" class="h-5 w-5 object-contain">
                     </p>
                     <p v-else-if="rewardState === 'pending'" class="mb-2 text-sm font-bold text-amber-600">テラを もらっているよ…</p>
                     <p v-else-if="rewardState === 'error'" class="mb-2 text-sm font-bold text-red-500">テラを もらえなかったよ（ネットを たしかめて、あとで もういちど）</p>
-                    <p v-else-if="isSlotGame() && finishedResult && !finishedResult.humanWon" class="mb-2 text-xs font-bold text-slate-500">1位に なると +{{ winRewardTera }}テラ もらえるよ</p>
+                    <p v-else-if="isSlotGame() && finishedResult && finishedResult.resigned" class="mb-2 text-xs font-bold text-slate-500">まけましたの ときは、テラは もらえないよ</p>
+                    <p v-else-if="isSlotGame() && finishedResult" class="mb-2 text-xs font-bold text-slate-500">{{ rankRewardText }} もらえるよ</p>
 
                     <p class="text-sm text-slate-500 mb-2">さいごの てんすう</p>
                     <ul class="text-left mb-4 space-y-2">
                         <li
-                            v-for="(player, index) in sortedPlayersByScore"
+                            v-for="player in sortedPlayersByScore"
                             :key="player.id"
                             class="flex items-center justify-between px-3 py-2 rounded-lg"
                             :style="{ background: player.color + '15' }"
                         >
                             <span class="font-semibold flex items-center gap-2">
-                                <span class="rank-badge">{{ index + 1 }}位</span>
+                                <span class="rank-badge">{{ rankOf(player) }}位</span>
                                 <span class="w-3 h-3 rounded-full" :style="{ background: player.color }"></span>
                                 {{ player.name }}
                                 <span v-if="player.isAI" class="text-xs">🤖</span>
@@ -383,27 +384,31 @@
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">2</span>
-                        <span><b>じゅんばんに 1まい ずつ。</b> じぶんの ばんに、てふだを えらんで、<b>きいろく ひかる マス</b>を タップ。おけない ときは「スキップ」。</span>
+                        <span><b>じゅんばんに 1まい ずつ。</b> じぶんの ばんに、カードを えらんで、<b>きいろく ひかる マス</b>を タップ。おけない ときは「スキップ」。</span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">3</span>
-                        <span><b>おける ばしょ。</b> りくの いきものは <b>町・森・土</b>、みずの いきものは <b>川・海</b>。<b>くろい マス</b>（未開発地）には おけないよ。</span>
+                        <span><b>おける ばしょ。</b> りくの いきものは <b>町・森・土</b>、みずの いきものは <b>川・海</b>。<b>くろい マス</b>（未開発地）には、そのままでは おけないよ。</span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">4</span>
-                        <span><b>レベルの ルール。</b> <b>Lv1（▲）</b>は どこにでも おける。<b>Lv2（■）</b>は、まわりに <b>Lv1が 2こ いじょう</b> ある マスだけ。Lv3は Lv2が 2こ、Lv4は Lv3が 2こ いるところに おけるよ。（まわり ＝ たて・よこ・ななめの 8マス）</span>
+                        <span><b>かんきょうチャレンジ！</b> <b>くろい マス</b>を タップすると、かんきょうクイズ（<b>2もん</b>）が できるよ。<b>ぜんぶ 1かいで</b> あてたら せいこう！ マスが なおって <b>+3てん</b>、そこに Lv1の カードを おけるよ。しっぱいすると ばんが つぎの チームに うつるよ。（その マスに あう Lv1の カードが ないと ちょうせん できないよ）</span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">5</span>
-                        <span><b>たべる！</b> レベルの たかい カードを おくと、まわりの <b>ひくい レベルの カード</b>を たべるよ。たべられた カードは はいいろに なって、おくための かずにも ならなくなる。</span>
+                        <span><b>レベルの ルール。</b> <b>Lv1（▲）</b>は どこにでも おける。<b>Lv2（■）</b>は、まわりに <b>Lv1が 2こ いじょう</b> ある マスだけ。Lv3は Lv2が 2こ、Lv4は Lv3が 2こ いるところに おけるよ。（まわり ＝ たて・よこ・ななめの 8マス）</span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">6</span>
-                        <span><b>ポイント。</b> おいた カードの レベルで きまるよ（下の ひょう）。</span>
+                        <span><b>たべる！</b> レベルの たかい カードを おくと、まわりの <b>ひくい レベルの カード</b>を たべるよ。たべられた カードは はいいろに なって、おくための かずにも ならなくなる。</span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">7</span>
-                        <span><b>おわり。</b> てふだが なくなる、ぜんいんが スキップする、または「まけました」を おすと おわり。</span>
+                        <span><b>ポイント。</b> おいた カードの レベルで きまるよ（下の ひょう）。</span>
+                    </li>
+                    <li class="flex gap-2">
+                        <span class="rule-no">8</span>
+                        <span><b>おわり。</b> カードが なくなる、ぜんいんが スキップする、または「まけました」を おすと おわり。<b>1位・2位・3位</b>に なると、テラが もらえるよ（1位 +10、2位 +5、3位 +2）。</span>
                     </li>
                 </ol>
 
@@ -441,6 +446,16 @@
                             </div>
                         </div>
                                     </div>
+            </div>
+        </div>
+
+        <!-- ■黒いマスの「かんきょうチャレンジ」（ABゲーム2問。ぜんぶ1回で正解なら成功） -->
+        <div v-if="showChallenge" class="fixed inset-0 z-[65] flex items-center justify-center bg-black/60 p-3">
+            <div class="relative w-full max-w-lg">
+                <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" aria-label="やめる" @click="cancelChallenge">✕</button>
+                <div class="max-h-[90vh] overflow-y-auto rounded-2xl bg-[#f4f1e8] shadow-xl">
+                    <ABGameProposalB embedded challenge :question-count="2" @start="challengeStarted = true" @finish="onChallengeFinish" />
+                </div>
             </div>
         </div>
 
@@ -484,6 +499,7 @@
 <script>
 import db from '../../firebase.js';
 import GameCardFocus from './GameCardFocus.vue';
+import ABGameProposalB from '@/views/ABGame/ABGameProposalB.vue';
 import { getSession } from '@/utils/session.js';
 import { generateSpotBoard } from './habitatBoard.js';
 import { isFresh } from '@/utils/dominationSlots.js';
@@ -503,9 +519,37 @@ import {
 // ■陣取りゲームは操作端末1台で複数チームが遊ぶ「共有の1ゲーム」という前提のため、
 // Firestoreには「ルームコード」ごとに1ドキュメント（進行中の1ゲーム分）として保存する。
 // 別の端末・別のグループが同時に遊んでも、ルームコードが違えば互いのゲームに影響しない
-// ■1位になったときにもらえるテラ（仮の数。ここを変えれば、もらえる数が変わる）。
-//   ce-n.org の updatePoints で加算する（ハブサイトの「合計得点」にも反映される）。地図のゲーム（ゲーム枠）だけが対象
-const WIN_REWARD_TERA = 10
+// ■順位ごとにもらえるテラ（仮の数。ここを変えれば、もらえる数が変わる。3位は少なめ）。
+//   ce-n.org の updatePoints で加算する（ハブサイトの「合計得点」にも反映される）。地図のゲーム（ゲーム枠）だけが対象。「まけました」は対象外
+const RANK_REWARD_TERA = { 1: 10, 2: 5, 3: 2 }
+
+// ■AIが「かしこく」打つ割合（0〜1）。かしこい手＝いちばん点の高いカードを、相手のカードを食べられる場所に置く。
+//   それ以外のときは、ランダム。大きくするほどAIが強くなる（シミュレーションでは、いつも賢いとあなたの勝率が下がる）
+const AI_SMART_RATE = 0.5
+
+// ■黒いマス（未開発地）の「かんきょうチャレンジ」（ABゲーム2問）に成功したときの、ゲーム内の点数（仮の数）
+const AB_CHALLENGE_POINTS = 3
+
+// ■地形の名前（チャレンジ成功でなおる地形の案内に使う）
+const AREA_NAMES = { town: '町', forest: '森', dirt: '土', river: '川', sea: '海' }
+
+// ■地形のうっすらした模様（草・水など）。ゲームの見やすさをじゃましない、うすい線だけ。
+//   SVGを、そのままマスの背景にする（マスの大きさに合わせて拡大・縮小される）
+const svgPattern = body => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'>${body}</svg>`)}")`
+const AREA_PATTERNS = {
+    // 森：草の葉
+    forest: svgPattern("<g stroke='#e8f5d8' stroke-width='1.2' stroke-linecap='round' fill='none' opacity='.4'><path d='M4 16V11M6.5 16V9.5M9 16V11.5'/><path d='M13 12V8M15.5 12V6.5M18 12V8.5'/></g>"),
+    // 町：小さな家
+    town: svgPattern("<g stroke='#fff3e0' stroke-width='1.1' fill='none' opacity='.4' stroke-linejoin='round'><path d='M3 17V11H9V17Z M2.5 11L6 7.5L9.5 11'/><path d='M12 15V11.5H17V15Z M11.5 11.5L14.5 9L17.5 11.5'/></g>"),
+    // 土：つぶつぶ
+    dirt: svgPattern("<g fill='#5b4636' opacity='.28'><circle cx='4' cy='5' r='1'/><circle cx='11' cy='3.5' r='.8'/><circle cx='16' cy='9' r='1'/><circle cx='7' cy='12' r='.9'/><circle cx='13' cy='16' r='1'/><circle cx='3' cy='17' r='.7'/></g>"),
+    // 川：ゆるい波
+    river: svgPattern("<g stroke='#ffffff' stroke-width='1.2' fill='none' opacity='.55' stroke-linecap='round'><path d='M1 7Q5 4 10 7T19 7'/><path d='M1 14Q5 11 10 14T19 14'/></g>"),
+    // 海：大きめの波
+    sea: svgPattern("<g stroke='#ffffff' stroke-width='1.2' fill='none' opacity='.4' stroke-linecap='round'><path d='M1 6Q5 3 10 6T19 6'/><path d='M1 12Q5 9 10 12T19 12'/><path d='M1 18Q5 15 10 18T19 18'/></g>"),
+    // 未開発地：ななめの線（まだ なおせていない）
+    undeveloped: svgPattern("<g stroke='#ffffff' stroke-width='1' opacity='.22'><path d='M-2 22L22 -2M-2 14L14 -2M6 22L22 6M-2 6L6 -2M14 22L22 14'/></g>")
+}
 
 const SAVE_COLLECTION = 'dominationGames'
 const ROOM_CODE_STORAGE_KEY = 'dominationRoomCode'
@@ -561,6 +605,9 @@ export default {
         resigned: false, // 「まけました」で終わったか
         showResignConfirm: false,
         showSkipConfirm: false,
+        showChallenge: false, // 黒いマスの「かんきょうチャレンジ」（ABゲーム）を開いている
+        challengeTile: null,
+        challengeStarted: false,
         rewardTera: 0, // 1位でもらったテラ（もらえたときだけ）
         rewardState: '', // '' | 'pending' | 'error'
         showTerritory: false, // ゲームのおわりに、じんち（チームごとのマス）を盤面で見る
@@ -664,13 +711,14 @@ export default {
             this.tilePreviewCard = tile.placedCard
             return
           }
+          // ■黒いマス（未開発地）：「かんきょうチャレンジ」（ABゲーム2問）に挑戦できる
+          if(tile.area === 'undeveloped') {
+              this.startChallenge(tile)
+              return
+          }
           if(!this.selectedCard) {
               this.showToast("カードを選択してからタイルを選んでね")
               return
-          }
-          if(tile.area === 'undeveloped') {
-              this.showToast("まだ動物たちが住めないから、環境をなおしてね")
-              return; // cannot select undeveloped
           }
 
           if(tile.ownerTeam !== null) return; // already owned
@@ -888,6 +936,7 @@ export default {
                 winnerId: winner.id,
                 winnerTeam: TEAM_NAME_BY_ID[winner.id],
                 humanWon: winner.id === this.humanPlayerId,
+                humanRank: this.humanRank(),
                 resigned: this.resigned,
                 rewardTera: this.rewardTera || 0
             }
@@ -1097,6 +1146,8 @@ export default {
         tileStyle(tile) {
             const base = {
                 background: this.areaColors[tile.area] || '#ccc',
+                backgroundImage: AREA_PATTERNS[tile.area] || 'none',
+                backgroundSize: '100% 100%',
                 width: '100%',
                 aspectRatio: '1 / 1'
             }
@@ -1106,9 +1157,11 @@ export default {
                 if (tile.placedCard) {
                     const team = this.controllingTeam(tile)
                     base.background = this.teamColor(team)
+                    base.backgroundImage = 'none'
                     if (team === this.humanPlayerId) base.boxShadow = 'inset 0 0 0 2px #fff'
                 } else {
                     base.background = '#cbd5e1'
+                    base.backgroundImage = 'none'
                     base.opacity = 0.45
                 }
                 return base
@@ -1136,11 +1189,13 @@ export default {
                     // ■食べられたマス：食べたチームの色に、ななめのしま模様をかさねる（ふつうの色つきのマスや、使われたマスと見分けがつくように）
                     base.background = this.teamColor(currentTile.ownerTeam)
                     base.backgroundImage = 'repeating-linear-gradient(45deg, rgba(0,0,0,0.3) 0 3px, transparent 3px 6px)'
+                    base.backgroundSize = 'auto'
                 }
             } else if (tile.ownerTeam !== null) {
                 // ■使われた（カードが置かれた）マス：黒っぽい色にして、そのチームの色のふちをつける。
                 //   形がくっきり見えて、食べられたマス・チームの色のマスと見分けがつく
                 base.background = '#262c38'
+                base.backgroundImage = 'none'
                 base.boxShadow = `inset 0 0 0 2px ${this.teamColor(tile.ownerTeam)}`
             }
 
@@ -1652,15 +1707,26 @@ export default {
             return current ? current.ownerTeam : tile.ownerTeam
         },
 
-        // ■1位のごほうび：テラを加算する（ce-n.org の updatePoints。地図のゲームで1位になったときだけ、1ゲームにつき1回）
+        // ■順位（同点は同じ順位。自分より点が高いチームの数＋1）
+        rankOf(player) {
+            return 1 + this.players.filter(other => other.score > player.score).length
+        },
+
+        humanRank() {
+            const me = this.players.find(player => player.id === this.humanPlayerId)
+            return me ? this.rankOf(me) : 0
+        },
+
+        // ■順位のごほうび：テラを加算する（ce-n.org の updatePoints。地図のゲームで1位になったときだけ、1ゲームにつき1回）
         async awardTera() {
             if (this.rewardState === 'pending' || this.rewardTera) return
+            const amount = RANK_REWARD_TERA[this.humanRank()] || 0
             const cenId = getSession('loginCenId')
-            if (!cenId) return
+            if (!cenId || !amount) return
             this.rewardState = 'pending'
             try {
-                await addPoints(cenId, WIN_REWARD_TERA)
-                this.rewardTera = WIN_REWARD_TERA
+                await addPoints(cenId, amount)
+                this.rewardTera = amount
                 this.rewardState = ''
             } catch (e) {
                 console.error('テラの加算に失敗しました', e)
@@ -1725,9 +1791,75 @@ export default {
             return move ? this.teamColor(move.teamId) : undefined
         },
 
+        // ■黒いマスをなおしたあとの地形：まわりのマス（8マス）でいちばん多い地形（黒いマスは数えない）。まわりに無ければ「土」
+        developedAreaFor(tile) {
+            const counts = {}
+            this.getNeighbors(tile).forEach(n => {
+                if (n.area && n.area !== 'undeveloped') counts[n.area] = (counts[n.area] || 0) + 1
+            })
+            const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0]
+            return top || 'dirt'
+        },
+
+        // ■黒いマスをタップ：「かんきょうチャレンジ」（ABゲーム2問）。
+        //   なおったあとの地形に合う Lv1 のカードを持っていないと、ちょうせんできない（なおしても、おけないので）
+        startChallenge(tile) {
+            if (this.gameState !== 'playing' || this.currentPlayer?.isAI) return
+            const area = this.developedAreaFor(tile)
+            const water = area === 'river' || area === 'sea'
+            const hand = this.hands[this.currentPlayerId] || []
+            if (!hand.some(card => card.tier === 1 && card.area === (water ? 'water' : 'land'))) {
+                this.showToast(`ここは「${AREA_NAMES[area]}」に なるよ。${water ? 'みず' : 'りく'}の いきもの（Lv1）の カードが ないと、ちょうせん できないよ`)
+                return
+            }
+            this.challengeTile = tile
+            this.challengeStarted = false
+            this.showChallenge = true
+            sfx.select()
+        },
+
+        // ■チャレンジのとちゅうで閉じたら、しっぱい（はじめる前なら、なにも起きない）
+        cancelChallenge() {
+            if (!this.challengeStarted) {
+                this.showChallenge = false
+                this.challengeTile = null
+                return
+            }
+            this.onChallengeFinish({ success: false })
+        },
+
+        // ■チャレンジのおわり
+        //   せいこう：黒いマスが、まわりの地形になおる＋ゲーム内の点数がふえる。自分の番はつづく（Lv1を、そこに おける）
+        //   しっぱい：自分の番が、つぎのチームにうつる（何回でもためせてしまわないように）
+        onChallengeFinish(result) {
+            const tile = this.challengeTile
+            this.showChallenge = false
+            this.challengeTile = null
+            this.challengeStarted = false
+
+            if (result && result.success && tile && tile.area === 'undeveloped') {
+                const area = this.developedAreaFor(tile)
+                tile.area = area
+                this.currentPlayer.score += AB_CHALLENGE_POINTS
+                this.selectedCard = null
+                this.updateValidTiles()
+                sfx.win()
+                this.showToast(`かんきょうを なおせた！ +${AB_CHALLENGE_POINTS}てん。「${AREA_NAMES[area]}」に なったよ。Lv1の カードを、ここに おいてみよう`, true)
+                this.saveGame()
+                return
+            }
+
+            sfx.skip()
+            this.showToast('ざんねん…。つぎの チームの ばんに なるよ')
+            this.recentMoves = []
+            this.goToNextPlayer()
+            this.saveGame()
+            this.maybeTriggerAI()
+        },
+
         // ■画面の中のメッセージ（数秒で消える）
-        showToast(message) {
-            sfx.error()
+        showToast(message, good = false) {
+            if (!good) sfx.error()
             this.toastMessage = message
             clearTimeout(this.toastTimer)
             this.toastTimer = setTimeout(() => { this.toastMessage = '' }, 4500)
@@ -1740,7 +1872,7 @@ export default {
           this.recentMoves = []
           const result = this.computeResult()
           if (result) setTimeout(() => (result.humanWon ? sfx.win() : sfx.lose()), 300)
-          if (result && result.humanWon && this.isSlotGame() && !this.rewardTera) this.awardTera()
+          if (result && !result.resigned && this.isSlotGame() && !this.rewardTera && RANK_REWARD_TERA[result.humanRank]) this.awardTera()
           this.saveGame()
         },
 
@@ -1758,8 +1890,16 @@ export default {
 
         // ■シンプルなAI: 手札からランダムに1枚選び、置けるマスがあればランダムな有効マスに置く。
         // どのカードも置ける場所が無ければスキップする
+        // ■AIの手の選び方：AI_SMART_RATE の割合で「かしこく」、それ以外は「ランダム」
         findAIMove(hand) {
-            const candidates = this.shuffleArray(hand || [])
+            const cards = hand || []
+
+            if (Math.random() < AI_SMART_RATE) {
+                const smart = this.findSmartAIMove(cards)
+                if (smart) return smart
+            }
+
+            const candidates = this.shuffleArray(cards)
 
             for (const card of candidates) {
                 const validTiles = this.tiles.filter(t => this.isTileValidForCard(t, card))
@@ -1768,6 +1908,33 @@ export default {
                     const tile = validTiles[Math.floor(Math.random() * validTiles.length)]
                     return { card, tile }
                 }
+            }
+
+            return null
+        },
+
+        // ■かしこい手：置けるカードのうち、点がいちばん高いカードを選び、置ける場所のうち、
+        //   相手のカードをたくさん食べられて、自分のカードを食べない場所を選ぶ
+        findSmartAIMove(cards) {
+            const sorted = this.shuffleArray(cards).sort((a, b) => this.getScoreForTile(b.tier) - this.getScoreForTile(a.tier))
+
+            for (const card of sorted) {
+                const validTiles = this.tiles.filter(t => this.isTileValidForCard(t, card))
+                if (!validTiles.length) continue
+
+                // 場所の数が多いときは、ランダムに選んだ一部だけ調べる
+                const candidates = this.shuffleArray(validTiles).slice(0, 60)
+                let best = candidates[0]
+                let bestScore = -Infinity
+                candidates.forEach(tile => {
+                    const lower = this.getNeighbors(tile).filter(n => n.placedCard && n.placedCard.tier < card.tier && !n.eatenByTileId)
+                    const score = lower.filter(n => n.ownerTeam !== this.currentPlayerId).length - 2 * lower.filter(n => n.ownerTeam === this.currentPlayerId).length
+                    if (score > bestScore) {
+                        bestScore = score
+                        best = tile
+                    }
+                })
+                return { card, tile: best }
             }
 
             return null
@@ -1872,7 +2039,8 @@ export default {
         this.dominationMode = 'standard';
     },
     components: {
-        GameCardFocus
+        GameCardFocus,
+        ABGameProposalB
     },
     computed: {
       currentPlayer() {
@@ -1923,8 +2091,8 @@ export default {
               .sort((a, b) => b.count - a.count)
       },
 
-      winRewardTera() {
-          return WIN_REWARD_TERA
+      rankRewardText() {
+          return `1位 +${RANK_REWARD_TERA[1]}・2位 +${RANK_REWARD_TERA[2]}・3位 +${RANK_REWARD_TERA[3]}テラ`
       },
 
       // ■AIに食べられたタイル
