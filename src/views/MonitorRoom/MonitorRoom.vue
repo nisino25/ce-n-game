@@ -25,9 +25,11 @@
                 <div class="flex flex-col items-center">
                     <div class="text-6xl animate-bounce my-4">🌍</div>
 
+                    <!-- ■平塚エリアの「かんりょうりつ」：チームごとに、平塚のゲーム（全部で{{ hiratsukaSlotTotal }}か所ぶん）のうち、勝ったゲームの割合（実際の結果） -->
                     <div class="text-xs">
-                        🌱95% 💧90% 🌬98%
+                        🌱{{ areaProgress.earth }}% 💧{{ areaProgress.water }}% 🌬{{ areaProgress.air }}%
                     </div>
+                    <div class="mt-0.5 text-[10px] opacity-70">平塚の かんりょうりつ</div>
                 </div>
             </div>
 
@@ -235,19 +237,11 @@
         </div>
 
         <!-- Console -->
-        <div class="consoles realtive flex justify-between items-center w-[400px] mx-auto">
+        <!-- ■「◯◯の部屋」のテーブルは、1つだけ -->
+        <div class="consoles realtive flex justify-center items-center w-[400px] max-w-full mx-auto">
             <div
                 class="relative w-44 h-16 bg-gray-700 border-2 border-gray-500 room-console flex justify-center items-center"
                 >
-                <div class="text-center room-accent-text text-sm">
-                    <div class="desk-monitor">{{ teamEmoji }} {{ teamName }}</div>
-                </div>
-            </div>
-
-            <!-- Right Console -->
-            <div
-                class="relative w-44 h-16 bg-gray-700 border-2 border-gray-500 room-console flex justify-center items-center"
-            >
                 <div class="text-center room-accent-text text-sm">
                     <div class="desk-monitor">{{ teamEmoji }} {{ teamName }}</div>
                 </div>
@@ -325,6 +319,7 @@ import { getSession, setSession, removeSession } from "@/utils/session.js";
 import { fetchTotalPoints } from "@/utils/points.js";
 import { isLocalEnv } from "@/utils/env.js";
 import RoomIconButton from "./RoomIconButton.vue";
+import mapSpotsSeed from "@/views/DominationGame/mapSpots.json";
 
 export default {
     name: "MonitorRoom",
@@ -361,6 +356,7 @@ export default {
 				showWildChoice: false,
 				wildChecking: false,
 				notice: "",
+				areaProgress: { earth: 0, water: 0, air: 0 }, // 平塚のゲームの完了率（チームごと・%）
 				terra: null, // ce-n.org側のtotalPoints（ハブの合計得点と同じ）。読み込み前はnull
 				isLocalEnv: isLocalEnv(),
 				minCardsForWild: MIN_CARDS_FOR_DOMINATION,
@@ -377,6 +373,11 @@ export default {
     },
 
     computed: {
+        // 平塚のゲーム枠の数（場所の数×3つのゲーム）
+        hiratsukaSlotTotal() {
+            return mapSpotsSeed.spots.filter(spot => spot.city === "hiratsuka").length * 3;
+        },
+
         cardsShort() {
             return this.personalCards < this.minCardsForWild;
         },
@@ -463,6 +464,7 @@ export default {
         themeVars() {
             return {
                 "--team-accent": this.teamTheme.accent,
+                "--room-accent": this.teamTheme.accent, // モニターごとの色（少しずつ変える）の元になる色
                 "--team-bg-glow": this.teamTheme.bgGlow,
                 "--team-bg-dark": this.teamTheme.bgDark,
                 "--team-title-glow": this.teamTheme.titleGlow
@@ -514,6 +516,7 @@ export default {
 
         this.loadCardCounts();
         this.loadTerra();
+        this.loadAreaProgress();
         this.loadResumeRoom();
 
         this.teamMembers = await this.getTeamMembers();
@@ -579,11 +582,30 @@ export default {
                 let local = null;
                 try { local = JSON.parse(localStorage.getItem("dominationPlace")); } catch (e) { local = null; }
                 const place = local || data.place;
+                // まだ遊べない街（準備中）のゲームは、「つづきから」に出さない
+                if (place && mapSpotsSeed.cities[place.city] && mapSpotsSeed.cities[place.city].playable === false) return;
                 this.resumePlaceName = (place && (place.spotName || place.cityName)) || "前回の陣取りゲーム";
 
                 this.resumeRoom = roomCode;
             } catch (error) {
                 console.error("進行中の陣取りゲームの確認に失敗しました:", error);
+            }
+        },
+
+        // ■地球のモニターに出す「かんりょうりつ」：平塚のゲーム枠（場所×3）のうち、チームごとに、勝った枠の割合。
+        //   mapSlots（地図に出している、枠のようす）から数える。まだ誰も遊んでいなければ0%
+        async loadAreaProgress() {
+            try {
+                const snapshot = await db.collection("mapSlots").where("city", "==", "hiratsuka").get();
+                const wins = { earth: 0, water: 0, air: 0 };
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.state === "finished" && data.humanWon !== false && wins[data.winnerTeam] !== undefined) wins[data.winnerTeam]++;
+                });
+                const percent = count => Math.round((count / this.hiratsukaSlotTotal) * 100);
+                this.areaProgress = { earth: percent(wins.earth), water: percent(wins.water), air: percent(wins.air) };
+            } catch (error) {
+                console.error("平塚のかんりょうりつの取得に失敗しました:", error);
             }
         },
 
@@ -1059,4 +1081,10 @@ export default {
       vertical-align:middle;
       white-space:nowrap;
   }
+
+  /* ■上のモニターは、それぞれ少しずつ色を変える（チームの色を元に、ほかの色を混ぜる）。
+     color-mix に対応していないブラウザでは、これまで通りチームの色のまま */
+  .monitor-globe{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #4aa3ff); }
+  .monitor-cave{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #ffb347); }
+  .monitor-wild{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #5ee08a); }
 </style>

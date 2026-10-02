@@ -488,6 +488,7 @@ import { getSession } from '@/utils/session.js';
 import { generateSpotBoard } from './habitatBoard.js';
 import { isFresh } from '@/utils/dominationSlots.js';
 import { sfx } from '@/utils/sfx.js';
+import mapSpotsSeed from './mapSpots.json';
 import { addPoints } from '@/utils/points.js';
 import {
     fetchCardLibrary,
@@ -968,6 +969,9 @@ export default {
                 return { blocked: true, loaded }
             }
             if (!user) return goBack('busy')
+
+            // まだ遊べない街（準備中）の枠には入れない
+            if (mapSpotsSeed.cities[place.city] && mapSpotsSeed.cities[place.city].playable === false) return goBack('closed')
 
             const me = { uid: user.uid, name: user.name || '', team: TEAM_NAME_BY_ID[this.humanPlayerId] }
 

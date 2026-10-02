@@ -5,14 +5,16 @@
       "center": [
         35.325,
         139.3497
-      ]
+      ],
+      "playable": true
     },
     "kushiro": {
       "name": "釧路市",
       "center": [
         42.9849,
         144.3814
-      ]
+      ],
+      "playable": false
     }
   },
   "spots": [

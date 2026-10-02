@@ -259,7 +259,8 @@ export default {
     mounted() {
 
         // ■陣取りゲームの「平塚市にもどる」から来たときは、日本の地図を見せず、その街の六角形の画面から始める
-        const directCity = mapSpotsSeed.cities[this.$route.query.city] ? this.$route.query.city : null;
+        // （まだ遊べない街 ＝ playable が false の街は、直接開けない）
+        const directCity = mapSpotsSeed.cities[this.$route.query.city] && mapSpotsSeed.cities[this.$route.query.city].playable !== false ? this.$route.query.city : null;
         this.directCity = directCity;
         if (directCity) {
             this.currentPlace = { city: directCity, cityName: mapSpotsSeed.cities[directCity].name };
@@ -272,7 +273,8 @@ export default {
         const notices = {
             busy: "そのゲームは、ほかの人が あそび中だったよ",
             done: "そのゲームは、もう おわっているよ",
-            active: "この街で あそび中の ゲームが あるよ。おわらせてから、ほかの ゲームを あそんでね"
+            active: "この街で あそび中の ゲームが あるよ。おわらせてから、ほかの ゲームを あそんでね",
+            closed: "釧路市は、まだ あそべないよ。もうすこし まっててね"
         };
         if (notices[this.$route.query.notice]) this.showNotice(notices[this.$route.query.notice]);
 
@@ -464,12 +466,12 @@ L.tileLayer(
 
         createStartMarkers() {
             // ■平塚市・釧路市は同じデザインのマーカーにそろえる（光る緑の地域の上に、タップできる街として出す）
-            const cityMarker = (position, name, onClick) => L.marker(position, {
+            const cityMarker = (position, name, onClick, closed = false) => L.marker(position, {
                 icon: L.divIcon({
                     className: "",
-                    // 名前のふだだけ。街の場所（緑の地域）が隠れないよう、ふだは地点の少し下に置く
-                    html: `<div class="city-marker">${name}</div>`,
-                    iconSize: [110, 34],
+                    // 名前のふだだけ。街の場所（緑の地域）が隠れないよう、ふだは地点の少し下に置く。まだ遊べない街は、灰色で「じゅんびちゅう」
+                    html: `<div class="city-marker${closed ? " city-marker-closed" : ""}">${name}${closed ? "<small>じゅんびちゅう</small>" : ""}</div>`,
+                    iconSize: [110, closed ? 44 : 34],
                     iconAnchor: [55, -22]
                 })
             })
@@ -477,7 +479,7 @@ L.tileLayer(
                 .on("click", onClick);
 
             this.hiratsukaMarker = cityMarker([35.3150, 139.3497], "平塚市", () => this.startHiratsuka());
-            this.kushiroMarker = cityMarker([42.9849, 144.3814], "釧路市", () => this.startKushiro());
+            this.kushiroMarker = cityMarker([42.9849, 144.3814], "釧路市", () => this.startKushiro(), mapSpotsSeed.cities.kushiro.playable === false);
         },
 
 
@@ -585,6 +587,11 @@ L.tileLayer(
         },
 
         startKushiro() {
+            // ■釧路市は、まだ遊べない（準備中）
+            if (mapSpotsSeed.cities.kushiro.playable === false) {
+                this.showNotice("釧路市は、まだ あそべないよ。もうすこし まっててね");
+                return;
+            }
             this.currentPlace = { city: "kushiro", cityName: "釧路市" };
             this.withTutorial("kushiro", "釧路市", () => this.startZoom("釧路市", [42.9849, 144.3814], 13));
         },
@@ -978,6 +985,21 @@ L.tileLayer(
     text-align: center;
     box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.45), 0 4px 10px rgba(0, 0, 0, 0.4);
     animation: city-pulse 1.8s ease-in-out infinite;
+}
+
+:deep(.city-marker-closed) {
+    background: #6b7280;
+    border-color: #d1d5db;
+    box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.45), 0 4px 10px rgba(0, 0, 0, 0.4);
+    animation: none;
+    line-height: 1.2;
+}
+
+:deep(.city-marker-closed small) {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    opacity: 0.9;
 }
 
 @keyframes city-pulse {
