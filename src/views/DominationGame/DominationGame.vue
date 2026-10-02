@@ -89,7 +89,6 @@
                             :key="tile.id"
                             class="board-tile relative rounded-[2px] cursor-pointer transition-transform duration-150"
                             :data-tile-id="tile.id"
-                            :data-move="moveOrder(tile)"
                             :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected, 'ai-last': aiMoveTileIds.has(tile.id), 'ai-eaten': aiEatenIds.has(tile.id) }"
                             @click="onTileClick(tile)"
                             :style="[tileStyle(tile), { '--tr': tile.row + 1, '--tc': tile.col + 1, '--ring': moveRing(tile) }]"
@@ -1620,12 +1619,6 @@ export default {
             return move ? this.teamColor(move.teamId) : undefined
         },
 
-        // ■AIが置いた順番（1, 2, …）。タイルの角に、数字のバッジで出す
-        moveOrder(tile) {
-            const index = this.recentMoves.findIndex(item => item.tileId === tile.id)
-            return index === -1 ? null : index + 1
-        },
-
         // ■画面の中のメッセージ（数秒で消える）
         showToast(message) {
             sfx.error()
@@ -1865,32 +1858,38 @@ export default {
       }
   }
 
-  /* ■自分の番が終わってからのAIの動き（自分が動くまで）。うるさすぎず、でも何が起きたか分かるように：
-     ・AIが置いたタイル：そのAIチームの色の太いふち ＋ 角に「置いた順番」の数字バッジ。出てきたときだけ、やさしく2回ふくらむ
+  /* ■自分の番が終わってからのAIの動き（自分が動くまで）。うるさすぎないように：
+     ・AIが置いたタイル：ゆっくり「ぷくぷく」ふくらむ ＋ 角が「キラキラ」光る。ふちは、そのAIチームの色
      ・AIに食べられたタイル：そのAIチームの色の点線のふち */
   .board-tile.ai-last{
       position: relative;
       z-index: 5;
-      outline: 3px solid var(--ring, #facc15);
+      outline: 2px solid var(--ring, #facc15);
       outline-offset: 0;
-      animation: ai-blink 0.6s ease-in-out 2;
+      animation: ai-pump 1.1s ease-in-out infinite;
+  }
+  .board-tile.ai-last::before,
+  .board-tile.ai-last::after{
+      content: '✦';
+      position: absolute;
+      z-index: 7;
+      font-size: 12px;
+      line-height: 1;
+      color: #fff;
+      text-shadow: 0 0 3px var(--ring, #facc15), 0 0 8px var(--ring, #facc15);
+      pointer-events: none;
+      opacity: 0;
   }
   .board-tile.ai-last::after{
-      content: attr(data-move);
-      position: absolute;
-      top: -6px;
-      left: -6px;
-      z-index: 7;
-      width: 14px;
-      height: 14px;
-      border: 1px solid #fff;
-      border-radius: 50%;
-      background: var(--ring, #facc15);
+      top: -7px;
+      right: -5px;
+      animation: ai-sparkle 1.1s ease-in-out infinite;
+  }
+  .board-tile.ai-last::before{
+      bottom: -7px;
+      left: -5px;
       font-size: 9px;
-      font-weight: 900;
-      line-height: 12px;
-      text-align: center;
-      color: #0f172a;
+      animation: ai-sparkle 1.1s ease-in-out 0.55s infinite;
   }
   .board-tile.ai-eaten{
       position: relative;
@@ -1898,9 +1897,13 @@ export default {
       outline: 2px dashed var(--ring, #facc15);
       outline-offset: -1px;
   }
-  @keyframes ai-blink{
+  @keyframes ai-pump{
       0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.25); }
+      50% { transform: scale(1.18); }
+  }
+  @keyframes ai-sparkle{
+      0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+      50% { opacity: 1; transform: scale(1.2) rotate(45deg); }
   }
 
   /* ■ヘッダー右はしの丸いボタン（？・🔍） */
