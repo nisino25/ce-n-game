@@ -89,7 +89,8 @@
                             :key="tile.id"
                             class="board-tile relative rounded-[2px] cursor-pointer transition-transform duration-150"
                             :data-tile-id="tile.id"
-                            :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected, 'ai-last': aiMoveTileIds.has(tile.id), 'ai-eaten': aiEatenIds.has(tile.id), 'tile-flash': tile.id === flashTileId }"
+                            :data-move="moveOrder(tile)"
+                            :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected, 'ai-last': aiMoveTileIds.has(tile.id), 'ai-eaten': aiEatenIds.has(tile.id) }"
                             @click="onTileClick(tile)"
                             :style="[tileStyle(tile), { '--tr': tile.row + 1, '--tc': tile.col + 1, '--ring': moveRing(tile) }]"
                         >
@@ -166,7 +167,7 @@
                                     v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0"
                                     class="text-xs text-slate-400 text-center py-4"
                                 >
-                                    手札がありません
+                                    カードがありません
                                 </p>
                             </div>
                         </template>
@@ -214,22 +215,9 @@
                 <!-- ■あなたの手札（ほかの部分と見分けがつくよう、枠・タイトルつきの別のエリア） -->
                 <div class="dock-panel dock-hand-panel">
                     <div class="dock-panel-title">
-                        <span>🃏 あなたの手札</span>
+                        <span>🃏 あなたのカード</span>
                         <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</span>
                         <span v-else-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」→ きいろい マスに おけるよ</span>
-                        <!-- ■自分の番が終わってからの、AIの動き。タップすると、そのタイルを光らせる -->
-                        <span v-else-if="recentMoves.length" class="dock-moves">
-                            <span class="dock-moves-label">さっきの うごき</span>
-                            <button
-                                v-for="move in recentMoves"
-                                :key="move.tileId"
-                                class="dock-move"
-                                :style="{ background: teamColor(move.teamId) }"
-                                @click="showMove(move)"
-                            >
-                                {{ move.label }}<template v-if="move.eatenIds.length"> 🍴{{ move.eatenIds.length }}</template>
-                            </button>
-                        </span>
                     </div>
                     <div v-if="gameState === 'playing' && currentPlayer && !currentPlayer.isAI" class="dock-hand">
                         <template v-for="group in groupHandByTier(hands[currentPlayerId])" :key="group.tier">
@@ -243,7 +231,7 @@
                                 <span class="dock-lv">{{ group.tier }}</span>{{ card.label }}<small>×{{ card.holdingCount }}</small>
                             </button>
                         </template>
-                        <span v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0" class="dock-empty">手札がありません</span>
+                        <span v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0" class="dock-empty">カードがありません</span>
                     </div>
                 </div>
 
@@ -531,7 +519,6 @@ export default {
         showSkipConfirm: false,
         sfxMuted: sfx.isMuted(), // 効果音のミュート
         recentMoves: [], // 自分の番が終わってから、AIが置いた手（{ tileId, teamId, label, eatenIds }）。自分が動くまで、地図でわかるようにする
-        flashTileId: null, // 「さっきの動き」をタップしたときに、ぱっと光らせるタイル
         toastMessage: '',
         savedPlace: null, // ルームに保存されていた場所（地図から入り直さなかったときに引き継ぐ）
 
@@ -1626,21 +1613,17 @@ export default {
             })
         },
 
-        // ■「さっきの動き」をタップ：そのタイルまでスクロールして、ぱっと光らせる
-        showMove(move) {
-            this.scrollToTile(move.tileId)
-            this.flashTileId = move.tileId
-            clearTimeout(this.flashTimer)
-            this.flashTimer = setTimeout(() => { this.flashTileId = null }, 1400)
-            sfx.select()
-        },
-
-        // ■AIの動きで光らせるタイルのふちの色（置いたチーム／食べたチームの色）
+        // ■AIが置いた／食べたタイルのふちの色（置いたチームの色）
         moveRing(tile) {
             const move = this.recentMoves.find(item => item.tileId === tile.id)
-            if (move) return this.teamColor(move.teamId)
-            const eater = this.recentMoves.find(item => item.eatenIds.includes(tile.id))
-            return eater ? this.teamColor(eater.teamId) : undefined
+                || this.recentMoves.find(item => item.eatenIds.includes(tile.id))
+            return move ? this.teamColor(move.teamId) : undefined
+        },
+
+        // ■AIが置いた順番（1, 2, …）。タイルの角に、数字のバッジで出す
+        moveOrder(tile) {
+            const index = this.recentMoves.findIndex(item => item.tileId === tile.id)
+            return index === -1 ? null : index + 1
         },
 
         // ■画面の中のメッセージ（数秒で消える）
@@ -1755,14 +1738,17 @@ export default {
             const eatenIds = this.handleEating(tile)
             sfx.aiPlace()
             if (eatenIds.length) setTimeout(() => sfx.eat(), 160)
-            this.recentMoves.push({ tileId: tile.id, teamId: player.id, label: card.label, eatenIds })
-            this.scrollToTile(tile.id)
+            this.recentMoves.push({ tileId: tile.id, teamId: player.id, eatenIds })
 
             this.removeFromHand(hand, card)
 
             this.skipCount = 0
             this.isAiThinking = false
             this.goToNextPlayer()
+            // 自分の番にもどったときだけ、最後のAIの手が画面の外なら、そこまでスクロールする
+            if (this.gameState === 'playing' && this.currentPlayer && !this.currentPlayer.isAI) {
+                this.scrollToTile(tile.id)
+            }
             this.saveGame()
             this.maybeTriggerAI()
         },
@@ -1792,10 +1778,12 @@ export default {
       currentPlayer() {
           return this.players.find(p => p.id === this.currentPlayerId)
       },
-      // ■AIの動きで光らせるタイル（置かれたタイルと、食べられたタイル）
+      // ■AIが置いたタイル（自分の番が終わってから）
       aiMoveTileIds() {
           return new Set(this.recentMoves.map(move => move.tileId))
       },
+
+      // ■AIに食べられたタイル
       aiEatenIds() {
           return new Set(this.recentMoves.flatMap(move => move.eatenIds))
       },
@@ -1877,56 +1865,43 @@ export default {
       }
   }
 
-  /* ■自分の番が終わってからのAIの動き：置かれたタイルは「ピコンピコン」点滅（置いたチームの色のふち）、
-     食べられたタイルは、やわらかく点滅。自分が動くまで続く */
+  /* ■自分の番が終わってからのAIの動き（自分が動くまで）。うるさすぎず、でも何が起きたか分かるように：
+     ・AIが置いたタイル：そのAIチームの色の太いふち ＋ 角に「置いた順番」の数字バッジ。出てきたときだけ、やさしく2回ふくらむ
+     ・AIに食べられたタイル：そのAIチームの色の点線のふち */
   .board-tile.ai-last{
       position: relative;
       z-index: 5;
-      animation: ai-blink 0.7s ease-in-out infinite;
+      outline: 3px solid var(--ring, #facc15);
+      outline-offset: 0;
+      animation: ai-blink 0.6s ease-in-out 2;
+  }
+  .board-tile.ai-last::after{
+      content: attr(data-move);
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      z-index: 7;
+      width: 14px;
+      height: 14px;
+      border: 1px solid #fff;
+      border-radius: 50%;
+      background: var(--ring, #facc15);
+      font-size: 9px;
+      font-weight: 900;
+      line-height: 12px;
+      text-align: center;
+      color: #0f172a;
   }
   .board-tile.ai-eaten{
       position: relative;
       z-index: 4;
-      animation: ai-eaten-blink 1.1s ease-in-out infinite;
+      outline: 2px dashed var(--ring, #facc15);
+      outline-offset: -1px;
   }
   @keyframes ai-blink{
-      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
-      50% { transform: scale(1.5); box-shadow: 0 0 0 3px #fff, 0 0 10px 5px var(--ring, #facc15); }
-  }
-  @keyframes ai-eaten-blink{
-      0%, 100% { box-shadow: 0 0 0 0 transparent; }
-      50% { box-shadow: 0 0 0 3px var(--ring, #facc15), 0 0 8px 3px var(--ring, #facc15); }
-  }
-  .board-tile.tile-flash{
-      position: relative;
-      z-index: 6;
-      animation: tile-flash 0.35s ease-in-out 4;
-  }
-  @keyframes tile-flash{
       0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.8); box-shadow: 0 0 0 4px #fff, 0 0 14px 7px #facc15; }
+      50% { transform: scale(1.25); }
   }
-  .dock-moves{
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      min-width: 0;
-  }
-  .dock-moves-label{
-      font-size: 11px;
-      font-weight: 700;
-      color: #94a3b8;
-      white-space: nowrap;
-  }
-  .dock-move{
-      border-radius: 999px;
-      padding: 2px 9px;
-      font-size: 11px;
-      font-weight: 800;
-      color: #0f172a;
-      white-space: nowrap;
-  }
-  .dock-move:active{ transform: scale(0.95); }
 
   /* ■ヘッダー右はしの丸いボタン（？・🔍） */
   .header-tool{
