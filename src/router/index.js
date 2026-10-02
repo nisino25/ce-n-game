@@ -30,6 +30,7 @@ import DocsView from "@/views/Docs/DocsView.vue";
 import NoticeBoard from "@/views/NoticeBoard/NoticeBoard.vue";
 import CommentsAdmin from "@/views/Admin/CommentsAdmin.vue";
 import HabitatCompare from "@/views/HabitatCompare/HabitatCompare.vue";
+import DeviceStats from "@/views/Admin/DeviceStats.vue";
 
 
 const routes = [
@@ -141,6 +142,13 @@ const routes = [
         path: "/comments-admin",
         name: "CommentsAdmin",
         component: CommentsAdmin
+    },
+
+    // ■どんな端末で使われているかの集計（管理者用の仮画面。モニタールームの仮リンクから）
+    {
+        path: "/device-stats",
+        name: "DeviceStats",
+        component: DeviceStats
     },
 
     // ■試作：すみか（海・町・森）で盤面がどう変わるかの比較ページ（比較が終わったら削除する）

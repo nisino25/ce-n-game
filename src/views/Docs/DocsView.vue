@@ -48,6 +48,7 @@ const ORDER = [
     "currency.md",
     "TODO.md",
     "data-access.md",
+    "device-stats.md",
     "requirements/00_overview.md",
     "requirements/01_login.md",
     "requirements/02_domination_game.md",

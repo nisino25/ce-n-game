@@ -120,6 +120,12 @@
             <p v-if="tutorialResetMessage" class="text-[11px] text-yellow-200 px-1">{{ tutorialResetMessage }}</p>
             <button
                 class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                @click="$router.push({ name: 'DeviceStats' })"
+            >
+                端末の集計を見る（仮）
+            </button>
+            <button
+                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
                 @click="$router.push({ name: 'CommentsAdmin' })"
             >
                 みんなの声を見る（仮）
@@ -230,6 +236,9 @@
 						
         </div>
 
+        <!-- ■どんな画面であそばれているか、人数だけを数えていることのおしらせ（名前やIDは使わない） -->
+        <p class="privacy-note">どんな画面で あそばれているか、回数だけを かぞえています。名前や ID は つかいません。</p>
+
         <!-- ■アイコン：図鑑（カードライブラリ）と看板（お知らせ・みんなの声） -->
         <div class="room-icon-row">
             <RoomIconButton kind="library" label="ずかん" @click="$router.push({ name: 'CardLibrary' })" />
@@ -318,6 +327,7 @@ import {
 import { getSession, setSession, removeSession } from "@/utils/session.js";
 import { fetchTotalPoints } from "@/utils/points.js";
 import { isLocalEnv } from "@/utils/env.js";
+import { sendDeviceStatsOnce } from "@/utils/deviceStats.js";
 import RoomIconButton from "./RoomIconButton.vue";
 import mapSpotsSeed from "@/views/DominationGame/mapSpots.json";
 
@@ -517,6 +527,7 @@ export default {
         this.loadCardCounts();
         this.loadTerra();
         this.loadAreaProgress();
+        sendDeviceStatsOnce(); // どんな端末か（粗い分類だけ）を、1日1回、数字として記録する（docs/device-stats.md）
         this.loadResumeRoom();
 
         this.teamMembers = await this.getTeamMembers();
@@ -1087,4 +1098,16 @@ export default {
   .monitor-globe{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #4aa3ff); }
   .monitor-cave{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #ffb347); }
   .monitor-wild{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #5ee08a); }
+
+  /* ■端末の統計についてのおしらせ（目立たないように、小さく） */
+  .privacy-note{
+      margin: 0 auto 8px;
+      padding: 0 12px;
+      max-width: 420px;
+      font-size: 10px;
+      line-height: 1.5;
+      text-align: center;
+      color: var(--team-accent, #0ff);
+      opacity: 0.55;
+  }
 </style>

@@ -56,6 +56,7 @@
 | `dominationGames/{ルームコード}` | 陣取りゲーム1ルーム分の進行状況（地図の場所から始めたゲームは、街の全員で共有する枠ID `{場所ID}-{1〜3}`） | `tiles`（盤面）, `hands`（手札）, `players`（スコア）, `currentPlayerId`, `gameState`, `place`（場所）, `result`（終了時の勝ち負け）, `ownerUid` / `ownerName` / `ownerTeam`（枠を遊んでいる人）など |
 | `mapSlots/{枠ID}` | 地図に出す、ゲーム枠1つの軽い「ようす」（誰が遊び中か・勝ったチーム） | `city`, `spotId`, `gameNo`, `state`（playing / finished）, `ownerUid`, `ownerName`, `ownerTeam`, `winnerTeam`, `humanWon`, `updatedAt` |
 | `mapSpots/{場所ID}` | 地図の六角形1つ（街の「場所」） | `city`, `name`, `icon`, `habitat`, `q`, `r`, `order`（[requirements/05_map_habitat.md](requirements/05_map_habitat.md)） |
+| `deviceStats/{日付}` | 1日ぶんの「どんな端末で使われているか」の回数（個人は特定しない。[device-stats.md](device-stats.md)） | `date`, `total`, `counts`（`{端末の種類}__{幅の区分}__{OS}__{app/web}` ごとの回数） |
 | `userComments/{id}` | かんばんから送られた「みんなの声」1件 | `text`, `uid`, `name`, `team`, `createdAt` |
 | `abGameQuestions/{id}` | ABゲームの1問 | `location`, `order`, `bComment`, `imgB`, `qaImage`, `correct`, `showIcons`, `comment` |
 
@@ -123,6 +124,14 @@
 | `CaveEnd.vue`（`resetCollection`） | 「カードクリア（仮）」ボタン | `cardInstances/{id}` を**削除**（バッチ） | テスト用。自分の所持カードを全部消す |
 | `CardAdmin.vue`（保存） | カード管理画面で保存 | `cards/{cardId}` を**更新**（set・merge） | 名前・レベル・地形・すみか・公開/非公開など |
 | `CardAdmin.vue`（追加） | カード管理画面で新規追加 | `cards` を**新規作成**（add） | カードIDは Firestore が自動で付ける |
+
+### 5-2a. 端末の統計
+
+| どこで | いつ | 操作 | 内容 |
+|---|---|---|---|
+| `utils/deviceStats.js`（`sendDeviceStatsOnce`） | モニタールームを開いたとき（1つの端末につき1日に1回） | `deviceStats/{日付}` を**更新**（set・merge、数字を `increment`） | 端末の種類・画面の幅の区分・OSの名前・アプリかの、回数を+1 |
+
+読み込みは `DeviceStats.vue`（`/device-stats`）が `deviceStats` を新しい日付順に90件取得し、画面側で足し直す。
 
 ### 5-2b. みんなの声
 
