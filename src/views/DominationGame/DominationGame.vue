@@ -5,7 +5,7 @@
             <!-- Header: title + scoreboard -->
             <header class="app-header bg-white">
                 <div class="max-w-[1500px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
-                    <div class="flex min-w-0 items-center gap-3">
+                    <div class="flex min-w-0 flex-1 items-center gap-3">
                         <h1 class="whitespace-nowrap text-lg font-bold text-slate-700">陣取りゲーム</h1>
 
                         <button
@@ -19,6 +19,19 @@
                             <span v-else-if="roomCodeCopied" class="text-emerald-600 font-sans font-normal">コピーしました！</span>
                             <span v-else class="text-slate-400 font-sans font-normal">📋</span>
                         </button>
+
+                        <!-- ■ヘッダーの右はし：？（説明をモーダルで）／🔍（盤面ぜんたい、スマホのみ） -->
+                        <div class="ml-auto flex flex-none items-center gap-2">
+                            <button class="header-tool" aria-label="地形・レベルの説明を見る" @click="isShowingTuorial = true">?</button>
+                            <button
+                                class="header-tool sm:hidden"
+                                :class="{ 'header-tool-on': boardOverview }"
+                                :aria-label="boardOverview ? 'もとの大きさにもどす' : '盤面ぜんたいを見る'"
+                                @click="toggleOverview"
+                            >
+                                🔍
+                            </button>
+                        </div>
 
                     </div>
 
@@ -61,19 +74,6 @@
             </transition>
 
             <div class="app-body">
-            <!-- ■右がわに浮かせる丸いボタン：？（説明をモーダルで）／🔍（盤面ぜんたい、スマホのみ） -->
-            <div class="float-tools">
-                <button class="float-button" aria-label="地形・レベルの説明を見る" @click="isShowingTuorial = true">?</button>
-                <button
-                    class="float-button sm:hidden"
-                    :class="{ 'float-button-on': boardOverview }"
-                    :aria-label="boardOverview ? 'もとの大きさにもどす' : '盤面ぜんたいを見る'"
-                    @click="toggleOverview"
-                >
-                    🔍
-                </button>
-            </div>
-
             <div ref="mainArea" class="app-main">
             <div class="max-w-[1500px] mx-auto px-1.5 py-2 sm:p-4 flex flex-col lg:flex-row gap-3 sm:gap-4 items-start">
 
@@ -357,6 +357,25 @@
                                 </div>
         </div>
 
+        <!-- ■スキップの確認（画面の中のダイアログ） -->
+        <div
+            v-if="showSkipConfirm"
+            class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+            @click.self="showSkipConfirm = false"
+        >
+            <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+                <p class="mb-1 text-xl font-black">スキップする？</p>
+                <p class="mb-5 text-sm text-slate-600">カードを おかずに、つぎの チームに じゅんばんを わたすよ。</p>
+                <div class="flex flex-col gap-2">
+                    <button class="rounded-xl bg-sky-500 px-4 py-3 font-bold text-white hover:bg-sky-600" @click="doSkip()">スキップする</button>
+                    <button class="rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showSkipConfirm = false">やめる</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ■操作の結果を知らせるメッセージ -->
+        <div v-if="toastMessage" class="game-toast">{{ toastMessage }}</div>
+
         <!-- ■手札のカードをタップ：同じ共通のカード表示で、「選択する」ボタンつき -->
         <GameCardFocus
             v-if="modalCard && isPreviewing"
@@ -447,6 +466,8 @@ export default {
         slotOwner: null, // 地図のゲーム枠を遊んでいる人 { uid, name, team }
         resigned: false, // 「まけました」で終わったか
         showResignConfirm: false,
+        showSkipConfirm: false,
+        toastMessage: '',
         savedPlace: null, // ルームに保存されていた場所（地図から入り直さなかったときに引き継ぐ）
 
         players: [
@@ -544,18 +565,18 @@ export default {
             return
           }
           if(!this.selectedCard) {
-              alert("カードを選択してからタイルを選んでね")
+              this.showToast("カードを選択してからタイルを選んでね")
               return
           }
           if(tile.area === 'undeveloped') {
-              alert("まだ動物たちが住めないから、環境をなおしてね")
+              this.showToast("まだ動物たちが住めないから、環境をなおしてね")
               return; // cannot select undeveloped
           }
 
           if(tile.ownerTeam !== null) return; // already owned
 
           if (!tile.validForSelection) {
-            alert("このタイルにはこのカードは置けないよ")
+            this.showToast("このタイルにはこのカードは置けないよ")
             return // not valid for selection
           }
 
@@ -571,7 +592,7 @@ export default {
               } catch (e) {
                   console.error('カードの配置の保存に失敗しました', e)
                   this.isPlacingCard = false
-                  alert("カードを置けませんでした。通信状況を確認して、もう一度ためしてね")
+                  this.showToast("カードを置けませんでした。通信状況を確認して、もう一度ためしてね")
                   return
               }
               this.isPlacingCard = false
@@ -582,7 +603,7 @@ export default {
                   this.selectedCard = null
                   this.updateValidTiles()
                   this.saveGame()
-                  alert(`「${card.label}」は、ほかのゲームですでに使われていたよ`)
+                  this.showToast(`「${card.label}」は、ほかのゲームですでに使われていたよ`)
                   return
               }
           }
@@ -647,7 +668,6 @@ export default {
             return tier * 2
         },
         async resetTiles() {
-            if (!confirm("本当にタイルをリセットしますか？現在の進行状況は失われます。")) return;
 
             this.resigned = false
             this.generateTiles()
@@ -1515,21 +1535,32 @@ export default {
             }
         },
 
+        // ■スキップ：画面の中の確認ダイアログを出す（標準の confirm は、埋め込みのブラウザなどで出ずに止まることがあるため）
         confirmSkip() {
             if (this.currentPlayer?.isAI) return
+            this.showSkipConfirm = true
+        },
 
-            if (confirm("本当にスキップしますか？")) {
-                this.skipCount++
-                if(this.skipCount >= this.players.length) {
-                    alert("全員がスキップしたので、ゲームを終了します。")
-                    this.finishGame();
-                    return;
-                } else {
-                    this.goToNextPlayer()
-                }
-                this.saveGame()
-                this.maybeTriggerAI()
+        doSkip() {
+            this.showSkipConfirm = false
+            if (this.currentPlayer?.isAI) return
+
+            this.skipCount++
+            if (this.skipCount >= this.players.length) {
+                this.showToast('全員がスキップしたので、ゲームを終了します。')
+                this.finishGame()
+                return
             }
+            this.goToNextPlayer()
+            this.saveGame()
+            this.maybeTriggerAI()
+        },
+
+        // ■画面の中のメッセージ（数秒で消える）
+        showToast(message) {
+            this.toastMessage = message
+            clearTimeout(this.toastTimer)
+            this.toastTimer = setTimeout(() => { this.toastMessage = '' }, 4500)
         },
 
         finishGame(){
@@ -1740,43 +1771,46 @@ export default {
       }
   }
 
-  /* ■右がわに浮かせる丸いボタン（？・🔍）。盤面をスクロールしても、同じ場所に見える */
-  .float-tools{
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 20;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-  }
-  @media (min-width: 1024px){
-      .float-tools{
-          position: fixed;
-          top: 130px;
-          right: 16px;
-      }
-  }
-  .float-button{
+  /* ■ヘッダー右はしの丸いボタン（？・🔍） */
+  .header-tool{
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 44px;
-      height: 44px;
+      width: 34px;
+      height: 34px;
       border: 2px solid #94a3b8;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.95);
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
-      font-size: 20px;
+      background: #fff;
+      font-size: 16px;
       font-weight: 900;
       line-height: 1;
       color: #475569;
   }
-  .float-button:active{ transform: scale(0.93); }
-  .float-button-on{
+  .header-tool:active{ transform: scale(0.93); }
+  .header-tool-on{
       border-color: #0ea5e9;
       background: #e0f2fe;
       color: #0369a1;
+  }
+
+  /* ■操作の結果を知らせる、画面の中のメッセージ（標準のダイアログは、埋め込みのブラウザなどで出ないことがあるため） */
+  .game-toast{
+      position: fixed;
+      left: 50%;
+      bottom: 150px;
+      z-index: 80;
+      width: 90%;
+      max-width: 360px;
+      transform: translateX(-50%);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.95);
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.5;
+      text-align: center;
+      color: #fef9c3;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   }
 
   /* ■下の手札・ボタン（スマホ・タブレット）。盤面の明るい色のマスとはっきり分けるため、濃い色にして、
