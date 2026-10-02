@@ -5,8 +5,8 @@
             <!-- Header: title + scoreboard -->
             <header class="app-header bg-white">
                 <div class="max-w-[1500px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
-                    <div class="flex min-w-0 flex-1 items-center gap-3">
-                        <h1 class="whitespace-nowrap text-lg font-bold text-slate-700">陣取りゲーム</h1>
+                    <div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                        <h1 class="whitespace-nowrap text-base sm:text-lg font-bold text-slate-700">陣取りゲーム</h1>
 
                         <button
                             class="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-full pl-3 pr-2.5 py-1 font-mono font-bold tracking-wider text-slate-600 transition"
@@ -21,7 +21,8 @@
                         </button>
 
                         <!-- ■ヘッダーの右はし：？（説明をモーダルで）／🔍（盤面ぜんたい、スマホのみ） -->
-                        <div class="ml-auto flex flex-none items-center gap-2">
+                        <div class="ml-auto flex flex-none items-center gap-1.5 sm:gap-2">
+                            <button class="header-tool" :aria-label="sfxMuted ? '効果音をつける' : '効果音を消す'" @click="toggleSfx">{{ sfxMuted ? '🔇' : '🔊' }}</button>
                             <button class="header-tool" aria-label="地形・レベルの説明を見る" @click="isShowingTuorial = true">?</button>
                             <button
                                 class="header-tool sm:hidden"
@@ -87,7 +88,8 @@
                             v-for="tile in tiles"
                             :key="tile.id"
                             class="board-tile relative rounded-[2px] cursor-pointer transition-transform duration-150"
-                            :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected }"
+                            :data-tile-id="tile.id"
+                            :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected, 'ai-last': tile.id === lastAiTileId }"
                             @click="onTileClick(tile)"
                             :style="[tileStyle(tile), { '--tr': tile.row + 1, '--tc': tile.col + 1 }]"
                         >
@@ -400,6 +402,7 @@ import GameCardFocus from './GameCardFocus.vue';
 import { getSession } from '@/utils/session.js';
 import { generateSpotBoard } from './habitatBoard.js';
 import { isFresh } from '@/utils/dominationSlots.js';
+import { sfx } from '@/utils/sfx.js';
 import {
     fetchCardLibrary,
     getCurrentUser,
@@ -467,6 +470,8 @@ export default {
         resigned: false, // 「まけました」で終わったか
         showResignConfirm: false,
         showSkipConfirm: false,
+        sfxMuted: sfx.isMuted(), // 効果音のミュート
+        lastAiTileId: null, // AIが最後にカードを置いたタイル（ピコンピコン点滅させる）
         toastMessage: '',
         savedPlace: null, // ルームに保存されていた場所（地図から入り直さなかったときに引き継ぐ）
 
@@ -614,7 +619,10 @@ export default {
           const points = this.getScoreForTile(card.tier)
           this.currentPlayer.score += points
 
-          this.handleEating(tile)
+          const ate = this.handleEating(tile)
+          sfx.place()
+          if (ate) setTimeout(() => sfx.eat(), 160)
+          this.lastAiTileId = null // 自分が置いたら、AIの点滅は消す
 
           //カードを削除
           this.removeFromHand(hand, card)
@@ -629,6 +637,7 @@ export default {
         handleEating(placedTile) {
             const neighbors = this.getNeighbors(placedTile)
             const eatenList = []
+            let eatenCount = 0
 
             neighbors.forEach(n => {
                 // if the neibghot is lower than the placed tile, then it gets eaten
@@ -637,6 +646,7 @@ export default {
                 // mark as eaten
                 n.eatenByTileId = placedTile.id
                 n.eatenByPlayerId = this.currentPlayerId
+                eatenCount++
 
                 // ■食べられたのがプレイヤーの所持カードなら、DBでも eaten にする
                 if (isOwnedCard(n.placedCard)) {
@@ -650,6 +660,8 @@ export default {
             markCardInstancesEaten(eatenList).catch(e => {
                 console.error('食べられたカードの保存に失敗しました', e)
             })
+
+            return eatenCount
         },
 
         removeFromHand(hand, card) {
@@ -1031,6 +1043,8 @@ export default {
             const allEmpty = this.players.every(p => this.hands[p.id].length === 0)
             if (allEmpty) {
                 this.finishGame()
+            } else if (this.gameState === 'playing' && !this.players[nextIndex].isAI) {
+                setTimeout(() => sfx.turn(), 250) // 自分の番になった合図
             }
         },
 
@@ -1474,12 +1488,14 @@ export default {
             if(this.currentPlayer?.isAI) return
             this.isPreviewing = true
             this.modalCard = card
+            sfx.select()
         },
 
         useCard() {
           this.selectedCard = this.modalCard
           this.isPreviewing = false
           this.modalCard = null
+          sfx.select()
 
           this.updateValidTiles()
         },
@@ -1545,6 +1561,8 @@ export default {
             this.showSkipConfirm = false
             if (this.currentPlayer?.isAI) return
 
+            sfx.skip()
+            this.lastAiTileId = null
             this.skipCount++
             if (this.skipCount >= this.players.length) {
                 this.showToast('全員がスキップしたので、ゲームを終了します。')
@@ -1556,8 +1574,31 @@ export default {
             this.maybeTriggerAI()
         },
 
+        // ■効果音のオン・オフ
+        toggleSfx() {
+            sfx.setMuted(!this.sfxMuted)
+            this.sfxMuted = sfx.isMuted()
+            if (!this.sfxMuted) sfx.select()
+        },
+
+        // ■AIが最後にカードを置いたタイルを、ピコンピコン点滅させる（自分が動くまで）。画面の外なら、見える場所までスクロールする
+        markAiTile(tileId) {
+            this.lastAiTileId = tileId
+            this.$nextTick(() => {
+                const element = document.querySelector(`[data-tile-id="${tileId}"]`)
+                const area = this.$refs.mainArea
+                if (!element || !area) return
+                const tileBox = element.getBoundingClientRect()
+                const areaBox = area.getBoundingClientRect()
+                if (tileBox.top < areaBox.top || tileBox.bottom > areaBox.bottom) {
+                    element.scrollIntoView({ block: 'center', behavior: 'smooth' })
+                }
+            })
+        },
+
         // ■画面の中のメッセージ（数秒で消える）
         showToast(message) {
+            sfx.error()
             this.toastMessage = message
             clearTimeout(this.toastTimer)
             this.toastTimer = setTimeout(() => { this.toastMessage = '' }, 4500)
@@ -1567,6 +1608,9 @@ export default {
           this.gameState = 'finished'
           this.currentPlayerId = null
           this.isAiThinking = false
+          this.lastAiTileId = null
+          const result = this.computeResult()
+          if (result) setTimeout(() => (result.humanWon ? sfx.win() : sfx.lose()), 300)
           this.saveGame()
         },
 
@@ -1661,7 +1705,10 @@ export default {
             tile.placedCard = card
             player.score += this.getScoreForTile(card.tier)
 
-            this.handleEating(tile)
+            const ate = this.handleEating(tile)
+            sfx.aiPlace()
+            if (ate) setTimeout(() => sfx.eat(), 160)
+            this.markAiTile(tile.id)
 
             this.removeFromHand(hand, card)
 
@@ -1675,6 +1722,9 @@ export default {
     },
     async mounted() {
         console.clear()
+
+        // スマホは、画面をタップしたあとでないと音が出ないので、最初のタップで音を使える状態にする
+        window.addEventListener('pointerdown', () => sfx.unlock(), { once: true })
 
         // set the first player as the current player by default (保存データがあれば後で上書きされる)
         if (this.players.length > 0) {
@@ -1769,6 +1819,17 @@ export default {
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
       }
+  }
+
+  /* ■AIが最後に置いたタイル：ピコンピコン点滅（自分が動くまで） */
+  .board-tile.ai-last{
+      position: relative;
+      z-index: 5;
+      animation: ai-blink 0.7s ease-in-out infinite;
+  }
+  @keyframes ai-blink{
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+      50% { transform: scale(1.5); box-shadow: 0 0 0 3px #fff, 0 0 10px 5px rgba(250, 204, 21, 0.95); }
   }
 
   /* ■ヘッダー右はしの丸いボタン（？・🔍） */
