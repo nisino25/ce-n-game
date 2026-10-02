@@ -89,12 +89,12 @@
 
                 <!-- ■自分はどこか1つのゲームでしか遊べない：あそび中のゲームがあるときの案内 -->
                 <div
-                    v-if="myActiveSlot && !(myActiveSlot.spotId === spotSheet.id)"
+                    v-if="myActiveSlots[spotSheet.city] && myActiveSlots[spotSheet.city].spotId !== spotSheet.id"
                     class="mb-3 rounded-xl border border-yellow-300/60 bg-yellow-300/10 p-3 text-sm font-bold text-yellow-100"
                 >
-                    いま「{{ myActiveSlot.spotName }} ゲーム{{ myActiveSlot.gameNo }}」を あそび中だよ。
+                    {{ spotSheet.city === 'hiratsuka' ? '平塚市' : '釧路市' }}では、いま「{{ myActiveSlots[spotSheet.city].spotName }} ゲーム{{ myActiveSlots[spotSheet.city].gameNo }}」を あそび中だよ。
                     おわらせると、ほかの ゲームが あそべるよ。
-                    <button class="mt-2 w-full rounded-lg bg-yellow-300 px-3 py-2 font-black text-slate-900" @click="goToMyActiveSlot">
+                    <button class="mt-2 w-full rounded-lg bg-yellow-300 px-3 py-2 font-black text-slate-900" @click="goToMyActiveSlot(spotSheet.city)">
                         ▶ そこへ いく
                     </button>
                 </div>
@@ -172,6 +172,9 @@ import { slotId, isFresh, TEAM_COLORS, TEAM_NAMES, AI_COLOR } from "@/utils/domi
 // ■日本全体の表示範囲（九州の南〜北海道の北）
 const JAPAN_BOUNDS = [[30.9, 129.3], [45.8, 146.2]];
 
+// ■六角形の並び：5段（4・3・4・3・4個）。一番長い段も4個にして、六角形を大きくする
+const HEX_ROWS = [4, 3, 4, 3, 4];
+
 // ■すみかの札（六角形の中に出す。色ではなく文字で伝える：色はゲームの結果を塗るために取っておく）
 const HABITAT_LABELS = { town: "町", forest: "森", dirt: "土", river: "川", sea: "海" };
 
@@ -225,7 +228,7 @@ export default {
             directCity: null, // 街の六角形の画面から始めたときの街（hiratsuka / kushiro）
             hexRadius: 80, // いまの六角形の大きさ（画面のピクセル）
             slots: {}, // 「場所ID-ゲーム番号」→ { state: none / mine / other / won / lost, ownerName, winnerTeam }
-            myActiveSlot: null, // 自分があそび中のゲーム（どこか1つだけ遊べる）
+            myActiveSlots: {}, // 街ごとの、自分があそび中のゲーム（街ごとに1つだけ。平塚と釧路は1つずつ同時に遊べる）
             teamTally: { water: 0, air: 0, earth: 0, ai: 0 }, // チームごとの勝った数
             teamColors: TEAM_COLORS,
             teamNames: TEAM_NAMES,
@@ -269,7 +272,7 @@ export default {
         const notices = {
             busy: "そのゲームは、ほかの人が あそび中だったよ",
             done: "そのゲームは、もう おわっているよ",
-            active: "いま あそび中の ゲームが あるよ。おわらせてから、ほかの ゲームを あそんでね"
+            active: "この街で あそび中の ゲームが あるよ。おわらせてから、ほかの ゲームを あそんでね"
         };
         if (notices[this.$route.query.notice]) this.showNotice(notices[this.$route.query.notice]);
 
@@ -586,7 +589,7 @@ L.tileLayer(
             this.withTutorial("kushiro", "釧路市", () => this.startZoom("釧路市", [42.9849, 144.3814], 13));
         },
 
-        // ■その街の「場所」を、ハチの巣のように並べた六角形で表示する（中心＋まわり2周で19か所）。
+        // ■その街の「場所」を、ハチの巣のように並べた六角形で表示する（4・3・4・3・4個の5段で18か所）。
         //   六角形は3つのひし形に分かれていて、1つ1つが「その場所の3つのゲーム」。
         //   ゲームが終わるたびに、そのひし形が勝ったチームの色で塗られる（AIが勝ったら赤）。
         //   すみかは色ではなく、絵文字・名前・「森」などの札で伝える。タップすると、3つのゲームから選ぶ
@@ -598,20 +601,21 @@ L.tileLayer(
 
             const ZOOM = 13;
             // 六角形の大きさ（画面のピクセル）。19個が横にも縦にも収まる大きさにする
-            // 横は画面の幅いっぱい（19個の並びは、六角形の幅の5つぶん）。縦に収まらないときは、縦に合わせる
-            const radius = Math.min(80, Math.floor(this.$refs.map.clientWidth / 8.7), Math.floor(this.$refs.map.clientHeight / 10));
+            // 横は画面の幅いっぱい（一番長い段は、六角形の幅の4つぶん）。縦に収まらないときは、縦に合わせる
+            const radius = Math.min(88, Math.floor(this.$refs.map.clientWidth / 7.05), Math.floor(this.$refs.map.clientHeight / 8.8));
             this.hexRadius = radius;
             const origin = this.map.project(L.latLng(cityPos), ZOOM);
             const toLatLng = (x, y) => this.map.unproject(L.point(x, y), ZOOM);
 
             // 文字の大きさも、六角形の大きさに合わせる
-            const iconSize = Math.round(radius * 0.34);
+            const iconSize = Math.round(radius * 0.3);
             const nameSize = Math.max(9, Math.round(radius * 0.19));
             const chipSize = Math.max(8, Math.round(radius * 0.15));
 
             this.spots.filter(spot => spot.city === city).forEach(spot => {
-                const cx = origin.x + radius * Math.sqrt(3) * (spot.q + spot.r / 2);
-                const cy = origin.y + radius * 1.5 * spot.r;
+                // 段（row）ごとに、中央にそろえて並べる（4個の段と3個の段が、ハチの巣のように交互にかみ合う）
+                const cx = origin.x + radius * Math.sqrt(3) * (spot.col - (HEX_ROWS[spot.row] - 1) / 2);
+                const cy = origin.y + radius * 1.5 * (spot.row - 2);
 
                 // 六角形の6つの角（少しすき間をあけるため、半径より少し小さくする）
                 const corner = i => {
@@ -703,10 +707,15 @@ L.tileLayer(
                     }
                 });
 
-                // 自分があそび中のゲーム（ほかの街のものも含めて、1つだけ）
-                const mine = mineSnap ? mineSnap.docs.map(doc => doc.data()).find(data => isFresh(data.updatedAt)) : null;
-                const mineSpot = mine ? this.spots.find(spot => spot.id === mine.spotId) : null;
-                this.myActiveSlot = mine ? { spotId: mine.spotId, gameNo: mine.gameNo, spotName: mineSpot ? mineSpot.name : "" } : null;
+                // 自分があそび中のゲーム（街ごとに1つ）
+                const mineBy = {};
+                if (mineSnap) {
+                    mineSnap.docs.map(doc => doc.data()).filter(data => isFresh(data.updatedAt)).forEach(data => {
+                        const mineSpot = this.spots.find(spot => spot.id === data.spotId);
+                        mineBy[data.city] = { spotId: data.spotId, gameNo: data.gameNo, spotName: mineSpot ? mineSpot.name : "" };
+                    });
+                }
+                this.myActiveSlots = mineBy;
             } catch (error) {
                 console.error("ゲームの状態の読み込みに失敗しました:", error);
             }
@@ -755,9 +764,9 @@ L.tileLayer(
             return this.slots[`${spot.id}-${gameNo}`] || { state: "none" };
         },
 
-        // ■自分が別のゲームをあそび中のときは、新しいゲームは始められない（どこか1つだけ）
+        // ■同じ街で、自分が別のゲームをあそび中のときは、新しいゲームは始められない（街ごとに1つだけ）
         isLockedByMyGame(spot, gameNo) {
-            const active = this.myActiveSlot;
+            const active = this.myActiveSlots[spot.city];
             return !!active && !(active.spotId === spot.id && active.gameNo === gameNo);
         },
 
@@ -806,8 +815,8 @@ L.tileLayer(
         },
 
         // ■あそび中のゲームがある場所へ（別のゲームを始めようとしたときの案内から）
-        goToMyActiveSlot() {
-            const active = this.myActiveSlot;
+        goToMyActiveSlot(city) {
+            const active = this.myActiveSlots[city];
             const spot = active ? this.spots.find(item => item.id === active.spotId) : null;
             if (spot) this.startSpotGame(spot, active.gameNo);
         },

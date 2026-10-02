@@ -1,6 +1,6 @@
 <template>
     <template v-if="dominationMode == 'standard'">
-        <div class="domination-app min-h-screen bg-slate-100">
+        <div class="domination-app min-h-screen bg-slate-100 pb-44 lg:pb-0">
 
             <!-- Header: title + scoreboard -->
             <header class="bg-white border-b border-slate-200 shadow-sm">
@@ -12,12 +12,13 @@
 
                         <button
                             class="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-full pl-3 pr-2.5 py-1 font-mono font-bold tracking-wider text-slate-600 transition"
-                            title="クリックでコピー"
-                            @click="copyRoomCode"
+                            :title="roomLabelText() ? '' : 'クリックでコピー'"
+                            @click="roomLabelText() ? null : copyRoomCode()"
                         >
                             <span class="text-slate-400">{{ roomLabelText() ? '📍' : '🔑ルーム' }}</span>
                             <span class="truncate">{{ roomLabelText() || roomCode }}</span>
-                            <span v-if="roomCodeCopied" class="text-emerald-600 font-sans font-normal">コピーしました！</span>
+                            <span v-if="roomLabelText()"></span>
+                            <span v-else-if="roomCodeCopied" class="text-emerald-600 font-sans font-normal">コピーしました！</span>
                             <span v-else class="text-slate-400 font-sans font-normal">📋</span>
                         </button>
                     </div>
@@ -60,21 +61,21 @@
                 </div>
             </transition>
 
-            <div class="max-w-[1500px] mx-auto p-4 flex flex-col lg:flex-row gap-4 items-start">
+            <div class="max-w-[1500px] mx-auto px-1.5 py-2 sm:p-4 flex flex-col lg:flex-row gap-3 sm:gap-4 items-start">
 
-                <!-- Board -->
-                <div class="flex-1 w-full bg-white rounded-xl shadow-sm border border-slate-200 p-3 overflow-auto">
+                <!-- Board（スマホでは、枠をなくして画面いっぱいに。縦長の盤面にして、マスを大きくする） -->
+                <div class="board-wrap flex-1 w-full bg-white rounded-xl shadow-sm border border-slate-200 p-3 overflow-auto">
                     <div
-                        class="grid gap-[2px] mx-auto"
-                        :style="{ gridTemplateColumns: `repeat(${cols}, minmax(14px, 1fr))`, maxWidth: '1100px' }"
+                        class="board-grid grid gap-[2px] mx-auto"
+                        :style="{ '--cols': cols, '--rows': rows, maxWidth: '1100px' }"
                     >
                         <div
                             v-for="tile in tiles"
                             :key="tile.id"
-                            class="relative rounded-[2px] cursor-pointer transition-transform duration-150"
+                            class="board-tile relative rounded-[2px] cursor-pointer transition-transform duration-150"
                             :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected }"
                             @click="onTileClick(tile, $event)"
-                            :style="tileStyle(tile)"
+                            :style="[tileStyle(tile), { '--tr': tile.row + 1, '--tc': tile.col + 1 }]"
                         >
                             <div
                                 v-if="tile.validForSelection"
@@ -137,7 +138,7 @@
                     </div>
 
                     <!-- current player hand -->
-                    <div v-if="gameState === 'playing' && currentPlayer" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div v-if="gameState === 'playing' && currentPlayer" class="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200 p-4">
                         <template v-if="currentPlayer.isAI">
                             <div class="flex items-center gap-2 text-slate-500 text-sm py-6 justify-center">
                                 <span class="text-2xl">🤖</span>
@@ -189,7 +190,7 @@
                     </div>
 
                     <!-- actions -->
-                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 grid grid-cols-2 gap-2">
+                    <div class="hidden lg:grid bg-white rounded-xl shadow-sm border border-slate-200 p-3 grid-cols-2 gap-2">
                         <button
                             @click="selectedCard = null"
                             :disabled="!selectedCard"
@@ -220,6 +221,59 @@
                             {{ backLabelText() }}
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- ■スマホ・タブレット：手札とボタンを、画面の下にまとめて固定する（盤面をスクロールしても、いつでも使える） -->
+            <div class="game-dock lg:hidden">
+                <template v-if="gameState === 'playing' && currentPlayer">
+                    <div v-if="currentPlayer.isAI" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</div>
+                    <template v-else>
+                        <div v-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」を えらんだよ → きいろく ひかる マスに おけるよ</div>
+                        <div class="dock-hand">
+                            <template v-for="group in groupHandByTier(hands[currentPlayerId])" :key="group.tier">
+                                <span class="dock-tier">Lv{{ group.tier }}</span>
+                                <button
+                                    v-for="card in group.cards"
+                                    :key="card.id"
+                                    class="dock-chip border"
+                                    :class="areaBadgeClass(card, currentPlayerId)"
+                                    @click="previewCard(card, currentPlayerId)"
+                                >
+                                    {{ card.label }}<small>×{{ card.holdingCount }}</small>
+                                </button>
+                            </template>
+                            <span v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0" class="dock-empty">手札がありません</span>
+                        </div>
+                    </template>
+                </template>
+
+                <div class="dock-actions">
+                    <button
+                        class="dock-button"
+                        :disabled="!selectedCard"
+                        @click="selectedCard = null"
+                    >
+                        <span class="dock-button-icon">↩</span>キャンセル
+                    </button>
+                    <button
+                        v-if="gameState === 'playing'"
+                        class="dock-button"
+                        :disabled="currentPlayer?.isAI"
+                        @click="confirmSkip()"
+                    >
+                        <span class="dock-button-icon">⏭</span>スキップ
+                    </button>
+                    <button
+                        v-if="gameState === 'playing'"
+                        class="dock-button dock-button-danger"
+                        @click="showResignConfirm = true"
+                    >
+                        <span class="dock-button-icon">🏳</span>まけました
+                    </button>
+                    <button class="dock-button dock-button-back" @click="backFromGame()">
+                        <span class="dock-button-icon">📍</span>{{ backShortText() }}
+                    </button>
                 </div>
             </div>
 
@@ -682,7 +736,15 @@ export default {
         // ■地図の場所から始めたゲームは、長いルームコードの代わりに「場所 ゲーム番号」を表示する
         roomLabelText() {
             const place = this.loadPlace()
-            return place && place.spotName && place.gameNo ? `${place.spotName} ゲーム${place.gameNo}` : ''
+            if (!place) return ''
+            if (place.spotName && place.gameNo) return `${place.spotName} ゲーム${place.gameNo}`
+            return place.cityName || ''
+        },
+
+        // ■下のボタンに出す、短い「もどる先」の名前（平塚市・釧路市・ホーム）
+        backShortText() {
+            const place = this.loadPlace()
+            return place && place.cityName ? place.cityName : 'ホーム'
         },
 
         // ■場所とゲーム番号から、盤面の元になる数（同じ場所・同じ番号なら必ず同じ数）
@@ -809,8 +871,9 @@ export default {
                 if (isFresh(slot.updatedAt)) return goBack('busy')
             }
 
-            // 自分がほかの枠であそび中なら、始められない
-            const other = context.mineDocs.find(doc => doc.id !== this.roomCode && isFresh(doc.data().updatedAt))
+            // 自分が同じ街のほかの枠であそび中なら、始められない
+            // 同時に遊べるのは、1つの街（エリア）につき1つ。ちがう街（平塚と釧路など）なら、1つずつ同時に遊べる
+            const other = context.mineDocs.find(doc => doc.id !== this.roomCode && doc.data().city === place.city && isFresh(doc.data().updatedAt))
             if (other) return goBack('active')
 
             this.slotOwner = me
@@ -1625,6 +1688,122 @@ export default {
 </script>
 
 <style scoped>
+  /* ■盤面：スマホ（640px未満）では、縦長（15列×30行）に置き直して、マスを大きくする。枠もなくして画面いっぱいにする */
+  .board-grid{
+      grid-template-columns: repeat(var(--cols), minmax(14px, 1fr));
+  }
+  .board-tile{
+      grid-row: var(--tr);
+      grid-column: var(--tc);
+  }
+  @media (max-width: 639px){
+      .board-wrap{
+          padding: 0;
+          background: transparent;
+          border: 0;
+          box-shadow: none;
+          border-radius: 0;
+          overflow: visible;
+      }
+      .board-grid{
+          grid-template-columns: repeat(var(--rows), minmax(0, 1fr));
+          gap: 1px;
+      }
+      .board-tile{
+          grid-row: var(--tc);
+          grid-column: var(--tr);
+      }
+  }
+
+  /* ■下に固定する、手札とボタン（スマホ・タブレット） */
+  .game-dock{
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 30;
+      background: rgba(255, 255, 255, 0.97);
+      border-top: 1px solid #cbd5e1;
+      box-shadow: 0 -6px 16px rgba(15, 23, 42, 0.12);
+      padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  }
+  .dock-note{
+      margin-bottom: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-align: center;
+  }
+  .dock-note-ok{
+      color: #047857;
+  }
+  .dock-hand{
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+  }
+  .dock-hand::-webkit-scrollbar{ display: none; }
+  .dock-tier{
+      flex: none;
+      border-radius: 6px;
+      background: #e2e8f0;
+      padding: 1px 6px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #475569;
+  }
+  .dock-chip{
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      white-space: nowrap;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 600;
+  }
+  .dock-chip small{
+      font-size: 10px;
+      color: #64748b;
+  }
+  .dock-empty{
+      font-size: 12px;
+      color: #94a3b8;
+  }
+  .dock-actions{
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
+      gap: 6px;
+  }
+  .dock-button{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      background: #f1f5f9;
+      padding: 5px 2px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: #334155;
+      white-space: nowrap;
+  }
+  .dock-button:active:not(:disabled){ transform: scale(0.96); }
+  .dock-button:disabled{ opacity: 0.35; }
+  .dock-button-icon{ font-size: 16px; line-height: 1; }
+  .dock-button-danger{ background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+  .dock-button-back{ background: #dcfce7; border-color: #86efac; color: #166534; }
+
+
   @keyframes pulse {
       0%, 100% { transform: scale(1); opacity: 1; }
       50% { transform: scale(1.05); opacity: 0.7; }
