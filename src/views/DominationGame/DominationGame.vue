@@ -6,9 +6,7 @@
             <header class="bg-white border-b border-slate-200 shadow-sm">
                 <div class="max-w-[1500px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
                     <div class="flex min-w-0 items-center gap-3">
-                        <h1 class="whitespace-nowrap text-lg font-bold text-slate-700 flex items-center gap-2">
-                            <span>🗺️</span><span>陣取りゲーム</span>
-                        </h1>
+                        <h1 class="whitespace-nowrap text-lg font-bold text-slate-700">陣取りゲーム</h1>
 
                         <button
                             class="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-full pl-3 pr-2.5 py-1 font-mono font-bold tracking-wider text-slate-600 transition"
@@ -20,6 +18,19 @@
                             <span v-if="roomLabelText()"></span>
                             <span v-else-if="roomCodeCopied" class="text-emerald-600 font-sans font-normal">コピーしました！</span>
                             <span v-else class="text-slate-400 font-sans font-normal">📋</span>
+                        </button>
+
+                        <!-- ■説明（地形・レベル）を見る：はてなボタン → モーダル -->
+                        <button class="round-button flex-none" aria-label="地形・レベルの説明を見る" @click="isShowingTuorial = true">?</button>
+
+                        <!-- ■虫眼鏡：盤面ぜんたいが1画面に収まる大きさにする／もとの大きさにもどす（スマホのみ） -->
+                        <button
+                            class="round-button flex-none sm:hidden"
+                            :class="{ 'round-button-on': boardOverview }"
+                            :aria-label="boardOverview ? 'もとの大きさにもどす' : '盤面ぜんたいを見る'"
+                            @click="toggleOverview"
+                        >
+                            🔍
                         </button>
                     </div>
 
@@ -67,7 +78,7 @@
                 <div class="board-wrap flex-1 w-full bg-white rounded-xl shadow-sm border border-slate-200 p-3 overflow-auto">
                     <div
                         class="board-grid grid gap-[2px] mx-auto"
-                        :style="{ '--cols': cols, '--rows': rows, maxWidth: '1100px' }"
+                        :style="{ '--cols': cols, '--rows': rows, maxWidth: boardOverview ? overviewWidth + 'px' : '1100px' }"
                     >
                         <div
                             v-for="tile in tiles"
@@ -96,46 +107,6 @@
 
                 <!-- Sidebar -->
                 <div class="w-full lg:w-[340px] flex-none flex flex-col gap-3">
-
-                    <!-- legend toggle -->
-                    <button
-                        class="text-xs text-slate-500 hover:text-slate-700 underline self-start"
-                        @click="isShowingTuorial = !isShowingTuorial"
-                    >
-                        {{ isShowingTuorial ? '説明を閉じる ▲' : '地形・レベルの説明を見る ▼' }}
-                    </button>
-
-                    <div v-if="isShowingTuorial" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
-                        <div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <template v-for="item in terrainList" :key="item.key">
-                                    <div class="flex items-center gap-1.5">
-                                        <div class="w-3.5 h-3.5 rounded-full flex-none" :style="{ background: areaColors[item.key] }"></div>
-                                        <span class="text-xs whitespace-nowrap">{{ item.label }}</span>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="text-xs font-bold text-slate-600 mb-2">レベルとポイント</div>
-                            <div class="grid grid-cols-4 gap-1.5">
-                                <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="text-center bg-slate-100 rounded-lg p-2">
-                                    <div
-                                        v-if="tier === 2 || tier === 3"
-                                        class="mx-auto mb-1.5 w-5 h-5 bg-slate-600"
-                                        :class="{ 'rounded-full': tier === 3 }"
-                                    ></div>
-                                    <div class="text-xs leading-tight">
-                                        <strong v-if="tier === 1" class="text-lg block">&#9650;</strong>
-                                        <strong v-if="tier === 4" class="text-lg block">★</strong>
-                                        <strong>Lv{{ tier }}</strong>
-                                        <div class="text-[10px] text-slate-500">{{ getScoreForTile(tier) }}点</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- current player hand -->
                     <div v-if="gameState === 'playing' && currentPlayer" class="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200 p-4">
@@ -225,14 +196,14 @@
             </div>
 
             <!-- ■スマホ・タブレット：手札とボタンを、画面の下にまとめて固定する（盤面をスクロールしても、いつでも使える） -->
-            <div class="game-dock lg:hidden">
+            <div class="game-dock lg:hidden" :style="{ '--turn-color': currentPlayer ? currentPlayer.color : '#64748b' }">
                 <template v-if="gameState === 'playing' && currentPlayer">
                     <div v-if="currentPlayer.isAI" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</div>
                     <template v-else>
                         <div v-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」を えらんだよ → きいろく ひかる マスに おけるよ</div>
+                        <!-- ■手札は2行（横にスクロール）。チップの先頭の小さい数字がレベル -->
                         <div class="dock-hand">
                             <template v-for="group in groupHandByTier(hands[currentPlayerId])" :key="group.tier">
-                                <span class="dock-tier">Lv{{ group.tier }}</span>
                                 <button
                                     v-for="card in group.cards"
                                     :key="card.id"
@@ -240,7 +211,7 @@
                                     :class="areaBadgeClass(card, currentPlayerId)"
                                     @click="previewCard(card, currentPlayerId)"
                                 >
-                                    {{ card.label }}<small>×{{ card.holdingCount }}</small>
+                                    <span class="dock-lv">{{ group.tier }}</span>{{ card.label }}<small>×{{ card.holdingCount }}</small>
                                 </button>
                             </template>
                             <span v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0" class="dock-empty">手札がありません</span>
@@ -250,29 +221,22 @@
 
                 <div class="dock-actions">
                     <button
-                        class="dock-button"
-                        :disabled="!selectedCard"
-                        @click="selectedCard = null"
-                    >
-                        <span class="dock-button-icon">↩</span>キャンセル
-                    </button>
-                    <button
                         v-if="gameState === 'playing'"
                         class="dock-button"
                         :disabled="currentPlayer?.isAI"
                         @click="confirmSkip()"
                     >
-                        <span class="dock-button-icon">⏭</span>スキップ
+                        ⏭ スキップ
                     </button>
                     <button
                         v-if="gameState === 'playing'"
                         class="dock-button dock-button-danger"
                         @click="showResignConfirm = true"
                     >
-                        <span class="dock-button-icon">🏳</span>まけました
+                        🏳 まけました
                     </button>
                     <button class="dock-button dock-button-back" @click="backFromGame()">
-                        <span class="dock-button-icon">📍</span>{{ backShortText() }}
+                        {{ backLabelText() }}
                     </button>
                 </div>
             </div>
@@ -350,6 +314,47 @@
                     <button class="rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showResignConfirm = false">やめる</button>
                 </div>
             </div>
+        </div>
+
+        <!-- ■地形・レベルの説明（はてなボタンから開くモーダル） -->
+        <div
+            v-if="isShowingTuorial"
+            class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+            @click.self="isShowingTuorial = false"
+        >
+            <div class="relative w-full max-w-sm space-y-4 rounded-2xl bg-white p-5 shadow-xl">
+                <button class="absolute -top-3 -right-3 rounded-full bg-white px-2 py-1 text-sm shadow" @click="isShowingTuorial = false">✕</button>
+                <p class="text-center text-base font-black text-slate-700">地形と レベルの せつめい</p>
+                        <div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <template v-for="item in terrainList" :key="item.key">
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-3.5 h-3.5 rounded-full flex-none" :style="{ background: areaColors[item.key] }"></div>
+                                        <span class="text-xs whitespace-nowrap">{{ item.label }}</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="text-xs font-bold text-slate-600 mb-2">レベルとポイント</div>
+                            <div class="grid grid-cols-4 gap-1.5">
+                                <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="text-center bg-slate-100 rounded-lg p-2">
+                                    <div
+                                        v-if="tier === 2 || tier === 3"
+                                        class="mx-auto mb-1.5 w-5 h-5 bg-slate-600"
+                                        :class="{ 'rounded-full': tier === 3 }"
+                                    ></div>
+                                    <div class="text-xs leading-tight">
+                                        <strong v-if="tier === 1" class="text-lg block">&#9650;</strong>
+                                        <strong v-if="tier === 4" class="text-lg block">★</strong>
+                                        <strong>Lv{{ tier }}</strong>
+                                        <div class="text-[10px] text-slate-500">{{ getScoreForTile(tier) }}点</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                                </div>
         </div>
 
         <!-- card select modal -->
@@ -517,6 +522,8 @@ export default {
         gameState: 'playing', // 'playing' or 'finished'
 
         isShowingTuorial: false,
+        boardOverview: false, // 虫眼鏡：盤面ぜんたいを1画面に収める（スマホ）
+        overviewWidth: 300,
 
         isAiThinking: false
       }
@@ -741,10 +748,13 @@ export default {
             return place.cityName || ''
         },
 
-        // ■下のボタンに出す、短い「もどる先」の名前（平塚市・釧路市・ホーム）
-        backShortText() {
-            const place = this.loadPlace()
-            return place && place.cityName ? place.cityName : 'ホーム'
+        // ■虫眼鏡：盤面ぜんたい（縦長の15列×30行）が、上の見出しと下のバーのあいだに収まる幅にする
+        toggleOverview() {
+            this.boardOverview = !this.boardOverview
+            if (this.boardOverview) {
+                const room = window.innerHeight - 270
+                this.overviewWidth = Math.max(180, Math.min(window.innerWidth - 12, Math.floor(room * this.rows / this.cols)))
+            }
         },
 
         // ■場所とゲーム番号から、盤面の元になる数（同じ場所・同じ番号なら必ず同じ数）
@@ -1715,58 +1725,65 @@ export default {
       }
   }
 
-  /* ■下に固定する、手札とボタン（スマホ・タブレット） */
+  /* ■下に固定する、手札とボタン（スマホ・タブレット）。
+     盤面（明るい色のマス）とはっきり分けるため、濃い色にして、上に今の手番のチームの色の線をひく */
   .game-dock{
       position: fixed;
       left: 0;
       right: 0;
       bottom: 0;
       z-index: 30;
-      background: rgba(255, 255, 255, 0.97);
-      border-top: 1px solid #cbd5e1;
-      box-shadow: 0 -6px 16px rgba(15, 23, 42, 0.12);
-      padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+      background: #0f172a;
+      border-top: 4px solid var(--turn-color, #64748b);
+      border-radius: 14px 14px 0 0;
+      box-shadow: 0 -10px 24px rgba(15, 23, 42, 0.35);
+      padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   }
   .dock-note{
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       font-size: 11px;
       font-weight: 700;
-      color: #64748b;
+      color: #94a3b8;
       text-align: center;
   }
   .dock-note-ok{
-      color: #047857;
+      color: #6ee7b7;
   }
+  /* 手札：2行。はみ出す分は横にスクロール */
   .dock-hand{
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      margin-bottom: 6px;
+      display: grid;
+      grid-template-rows: repeat(2, auto);
+      grid-auto-flow: column;
+      grid-auto-columns: max-content;
+      gap: 6px 5px;
+      margin-bottom: 8px;
       overflow-x: auto;
       padding-bottom: 2px;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
   }
   .dock-hand::-webkit-scrollbar{ display: none; }
-  .dock-tier{
-      flex: none;
-      border-radius: 6px;
-      background: #e2e8f0;
-      padding: 1px 6px;
-      font-size: 10px;
-      font-weight: 800;
-      color: #475569;
-  }
   .dock-chip{
-      flex: none;
       display: inline-flex;
       align-items: center;
-      gap: 3px;
+      gap: 4px;
       white-space: nowrap;
       border-radius: 999px;
-      padding: 4px 9px;
+      padding: 3px 9px 3px 4px;
       font-size: 12px;
       font-weight: 600;
+  }
+  .dock-lv{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.75);
+      font-size: 10px;
+      font-weight: 800;
+      color: #fff;
   }
   .dock-chip small{
       font-size: 10px;
@@ -1776,6 +1793,7 @@ export default {
       font-size: 12px;
       color: #94a3b8;
   }
+  /* ボタン：高さを使わないよう、1段（アイコンと文字を横に並べる） */
   .dock-actions{
       display: grid;
       grid-auto-flow: column;
@@ -1784,47 +1802,43 @@ export default {
   }
   .dock-button{
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 1px;
-      border: 1px solid #cbd5e1;
+      justify-content: center;
+      gap: 3px;
+      border: 1px solid #334155;
       border-radius: 10px;
-      background: #f1f5f9;
-      padding: 5px 2px;
-      font-size: 11px;
+      background: #1e293b;
+      padding: 8px 4px;
+      font-size: 12px;
       font-weight: 700;
       line-height: 1.2;
-      color: #334155;
+      color: #e2e8f0;
       white-space: nowrap;
   }
   .dock-button:active:not(:disabled){ transform: scale(0.96); }
   .dock-button:disabled{ opacity: 0.35; }
-  .dock-button-icon{ font-size: 16px; line-height: 1; }
-  .dock-button-danger{ background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
-  .dock-button-back{ background: #dcfce7; border-color: #86efac; color: #166534; }
+  .dock-button-danger{ background: #7f1d1d; border-color: #b91c1c; color: #fecaca; }
+  .dock-button-back{ background: #14532d; border-color: #15803d; color: #bbf7d0; }
 
-
-  @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.7; }
+  /* ■はてな・虫眼鏡の丸いボタン */
+  .round-button{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border: 2px solid #94a3b8;
+      border-radius: 50%;
+      background: #fff;
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1;
+      color: #475569;
   }
-
-  .triangle{
-      width:0;
-      height:0;
-      border-left:12px solid transparent;
-      border-right:12px solid transparent;
-      border-bottom:20px solid;
-  }
-
-  .fade-enter-active,
-  .fade-leave-active{
-      transition: opacity .2s ease;
-  }
-
-  .fade-enter-from,
-  .fade-leave-to{
-      opacity: 0;
+  .round-button-on{
+      border-color: #0ea5e9;
+      background: #e0f2fe;
+      color: #0369a1;
   }
 
 </style>
