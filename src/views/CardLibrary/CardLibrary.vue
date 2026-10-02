@@ -52,14 +52,25 @@
                     </template>
                 </p>
 
-                <!-- 絞り込み -->
-                <div class="mb-4 flex flex-wrap gap-2">
+                <!-- 絞り込み：1段目＝持っているかどうか（最初は「もっている」）、2段目＝ロケーション -->
+                <div class="mb-2 flex flex-wrap gap-2">
                     <button
-                        v-for="option in filterOptions"
+                        v-for="option in ownedOptions"
                         :key="option.value"
                         class="filter-button"
-                        :class="{ active: filter === option.value }"
-                        @click="filter = option.value"
+                        :class="{ active: ownedFilter === option.value }"
+                        @click="ownedFilter = option.value"
+                    >
+                        {{ option.label }}
+                    </button>
+                </div>
+                <div class="mb-4 flex flex-wrap gap-2">
+                    <button
+                        v-for="option in regionOptions"
+                        :key="option.value"
+                        class="filter-button"
+                        :class="{ active: regionFilter === option.value }"
+                        @click="regionFilter = option.value"
                     >
                         {{ option.label }}
                     </button>
@@ -69,44 +80,55 @@
                 <div v-if="!filteredCards.length" class="py-10 text-center text-slate-400">
                     該当するカードがありません
                 </div>
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                    <div
-                        v-for="card in filteredCards"
+                <!-- ■宝箱・獲得カード一覧と同じカードデザイン（CollectionCard）で表示 -->
+                <div class="library-grid">
+                    <!-- ■タップするとカードを拡大して見られる -->
+                    <button
+                        v-for="(card, index) in filteredCards"
                         :key="card.cardId"
-                        class="library-card"
+                        class="library-item"
                         :class="{ unowned: !card.owned }"
+                        :aria-label="card.name + 'を拡大して見る'"
+                        @click="focusCard(index)"
                     >
-                        <div class="library-card-image">
-                            <img v-if="card.image" :src="card.image" :alt="card.name">
-                            <span v-else class="text-4xl">🐾</span>
-                        </div>
-                        <div class="library-card-body">
-                            <div class="flex items-center justify-between gap-1">
-                                <span class="font-bold">{{ card.name }}</span>
-                                <span class="level-badge">Lv{{ card.level }}</span>
-                            </div>
-                            <div class="mt-1 flex flex-wrap gap-1 text-[11px]">
-                                <span class="tag">{{ regionLabels[card.region] || card.region }}</span>
-                                <span class="tag">{{ terrainLabels[card.terrain] || card.terrain }}</span>
-                                <span class="tag">レア度 {{ card.rarity }}</span>
-                            </div>
-                            <div class="mt-2 text-sm">
-                                <span v-if="card.collectionCount" class="font-bold text-cyan-300">もっている ×{{ card.collectionCount }}</span>
-                                <span v-else class="text-slate-500">もっていない</span>
-                                <span v-if="card.placedCount" class="ml-1 text-xs text-amber-300">（盤面 ×{{ card.placedCount }}）</span>
-                            </div>
-                        </div>
-                    </div>
+                        <CollectionCard :card="displayCard(card)" />
+                        <span v-if="card.collectionCount" class="count-badge">×{{ card.collectionCount }}</span>
+                        <span v-else-if="card.placedCount" class="count-badge placed">盤面 ×{{ card.placedCount }}</span>
+                        <span v-else class="lock-badge">もっていない</span>
+                    </button>
                 </div>
             </template>
 
+        </div>
+
+        <!-- ■カードの拡大表示（宝箱の獲得カード一覧と同じ操作感） -->
+        <div v-if="focusedCard" class="focus-modal" @click.self="closeFocus">
+            <button class="focus-close" aria-label="閉じる" @click="closeFocus">✕</button>
+            <button class="focus-nav focus-prev" aria-label="前のカード" :disabled="focusedIndex === 0" @click.stop="moveFocus(-1)">◀</button>
+
+            <div :key="focusedCard.cardId" class="focus-card" :style="{ '--s': focusScale }">
+                <CollectionCard :card="displayCard(focusedCard)" />
+            </div>
+
+            <button class="focus-nav focus-next" aria-label="次のカード" :disabled="focusedIndex === filteredCards.length - 1" @click.stop="moveFocus(1)">▶</button>
+            <p class="focus-count">
+                {{ focusedIndex + 1 }} / {{ filteredCards.length }}
+                <span class="focus-owned">
+                    <template v-if="focusedCard.collectionCount">&emsp;もっている ×{{ focusedCard.collectionCount }}</template>
+                    <template v-if="focusedCard.placedCount">&emsp;盤面 ×{{ focusedCard.placedCount }}</template>
+                    <template v-if="!focusedCard.owned">&emsp;もっていない</template>
+                </span>
+            </p>
         </div>
     </div>
 </template>
 
 <script>
+import CollectionCard from "@/views/CaveAdventure/CollectionCard.vue";
+import { getSession } from "@/utils/session.js";
 import {
     MIN_CARDS_FOR_DOMINATION,
+    toDisplayCard,
     REGION_LABELS,
     TERRAIN_LABELS,
     getCurrentUser,
@@ -117,19 +139,28 @@ import {
 export default {
     name: "CardLibrary",
 
+    components: { CollectionCard },
+
     data() {
         return {
             loading: true,
             loadError: "",
             library: [],
             instances: [],
-            filter: "all",
-            filterOptions: [
+            ownedFilter: "owned", // 最初は持っているカードだけ表示する
+            regionFilter: "all",
+            ownedOptions: [
                 { value: "all", label: "すべて" },
                 { value: "owned", label: "もっている" },
-                { value: "unowned", label: "もっていない" },
-                ...Object.entries(REGION_LABELS).map(([value, label]) => ({ value: `region:${value}`, label }))
+                { value: "unowned", label: "もっていない" }
             ],
+            regionOptions: [
+                { value: "all", label: "すべての場所" },
+                ...Object.entries(REGION_LABELS).map(([value, label]) => ({ value, label }))
+            ],
+            playerName: "",
+            focusedIndex: null,
+            focusScale: 2,
             minCards: MIN_CARDS_FOR_DOMINATION,
             regionLabels: REGION_LABELS,
             terrainLabels: TERRAIN_LABELS
@@ -158,13 +189,14 @@ export default {
         },
 
         filteredCards() {
-            if (this.filter === "owned") return this.cards.filter(card => card.owned);
-            if (this.filter === "unowned") return this.cards.filter(card => !card.owned);
-            if (this.filter.startsWith("region:")) {
-                const region = this.filter.slice("region:".length);
-                return this.cards.filter(card => card.region === region);
-            }
-            return this.cards;
+            return this.cards.filter(card =>
+                (this.ownedFilter === "all" || (this.ownedFilter === "owned") === card.owned)
+                && (this.regionFilter === "all" || card.region === this.regionFilter)
+            );
+        },
+
+        focusedCard() {
+            return this.focusedIndex === null ? null : this.filteredCards[this.focusedIndex] || null;
         },
 
         ownedKinds() {
@@ -180,6 +212,34 @@ export default {
         }
     },
 
+    methods: {
+        // ■宝箱と同じ表示用データに変換（所持カードにはチームカラーと自分の名前を付ける）
+        displayCard(card) {
+            const instance = card.owned
+                ? { team: getSession("myTeam"), ownerName: this.playerName }
+                : null;
+            return toDisplayCard(card, instance);
+        },
+
+        // ■画面に収まる最大2.2倍まで拡大して表示
+        focusCard(index) {
+            const maxByHeight = (window.innerHeight * 0.78) / 220;
+            const maxByWidth = (window.innerWidth * 0.86) / 150;
+            this.focusScale = Math.max(1, Math.min(2.2, maxByHeight, maxByWidth));
+            this.focusedIndex = index;
+        },
+
+        moveFocus(delta) {
+            const next = this.focusedIndex + delta;
+            if (next < 0 || next >= this.filteredCards.length) return;
+            this.focusedIndex = next;
+        },
+
+        closeFocus() {
+            this.focusedIndex = null;
+        }
+    },
+
     async mounted() {
         try {
             const [library, user] = await Promise.all([
@@ -187,6 +247,7 @@ export default {
                 getCurrentUser()
             ]);
             this.library = library;
+            this.playerName = (user && user.name) || "";
             this.instances = user ? await fetchMyCardInstances(user.uid) : [];
         } catch (error) {
             console.error("カードライブラリの読み込みに失敗しました:", error);
@@ -213,22 +274,64 @@ export default {
 }
 .filter-button.active{background:#22d3ee;border-color:#22d3ee;color:#0f172a}
 
-.library-card{
-    overflow:hidden;border:1px solid #334155;border-radius:12px;
-    background:#1b2330;
+.library-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:16px 12px;justify-items:center;
 }
-.library-card-image{
-    display:flex;align-items:center;justify-content:center;
-    height:110px;background:#f3eee2;
+.library-item{
+    position:relative;display:block;width:150px;height:220px;padding:0;
+    cursor:pointer;transition:transform .18s ease;-webkit-tap-highlight-color:transparent;
 }
-.library-card-image img{max-width:100%;max-height:100%;object-fit:contain}
-.library-card-body{padding:8px 10px 10px}
-.library-card.unowned .library-card-image{filter:grayscale(1) brightness(.55)}
-.library-card.unowned .library-card-body{opacity:.6}
+.library-item:hover{transform:translateY(-4px) scale(1.03)}
+.library-item:active{transform:scale(.97)}
+.library-item:focus-visible{outline:3px solid #ffd84d;outline-offset:3px}
+.library-item.unowned > :first-child{filter:grayscale(1) brightness(.5)}
+.count-badge{
+    position:absolute;right:-6px;bottom:-8px;z-index:20;
+    border-radius:999px;background:#22d3ee;color:#0f172a;
+    padding:2px 10px;font-size:13px;font-weight:900;
+    box-shadow:0 2px 6px rgba(0,0,0,.5);
+}
+.count-badge.placed{background:#fbbf24}
+.lock-badge{
+    position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);z-index:20;
+    border-radius:999px;background:#334155;color:#cbd5e1;
+    padding:2px 10px;font-size:11px;font-weight:bold;white-space:nowrap;
+}
 
-.level-badge{
-    flex:none;border-radius:6px;background:#0e7490;
-    padding:0 6px;font-size:11px;font-weight:bold;
+/* ■カードの拡大表示 */
+.focus-modal{
+    position:fixed;inset:0;z-index:10001;
+    background:rgba(6,10,16,.88);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    display:flex;align-items:center;justify-content:center;
 }
-.tag{border-radius:4px;background:rgba(255,255,255,.08);padding:0 6px;color:#cbd5e1}
+.focus-card{
+    line-height:0;
+    transform:scale(var(--s,2));
+    filter:drop-shadow(0 18px 30px rgba(0,0,0,.6));
+    animation:focus-pop .28s cubic-bezier(.2,1.2,.4,1);
+}
+@keyframes focus-pop{from{transform:scale(calc(var(--s,2) * .6));opacity:0}to{transform:scale(var(--s,2));opacity:1}}
+.focus-close,.focus-nav{
+    position:absolute;margin:0;padding:0;border-radius:50%;
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
+    color:#fff;cursor:pointer;transition:background .2s,opacity .2s;
+}
+.focus-close:hover,.focus-nav:hover:not(:disabled){background:rgba(255,255,255,.25)}
+.focus-close{top:max(16px,env(safe-area-inset-top));right:16px;width:40px;height:40px;font-size:16px}
+.focus-nav{top:50%;transform:translateY(-50%);width:44px;height:44px;font-size:16px}
+.focus-nav:disabled{opacity:.25;cursor:default}
+.focus-prev{left:10px}
+.focus-next{right:10px}
+.focus-count{
+    position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:0;right:0;
+    margin:0;text-align:center;color:#cbd5e1;font-size:13px;font-weight:bold;letter-spacing:2px;
+}
+.focus-owned{color:#67e8f9;letter-spacing:0}
+
+@media (prefers-reduced-motion: reduce){
+    .focus-card{animation:none !important}
+}
 </style>

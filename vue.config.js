@@ -2,6 +2,11 @@ const { defineConfig } = require('@vue/cli-service')
 module.exports = defineConfig({
   transpileDependencies: true,
 
+  // ■docs/ のmdファイルを文字列として取り込む（ドキュメントページで表示するため）
+  chainWebpack: config => {
+    config.module.rule('md').test(/\.md$/).type('asset/source')
+  },
+
   pwa: {
     // ■ホーム画面に追加できるPWAとしての設定
     // 起動先は本番のハブサイト（shineki-game）が「洞窟ゲーム」リンクで使っているのと同じ

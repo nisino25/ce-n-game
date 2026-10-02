@@ -225,7 +225,6 @@
                     team: this.potentialTeam,
                     cards: [],
                     level: 1,
-                    coins: 0,
                     createdAt: new Date(),
                     cenId: this.cenId,
                     enteredMonitorRoomAt: firebase.firestore.Timestamp.now()

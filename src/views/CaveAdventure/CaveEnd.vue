@@ -116,49 +116,71 @@
         </div>    
     </div>
 
-    <!-- Collection -->
-    <div v-if="showBook" class="book">
-        <div class="bookPanel">
-            <h2>獲得カード一覧</h2>
-            <div id="collectionGrid">
-                <div v-if="collectionLoading">よみこみ中…</div>
-                <div v-else-if="collection.length === 0">まだカードを獲得していません。</div>
-                <!-- ■ミニカード表示 -->
-                    <div v-for="card in collection" :key="card.instanceId" class="smallCard" :style="{ backgroundImage: `url('/images/card/cardBack.png')` }">
-                        <!-- 生態系レベル -->
-                        <div class="small-eco">
-                            <img v-if="card.group === '土'" src="/images/card/チームカラー（土・ブラウン）.png" class="small-team-bg" alt="土">
-                            <img v-else-if="card.group === '水'" src="/images/card/チームカラー（水・ブルー）.png" class="small-team-bg" alt="水">
-                            <img v-else-if="card.group === '風'" src="/images/card/チームカラー（風・ライトグリーン）.png" class="small-team-bg" alt="風">
+    <!-- ■獲得カード一覧 -->
+    <div v-if="showBook" class="collection-modal" @click.self="closeCollection">
+        <div class="collection-sheet">
+            <header class="collection-head">
+                <div>
+                    <h2>獲得カード一覧</h2>
+                    <p v-if="!collectionLoading">{{ collection.length }}枚 あつめたよ</p>
+                </div>
+                <button class="collection-close" aria-label="閉じる" @click="closeCollection">✕</button>
+            </header>
 
-                            <img :src="card.level" alt="レベル">
-                            <span>生態系レベル</span>
-                        </div>
-                        <!-- レア度 & すみか -->
-                        <div class="small-top-right">
-                            <div class="small-rare">
-                                <span>レア度</span>
-                                <strong>{{ card.rare }}</strong>
-                            </div>
-                            <div class="small-habitat">
-                                <span>すみか</span>
-                                <img :src="card.area2" alt="すみか">
-                            </div>
-                        </div>
-                        <!-- 生きもの画像 -->
-                        <div class="small-image">
-                            <img v-if="card.icon" :src="card.icon" :alt="card.name">
-                            <div v-else class="no-image small">🐾</div>
-                        </div>
-                        <!-- 名前 -->
-                        <div class="small-name">{{ card.name }}</div>
-                        <!-- 発見者 -->
-                        <div class="small-owner">発見者 {{ card.owner }}</div>
-                
+            <p v-if="collectionNotice" class="collection-notice">{{ collectionNotice }}</p>
+
+            <div class="collection-body">
+                <div v-if="collectionLoading" class="collection-grid">
+                    <div v-for="n in 6" :key="n" class="skeleton-card"></div>
+                </div>
+
+                <div v-else-if="collection.length === 0" class="collection-empty">
+                    <div class="empty-icon">🎁</div>
+                    <p>まだカードがありません</p>
+                    <p class="sub">宝箱をあけて、カードをあつめよう！</p>
+                </div>
+
+                <div v-else class="collection-grid">
+                    <!-- ■タップするとカードを拡大して見られる -->
+                    <button
+                        v-for="(card, index) in collection"
+                        :key="card.instanceId"
+                        class="collection-item"
+                        :aria-label="card.name + 'を拡大して見る'"
+                        @click="focusCard(index)"
+                    >
+                        <CollectionCard :card="card" />
+                    </button>
                 </div>
             </div>
-            <button @click="closeCollection">閉じる</button>
-            <button type="button" class="book-clear-btn" @click="resetCollection">カードクリア（仮）</button>
+
+            <footer class="collection-foot">
+                <button type="button" class="collection-reset" @click="askResetCollection">カードクリア（仮）</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ■カードの拡大表示（一覧のカードをタップ） -->
+    <div v-if="focusedCard" class="focus-modal" @click.self="closeFocus">
+        <button class="focus-close" aria-label="閉じる" @click="closeFocus">✕</button>
+        <button class="focus-nav focus-prev" aria-label="前のカード" :disabled="focusedIndex === 0" @click.stop="moveFocus(-1)">◀</button>
+
+        <div :key="focusedCard.instanceId" class="focus-card" :style="{ '--s': focusScale }">
+            <CollectionCard :card="focusedCard" />
+        </div>
+
+        <button class="focus-nav focus-next" aria-label="次のカード" :disabled="focusedIndex === collection.length - 1" @click.stop="moveFocus(1)">▶</button>
+        <p class="focus-count">{{ focusedIndex + 1 }} / {{ collection.length }}</p>
+    </div>
+
+    <!-- ■確認ダイアログ（ネイティブのconfirmは環境によって動かないため画面内で出す） -->
+    <div v-if="confirmReset" class="confirm-modal">
+        <div class="confirm-box">
+            <p>獲得したカードをすべて消去してもよろしいですか？</p>
+            <div class="confirm-actions">
+                <button class="confirm-yes" @click="resetCollection">消去する</button>
+                <button class="confirm-no" @click="confirmReset = false">キャンセル</button>
+            </div>
         </div>
     </div>
   </div>
@@ -173,6 +195,7 @@ import {
     loadLastCaveArea
 } from "./caveAreas.js";
 import db from "@/firebase.js";
+import CollectionCard from "./CollectionCard.vue";
 import {
     getCurrentUser,
     fetchCardLibrary,
@@ -183,6 +206,8 @@ import {
 } from "@/utils/cards.js";
 
 export default {
+    components: { CollectionCard },
+
     data() {
         return {         
           // ■カードはFirestoreのカードライブラリ（cards）から出し、所持カード（cardInstances）として保存する
@@ -207,10 +232,19 @@ export default {
           },
           collection: [],
           collectionLoading: false,
+          collectionNotice: "",
+          // ■一覧でタップしたカードの拡大表示（collectionの添字。nullなら閉じている）
+          focusedIndex: null,
+          focusScale: 2,
+          confirmReset: false,
         };
     },
 
     computed: {
+        focusedCard() {
+            return this.focusedIndex === null ? null : this.collection[this.focusedIndex] || null;
+        },
+
         selectedAreaInfo() {
             return CAVE_AREAS[this.selectedArea];
         },
@@ -330,29 +364,56 @@ export default {
 
         closeCollection() {
             this.showBook = false;
+            this.focusedIndex = null;
+            this.confirmReset = false;
+            this.collectionNotice = "";
         },
-        // ■追加：カード一括クリア処理（確認ダイアログ付き）
-        resetCollection() {
+
+        // ■一覧のカードをタップ → 画面に収まる最大2倍まで拡大して表示
+        focusCard(index) {
+            const maxByHeight = (window.innerHeight * 0.78) / 220;
+            const maxByWidth = (window.innerWidth * 0.86) / 150;
+            this.focusScale = Math.max(1, Math.min(2.2, maxByHeight, maxByWidth));
+            this.focusedIndex = index;
+        },
+
+        moveFocus(delta) {
+            const next = this.focusedIndex + delta;
+            if (next < 0 || next >= this.collection.length) return;
+            this.focusedIndex = next;
+        },
+
+        closeFocus() {
+            this.focusedIndex = null;
+        },
+
+        // ■テスト用：カード一括クリア（確認は画面内ダイアログで行う）
+        askResetCollection() {
             if (this.collection.length === 0) {
-                alert("クリアするカードがありません。");
+                this.collectionNotice = "クリアするカードがありません。";
                 return;
             }
-            if (confirm("獲得したカードをすべて消去してもよろしいですか？")) {
-                // ■テスト用：自分の所持カードをDBから削除する
-                const batch = db.batch();
-                this.collection.forEach(card => {
-                    batch.delete(db.collection("cardInstances").doc(card.instanceId));
+            this.collectionNotice = "";
+            this.confirmReset = true;
+        },
+
+        resetCollection() {
+            this.confirmReset = false;
+            // ■テスト用：自分の所持カードをDBから削除する
+            const batch = db.batch();
+            this.collection.forEach(card => {
+                batch.delete(db.collection("cardInstances").doc(card.instanceId));
+            });
+            batch.commit()
+                .then(() => {
+                    this.collection = [];
+                    this.focusedIndex = null;
+                    this.collectionNotice = "図鑑をリセットしました。";
+                })
+                .catch(error => {
+                    console.error("カードの削除に失敗しました:", error);
+                    this.collectionNotice = "カードを削除できませんでした。";
                 });
-                batch.commit()
-                    .then(() => {
-                        this.collection = [];
-                        alert("図鑑をリセットしました");
-                    })
-                    .catch(error => {
-                        console.error("カードの削除に失敗しました:", error);
-                        alert("カードを削除できませんでした。");
-                    });
-            }
         },
 
         activateGate() {
@@ -600,7 +661,7 @@ export default {
     }
 
     /* 全画面オーバーレイ */
-    .overlay,.book{
+    .overlay{
         position:fixed !important;
         inset:0 !important;
         background:rgba(0,0,0,.75);
@@ -785,181 +846,133 @@ export default {
         background-color: #eee !important;
     }
 
-    /* コレクション図鑑 */
-    #collectionGrid{
-        display: flex !important;
-        gap: 15px !important;
-        overflow-x: auto !important;
-        padding: 15px 5px !important;
-        margin-top: 10px !important;
+    /* ■獲得カード一覧（シート型） */
+    .collection-modal{
+        position:fixed;inset:0;z-index:9999;
+        background:rgba(8,6,4,.72);
+        -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+        display:flex;align-items:flex-end;justify-content:center;
+        animation:overlay-in .25s ease-out;
     }
-    .smallCard{
-        flex: 0 0 auto !important;
-        width: 150px !important;
-        height: 220px !important;
-        background-size: 100% 100% !important;
-        background-repeat: no-repeat !important;
-        position: relative !important;
-        padding: 10px !important;
-        box-sizing: border-box !important;
-        border-radius: 8px !important;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+    .collection-sheet{
+        width:min(100%,760px);max-height:88vh;
+        display:flex;flex-direction:column;
+        background:linear-gradient(180deg,#2a2219,#17120d);
+        border:1px solid rgba(212,175,55,.35);border-bottom:none;
+        border-radius:22px 22px 0 0;
+        box-shadow:0 -12px 40px rgba(0,0,0,.5);
+        color:#f6ecd6;
+        animation:sheet-up .3s cubic-bezier(.2,.9,.3,1);
     }
-    .small-eco {
-        position: absolute !important;
-        top: 12px !important;
-        left: 12px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        z-index: 10 !important;
+    @keyframes sheet-up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+    @media (min-width:768px){
+        .collection-modal{align-items:center}
+        .collection-sheet{border-bottom:1px solid rgba(212,175,55,.35);border-radius:22px}
     }
-    .small-team-bg {
-        position: absolute !important;
-        top: -4px !important;
-        left: 50% !important;
-        transform: translateX(-50%) scale(1.4) !important;
-        transform-origin: center top !important;
-        width: 36px !important;
-        height: 36px !important;
-        object-fit: contain !important;
-        z-index: 1 !important;
+    .collection-head{
+        display:flex;align-items:center;justify-content:space-between;
+        padding:18px 20px 10px;
     }
-    .small-eco img {
-        top: 5;
-        width: 28px !important;
-        height: 28px !important;
-        z-index: 2 !important;
-        object-fit: contain !important;
+    .collection-head h2{margin:0;font-size:20px;font-weight:900;letter-spacing:1px;color:#ffe9a8}
+    .collection-head p{margin:2px 0 0;font-size:12px;color:#bfae8a}
+    .collection-close{
+        margin:0;padding:0;width:36px;height:36px;border-radius:50%;
+        background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);
+        color:#f6ecd6;font-size:15px;cursor:pointer;transition:background .2s;
     }
-    .small-eco span {
-        font-size: 8px !important;
-        line-height: 1 !important;
-        color: #000 !important;
-        margin-top: 2px !important;
-        white-space: nowrap !important;
+    .collection-close:hover{background:rgba(255,255,255,.18)}
+    .collection-notice{
+        margin:0 20px 6px;padding:8px 12px;border-radius:10px;font-size:12px;
+        background:rgba(212,175,55,.15);color:#ffe9a8;
     }
-    /* ミニカード：右上（レア度＆すみか） */
-    .small-top-right {
-        position: absolute !important;
-        top: 6px !important;
-        right: 8px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-end !important;
-        z-index: 10 !important;
+    .collection-body{flex:1;overflow-y:auto;padding:8px 16px 16px;-webkit-overflow-scrolling:touch}
+    .collection-grid{
+        display:grid;grid-template-columns:repeat(auto-fill,150px);
+        justify-content:center;gap:18px 16px;padding:6px 0;
     }
-    .small-rare {
-        display: flex !important;
-        align-items: baseline !important;
-        gap: 4px !important;
-        color: #000 !important;
+    .collection-item{
+        margin:0;padding:0;border:none;background:none;cursor:pointer;
+        border-radius:10px;line-height:0;
+        filter:drop-shadow(0 6px 10px rgba(0,0,0,.45));
+        transition:transform .18s ease,filter .18s ease;
+        -webkit-tap-highlight-color:transparent;
     }
-    .small-rare span {
-        font-size: 9px !important;
+    .collection-item:hover{transform:translateY(-4px) scale(1.03);filter:drop-shadow(0 12px 16px rgba(0,0,0,.55))}
+    .collection-item:active{transform:scale(.97)}
+    .collection-item:focus-visible{outline:3px solid #ffd84d;outline-offset:3px}
+
+    .skeleton-card{
+        width:150px;height:220px;border-radius:10px;
+        background:linear-gradient(100deg,#3a3126 30%,#4a3f31 50%,#3a3126 70%);
+        background-size:200% 100%;animation:skeleton 1.2s linear infinite;
     }
-    .small-rare strong {
-        font-size: 13px !important;
-        font-family: serif !important;
-        line-height: 1 !important;
+    @keyframes skeleton{from{background-position:200% 0}to{background-position:-200% 0}}
+
+    .collection-empty{text-align:center;padding:48px 16px 40px;color:#d8c9a6}
+    .collection-empty .empty-icon{font-size:56px;margin-bottom:10px}
+    .collection-empty p{margin:4px 0;font-weight:bold}
+    .collection-empty .sub{font-size:12px;font-weight:normal;color:#a89877}
+
+    .collection-foot{
+        padding:10px 20px calc(14px + env(safe-area-inset-bottom));
+        border-top:1px solid rgba(255,255,255,.08);text-align:right;
     }
-    .small-rare strong {
-        font-size: 14px !important;
-        font-family: serif !important;
+    .collection-reset{
+        margin:0;padding:6px 12px;background:none;border:1px solid rgba(255,120,120,.5);
+        border-radius:8px;color:#ff9c9c;font-size:11px;cursor:pointer;
     }
-    .small-habitat {
-        display: flex !important;
-        align-items: center !important;
-        gap: 2px !important;
-        margin-top: 2px !important;
+    .collection-reset:hover{background:rgba(255,80,80,.15)}
+
+    /* ■カードの拡大表示 */
+    .focus-modal{
+        position:fixed;inset:0;z-index:10001;
+        background:rgba(6,4,2,.88);
+        -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+        display:flex;align-items:center;justify-content:center;
+        animation:overlay-in .2s ease-out;
     }
-    .small-habitat span {
-        font-size: 8px !important;
-        color: #000 !important;
-        white-space: nowrap !important;
+    .focus-card{
+        line-height:0;
+        transform:scale(var(--s,2));
+        filter:drop-shadow(0 18px 30px rgba(0,0,0,.6));
+        animation:focus-pop .28s cubic-bezier(.2,1.2,.4,1);
     }
-    .small-habitat img {
-        width: 28px !important;
-        height: 28px !important;
-        object-fit: contain !important;
+    @keyframes focus-pop{from{transform:scale(calc(var(--s,2) * .6));opacity:0}to{transform:scale(var(--s,2));opacity:1}}
+    .focus-close,.focus-nav{
+        position:absolute;margin:0;padding:0;border-radius:50%;
+        background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
+        color:#fff;cursor:pointer;transition:background .2s,opacity .2s;
     }
-    /* ミニカード：生きもの画像 */
-    .small-image {
-        position: absolute !important;
-        top: 50px !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 120px !important;
-        height: 120px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    .small-image img {
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: contain !important;
-    }
-    /* ミニカード：名前 */
-    .small-name {
-        position: absolute !important;
-        top: 165px !important;
-        left: 0 !important;
-        width: 100% !important;
-        font-size: 13px !important;
-        font-weight: bold !important;
-        text-align: center !important;
-        color: #000 !important;
-        padding: 0 4px !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
-    /* ミニカード：発見者 */
-    .small-owner {
-        position: absolute !important;
-        top: 190px !important;
-        left: 0 !important;
-        width: 100% !important;
-        font-size: 10px !important;
-        text-align: center !important;
-        color: #444 !important;
-    }
-    /* コレクションモーダルの閉じるボタン */
-    .book-btn-area {
-        display: flex !important;
-        justify-content: center !important;
-        gap: 15px !important;
-        margin-top: 15px !important;
-        position: relative !important;
-        z-index: 10000 !important;
-        pointer-events: auto !important;
-    }
-    .book-close-btn {
-        margin-top: 0px !important;
-        padding: 6px 20px !important;
-        background-color: #eee !important;
-        border: 1px solid #ccc !important;
-        border-radius: 6px !important;
-        cursor: pointer !important;
-        font-weight: bold !important;
-    }
-    .book-clear-btn {
-        padding: 6px 20px !important;
-        background-color: #ff4d4d !important;
-        border: 2px solid #cc0000 !important;
-        border-radius: 6px !important;
-        cursor: pointer !important;
-        font-weight: bold !important;
-        color: #ffffff !important;
-    }
-    .book-clear-btn:hover {
-        background-color: #e60000 !important;
+    .focus-close:hover,.focus-nav:hover:not(:disabled){background:rgba(255,255,255,.25)}
+    .focus-close{top:max(16px,env(safe-area-inset-top));right:16px;width:40px;height:40px;font-size:16px}
+    .focus-nav{top:50%;transform:translateY(-50%);width:44px;height:44px;font-size:16px}
+    .focus-nav:disabled{opacity:.25;cursor:default}
+    .focus-prev{left:10px}
+    .focus-next{right:10px}
+    .focus-count{
+        position:absolute;bottom:calc(18px + env(safe-area-inset-bottom));left:0;right:0;
+        margin:0;text-align:center;color:#d8c9a6;font-size:13px;font-weight:bold;letter-spacing:2px;
     }
 
-    .smallIcon{font-size:40px}
-    .bookPanel{
-        width:95%;height:80%;background:white;border-radius:16px;padding:16px;
+    /* ■確認ダイアログ */
+    .confirm-modal{
+        position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,.6);
+        display:flex;align-items:center;justify-content:center;padding:16px;
+    }
+    .confirm-box{
+        width:min(100%,320px);background:#fff;color:#2b2b2b;border-radius:16px;
+        padding:22px 20px;text-align:center;box-shadow:0 14px 40px rgba(0,0,0,.4);
+    }
+    .confirm-box p{margin:0 0 18px;font-weight:bold;line-height:1.5}
+    .confirm-actions{display:flex;gap:10px;justify-content:center}
+    .confirm-actions button{margin:0;padding:9px 18px;border-radius:10px;font-weight:bold;cursor:pointer;border:none}
+    .confirm-yes{background:#e53935;color:#fff}
+    .confirm-yes:hover{background:#c62828}
+    .confirm-no{background:#e5e7eb;color:#333}
+    .confirm-no:hover{background:#d1d5db}
+
+    @media (prefers-reduced-motion: reduce){
+        .collection-modal,.collection-sheet,.focus-modal,.focus-card,.skeleton-card{animation:none !important}
     }
 
     /* 帰還ゲート & ワープ */

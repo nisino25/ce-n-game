@@ -7,6 +7,8 @@
         <!-- Title -->
         <h1 class="m-4 room-title text-3xl font-bold tracking-wider">
             SECRET BASE CONTROL ROOM
+            <!-- ■手元の開発環境のときだけDEMOと出して、本番と見分けられるようにする -->
+            <span v-if="isLocalEnv" class="demo-badge">(DEMO)</span>
         </h1>
 
         <!-- Floor -->
@@ -23,9 +25,11 @@
                 <div class="flex flex-col items-center">
                     <div class="text-6xl animate-bounce my-4">🌍</div>
 
+                    <!-- ■平塚エリアの「かんりょうりつ」：チームごとに、平塚のゲーム（全部で{{ hiratsukaSlotTotal }}か所ぶん）のうち、勝ったゲームの割合（実際の結果） -->
                     <div class="text-xs">
-                        🌱95% 💧90% 🌬98%
+                        🌱{{ areaProgress.earth }}% 💧{{ areaProgress.water }}% 🌬{{ areaProgress.air }}%
                     </div>
+                    <div class="mt-0.5 text-[10px] opacity-70">平塚の かんりょうりつ</div>
                 </div>
             </div>
 
@@ -49,7 +53,7 @@
                 :class="{ offline: cardCountsLoaded && personalCards < minCardsForWild }"
                 @click="goWild"
             >
-                野生にもどそう！
+                {{ wildChecking ? "確認中…" : "野生にもどそう！" }}
             </button>
 
             <!-- ■生き物スキャン：要件定義済み・実装済みだが、今回のデプロイでは一旦非表示
@@ -81,11 +85,13 @@
                         </div>
 
                         <div class="text-sm">
-                            チーム保有カード：{{ teamCards }}枚
+                            保有カード：{{ personalCards }}枚
                         </div>
 
-                        <div class="text-sm">
-                            個人保有カード：{{ personalCards }}枚
+                        <!-- ■自分のテラ（通貨）。アイコンは仮（ベッカさん作成中）で、差し替えは public/images/coin.png -->
+                        <div class="text-sm font-bold flex items-center justify-center gap-1">
+                            {{ terra === null ? "-" : terra }}テラ
+                            <img src="/images/coin.png" alt="テラ" class="h-5 w-5 object-contain">
                         </div>
 
                     </div>
@@ -105,22 +111,30 @@
         <details class="fixed bottom-4 right-4 z-[450] bg-black/40 border border-dashed border-yellow-400/60 rounded-lg p-2 flex flex-col gap-1.5 backdrop-blur-sm max-w-[85vw]">
             <summary class="text-yellow-300 text-[10px] font-bold tracking-wider px-1 cursor-pointer select-none">🚧 仮リンク</summary>
             <button
-                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'DominationGame' })"
+                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition disabled:opacity-50"
+                :disabled="tutorialResetting"
+                @click="resetTutorialFlags"
             >
-                陣取りゲームに直接アクセス（仮）
+                「チュートリアル初回フラグ」を消す
+            </button>
+            <p v-if="tutorialResetMessage" class="text-[11px] text-yellow-200 px-1">{{ tutorialResetMessage }}</p>
+            <button
+                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                @click="$router.push({ name: 'DeviceStats' })"
+            >
+                端末の集計を見る（仮）
             </button>
             <button
                 class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'ABGame' })"
+                @click="$router.push({ name: 'CommentsAdmin' })"
             >
-                ABゲーム（仮）
+                みんなの声を見る（仮）
             </button>
             <button
                 class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'ABGameB' })"
+                @click="$router.push({ name: 'Docs' })"
             >
-                ABゲーム提案B（仮）
+                ドキュメント（仮）
             </button>
             <button
                 class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
@@ -128,13 +142,58 @@
             >
                 生き物スキャン（仮）
             </button>
-            <button
-                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'CardLibrary' })"
-            >
-                カードライブラリ（仮）
-            </button>
         </details>
+
+        <!-- ■操作の結果を知らせる一時メッセージ -->
+        <div
+            v-if="notice"
+            class="fixed bottom-20 left-1/2 z-[2100] w-[90vw] max-w-sm -translate-x-1/2 rounded-lg border border-yellow-400/60 bg-black/85 px-4 py-3 text-center text-sm font-bold text-yellow-100"
+        >
+            {{ notice }}
+        </div>
+
+        <!-- ■野生にもどそう！：前回の陣取りゲームが進行中なら、「つづきから」か「あたらしく」かを選ぶ
+             ■子どもが読めるよう、ひらがな中心・短い言葉・大きなボタンにしている -->
+        <div
+            v-if="showWildChoice"
+            class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/70 p-4"
+            @click.self="showWildChoice = false"
+        >
+            <div class="w-full max-w-sm rounded-2xl border-2 border-cyan-300 bg-[#10151c] p-5 text-center text-white shadow-[0_0_24px_rgba(0,255,255,.35)]">
+                <p class="mb-4 text-2xl font-black text-cyan-300">どっちであそぶ？</p>
+
+                <div class="flex flex-col gap-3">
+                    <button
+                        class="rounded-xl bg-cyan-400 px-4 py-4 text-slate-900 hover:bg-cyan-300 active:scale-[.98]"
+                        @click="resumeWild"
+                    >
+                        <span class="block text-2xl">▶</span>
+                        <span class="block text-xl font-black">つづきから</span>
+                        <span class="block text-sm font-bold">{{ resumePlaceName }}の つづきだよ</span>
+                    </button>
+
+                    <button
+                        class="rounded-xl border-2 border-cyan-300 px-4 py-4 text-cyan-100 hover:bg-white/10 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                        :disabled="cardsShort"
+                        @click="goWildMap"
+                    >
+                        <span class="block text-2xl">🗺</span>
+                        <span class="block text-xl font-black">あたらしく はじめる</span>
+                        <span class="block text-sm font-bold">ちずから えらぶよ</span>
+                    </button>
+                    <p v-if="cardsShort" class="text-sm font-bold text-amber-300">
+                        あたらしく はじめるには、カードが あと{{ minCardsForWild - personalCards }}まい いるよ
+                    </p>
+                </div>
+
+                <button
+                    class="mt-4 w-full rounded-lg border border-slate-500 px-4 py-2 text-sm font-bold hover:bg-white/10"
+                    @click="showWildChoice = false"
+                >
+                    やめる
+                </button>
+            </div>
+        </div>
 
         <!-- ■野生にもどそう！はカードが足りないと遊べない -->
         <div
@@ -164,7 +223,7 @@
         </div>
 
         <!-- Door -->
-        <div ref="doorEl" class="my-8 mx-auto w-[80%] h-64 flex justify-center items-center relative">
+        <div ref="doorEl" class="room-main-door my-8 mx-auto w-[80%] h-64 flex justify-center items-center relative">
             <div class="door-left panel bg-gray-700 h-full w-[90px] relative z-100 transition-transform duration-1000 z-20" :style="{transform: isTransitioning ? 'translateX(-75px)' : 'translateX(0)'}">
                 <div class="door-line absolute h-full w-[2px] right-0"></div>
             </div>
@@ -177,20 +236,21 @@
 						
         </div>
 
+        <!-- ■どんな画面であそばれているか、人数だけを数えていることのおしらせ（名前やIDは使わない） -->
+        <p class="privacy-note">どんな画面で あそばれているか、回数だけを かぞえています。名前や ID は つかいません。</p>
+
+        <!-- ■アイコン：図鑑（カードライブラリ）と看板（お知らせ・みんなの声） -->
+        <div class="room-icon-row">
+            <RoomIconButton kind="library" label="ずかん" @click="$router.push({ name: 'CardLibrary' })" />
+            <RoomIconButton kind="board" label="かんばん" @click="$router.push({ name: 'NoticeBoard' })" />
+        </div>
+
         <!-- Console -->
-        <div class="consoles realtive flex justify-between items-center w-[400px] mx-auto">
+        <!-- ■「◯◯の部屋」のテーブルは、1つだけ -->
+        <div class="consoles realtive flex justify-center items-center w-[400px] max-w-full mx-auto">
             <div
                 class="relative w-44 h-16 bg-gray-700 border-2 border-gray-500 room-console flex justify-center items-center"
                 >
-                <div class="text-center room-accent-text text-sm">
-                    <div class="desk-monitor">{{ teamEmoji }} {{ teamName }}</div>
-                </div>
-            </div>
-
-            <!-- Right Console -->
-            <div
-                class="relative w-44 h-16 bg-gray-700 border-2 border-gray-500 room-console flex justify-center items-center"
-            >
                 <div class="text-center room-accent-text text-sm">
                     <div class="desk-monitor">{{ teamEmoji }} {{ teamName }}</div>
                 </div>
@@ -265,9 +325,16 @@ import {
     resetCurrentUserCache
 } from "@/utils/cards.js";
 import { getSession, setSession, removeSession } from "@/utils/session.js";
+import { fetchTotalPoints } from "@/utils/points.js";
+import { isLocalEnv } from "@/utils/env.js";
+import { sendDeviceStatsOnce } from "@/utils/deviceStats.js";
+import RoomIconButton from "./RoomIconButton.vue";
+import mapSpotsSeed from "@/views/DominationGame/mapSpots.json";
 
 export default {
     name: "MonitorRoom",
+
+    components: { RoomIconButton },
 
     data() {
 			const myTeam = getSession("myTeam");
@@ -282,6 +349,10 @@ export default {
 				avatarFrom: null,
 				doorTarget: null,
 
+				// ■仮リンク：チュートリアル見たフラグのリセット
+				tutorialResetting: false,
+				tutorialResetMessage: "",
+
 				myTeam,
 				currentPlayerName,
 				currentPlayerData,
@@ -290,7 +361,14 @@ export default {
 
 				// ■保有カード数（Firestoreの所持カード cardInstances のうち手元にあるもの）
 				personalCards: 0,
-				teamCards: 0,
+				resumeRoom: "", // 進行中の陣取りゲームのルームコード（無ければ空）
+				resumePlaceName: "",
+				showWildChoice: false,
+				wildChecking: false,
+				notice: "",
+				areaProgress: { earth: 0, water: 0, air: 0 }, // 平塚のゲームの完了率（チームごと・%）
+				terra: null, // ce-n.org側のtotalPoints（ハブの合計得点と同じ）。読み込み前はnull
+				isLocalEnv: isLocalEnv(),
 				minCardsForWild: MIN_CARDS_FOR_DOMINATION,
 				showCardShortage: false,
 				cardCountsLoaded: false, // 読み込み前に一瞬「NO SIGNAL」にならないように
@@ -305,6 +383,15 @@ export default {
     },
 
     computed: {
+        // 平塚のゲーム枠の数（場所の数×3つのゲーム）
+        hiratsukaSlotTotal() {
+            return mapSpotsSeed.spots.filter(spot => spot.city === "hiratsuka").length * 3;
+        },
+
+        cardsShort() {
+            return this.personalCards < this.minCardsForWild;
+        },
+
 
         teamName() {
             switch (this.myTeam) {
@@ -387,6 +474,7 @@ export default {
         themeVars() {
             return {
                 "--team-accent": this.teamTheme.accent,
+                "--room-accent": this.teamTheme.accent, // モニターごとの色（少しずつ変える）の元になる色
                 "--team-bg-glow": this.teamTheme.bgGlow,
                 "--team-bg-dark": this.teamTheme.bgDark,
                 "--team-title-glow": this.teamTheme.titleGlow
@@ -437,6 +525,10 @@ export default {
         this.refreshPlayerData();
 
         this.loadCardCounts();
+        this.loadTerra();
+        this.loadAreaProgress();
+        sendDeviceStatsOnce(); // どんな端末か（粗い分類だけ）を、1日1回、数字として記録する（docs/device-stats.md）
+        this.loadResumeRoom();
 
         this.teamMembers = await this.getTeamMembers();
 				// console.log("Current Player Data:", this.currentPlayerData);
@@ -449,6 +541,23 @@ export default {
     },
 
     methods: {
+        // ■テスト用：地図のチュートリアル（動画）を見たフラグ（users/{uid}.tutorialCleared）を消して、また見られるようにする
+        async resetTutorialFlags() {
+            this.tutorialResetting = true;
+            this.tutorialResetMessage = "";
+            try {
+                const user = await getCurrentUser();
+                if (!user) throw new Error("ユーザーが見つかりません");
+                await db.collection("users").doc(user.uid).update({ tutorialCleared: {} });
+                this.tutorialResetMessage = "消しました。次に地図で地域を選ぶと動画が流れます";
+            } catch (error) {
+                console.error("チュートリアルフラグの削除に失敗しました:", error);
+                this.tutorialResetMessage = "消せませんでした。通信状況を確認してください";
+            } finally {
+                this.tutorialResetting = false;
+            }
+        },
+
         // ■ProfileEditor等で更新された名前・アバターをFirestoreから取り直し、
         // 表示中のデータとセッションキャッシュの両方を最新化する
         async refreshPlayerData() {
@@ -464,14 +573,69 @@ export default {
             }
         },
 
+        // ■最後に遊んだ陣取りゲーム：この端末のルームコード（DominationGameが最後に参加・作成したもの）が、
+        //   進行中（終了していない）なら、野生にもどそう！で「前回の場所へもどる」を選べるようにする。入室時に1回だけ確認する
+        async loadResumeRoom() {
+            try {
+                const roomCode = localStorage.getItem("dominationRoomCode");
+                if (!roomCode) return;
+                const doc = await db.collection("dominationGames").doc(roomCode).get();
+                const data = doc.exists ? doc.data() : null;
+                if (!data || !Array.isArray(data.tiles) || !data.tiles.length || data.gameState === "finished") return;
+
+                // ■地図のゲーム枠は、遊んでいる本人だけが「つづきから」できる（ほかの人の枠には入れない）
+                if (data.ownerUid) {
+                    const user = await getCurrentUser();
+                    if (!user || user.uid !== data.ownerUid) return;
+                }
+
+                // ■場所：地図から入った場所（この端末のメモ）を優先し、無ければルームに保存された場所
+                let local = null;
+                try { local = JSON.parse(localStorage.getItem("dominationPlace")); } catch (e) { local = null; }
+                const place = local || data.place;
+                // まだ遊べない街（準備中）のゲームは、「つづきから」に出さない
+                if (place && mapSpotsSeed.cities[place.city] && mapSpotsSeed.cities[place.city].playable === false) return;
+                this.resumePlaceName = (place && (place.spotName || place.cityName)) || "前回の陣取りゲーム";
+
+                this.resumeRoom = roomCode;
+            } catch (error) {
+                console.error("進行中の陣取りゲームの確認に失敗しました:", error);
+            }
+        },
+
+        // ■地球のモニターに出す「かんりょうりつ」：平塚のゲーム枠（場所×3）のうち、チームごとに、勝った枠の割合。
+        //   mapSlots（地図に出している、枠のようす）から数える。まだ誰も遊んでいなければ0%
+        async loadAreaProgress() {
+            try {
+                const snapshot = await db.collection("mapSlots").where("city", "==", "hiratsuka").get();
+                const wins = { earth: 0, water: 0, air: 0 };
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.state === "finished" && data.humanWon !== false && wins[data.winnerTeam] !== undefined) wins[data.winnerTeam]++;
+                });
+                const percent = count => Math.round((count / this.hiratsukaSlotTotal) * 100);
+                this.areaProgress = { earth: percent(wins.earth), water: percent(wins.water), air: percent(wins.air) };
+            } catch (error) {
+                console.error("平塚のかんりょうりつの取得に失敗しました:", error);
+            }
+        },
+
+        // ■テラ：ハブサイトと同じく、ce-n.orgのfindMeから合計ポイントを取る（Firestoreには持たない）
+        async loadTerra() {
+            try {
+                const cenId = getSession("loginCenId");
+                if (!cenId) return;
+                this.terra = await fetchTotalPoints(cenId);
+            } catch (error) {
+                console.error("テラ（ポイント）の取得に失敗しました:", error);
+            }
+        },
+
         async loadCardCounts() {
             try {
                 const user = await getCurrentUser();
                 if (!user) return;
-                [this.personalCards, this.teamCards] = await Promise.all([
-                    countCollectionCards({ ownerUid: user.uid }),
-                    user.team ? countCollectionCards({ team: user.team }) : 0
-                ]);
+                this.personalCards = await countCollectionCards({ ownerUid: user.uid });
                 this.cardCountsLoaded = true;
             } catch (error) {
                 console.error("保有カード数の取得に失敗しました:", error);
@@ -479,13 +643,53 @@ export default {
         },
 
         // ■野生にもどそう！：手元のカードが一定枚数以上ないと遊べない
+        // ■野生にもどそう！
+        //   前回の陣取りゲームが進行中なら、まず選択モーダル（前回の場所へもどる／地図をひらく）を出す。
+        //   進行中の続きはカードが盤面に出ていて手元の枚数が減っているので、枚数が足りなくてももどれるようにしている。
+        //   枚数・進行中のゲームはどちらも入室時に確認済みの値を使い、押したときに通信しない（読み込み前だけ待つ）
         async goWild() {
-            await this.loadCardCounts();
-            if (this.personalCards < this.minCardsForWild) {
+            if (this.wildChecking || this.isTransitioning) return;
+
+            if (!this.cardCountsLoaded) {
+                this.wildChecking = true;
+                try {
+                    await this.loadCardCounts();
+                } finally {
+                    this.wildChecking = false;
+                }
+                if (!this.cardCountsLoaded) {
+                    this.showNotice("カードの枚数を確認できませんでした。通信状況を確認して、もう一度押してください");
+                    return;
+                }
+            }
+
+            if (this.resumeRoom) {
+                this.showWildChoice = true;
+                return;
+            }
+            this.goWildMap();
+        },
+
+        // ■地図をひらく（新しく始める）：手元のカードが足りなければ案内を出す
+        goWildMap() {
+            this.showWildChoice = false;
+            if (this.cardsShort) {
                 this.showCardShortage = true;
                 return;
             }
             this.changeMode('dominationMap');
+        },
+
+        // ■前回の場所へもどる：地図・チュートリアルを飛ばして陣取りゲームに入る（続きなのでカード枚数のチェックはしない）
+        resumeWild() {
+            this.showWildChoice = false;
+            this.changeMode('dominationGame');
+        },
+
+        showNotice(message) {
+            this.notice = message;
+            clearTimeout(this.noticeTimer);
+            this.noticeTimer = setTimeout(() => { this.notice = ""; }, 4000);
         },
 
         goRepair() {
@@ -865,5 +1069,45 @@ export default {
       .monitor-team{ order:2; }
       .monitor-cave{ order:3; }
       .monitor-wild{ order:4; }
+      /* ■ドアを低くして、下のアイコン（ずかん・かんばん）が画面の下端に追いやられないようにする */
+      .room-main-door{ height:9rem; margin-top:1.25rem; margin-bottom:1.25rem; }
+  }
+
+  .room-icon-row{
+      position:relative;
+      z-index:30;
+      display:flex;
+      justify-content:center;
+      gap:40px;
+      margin:0 auto 16px;
+  }
+
+  .demo-badge{
+      margin-left:.4em;
+      padding:0 .4em;
+      border:2px solid #fbbf24;
+      border-radius:.4em;
+      color:#fbbf24;
+      font-size:.6em;
+      vertical-align:middle;
+      white-space:nowrap;
+  }
+
+  /* ■上のモニターは、それぞれ少しずつ色を変える（チームの色を元に、ほかの色を混ぜる）。
+     color-mix に対応していないブラウザでは、これまで通りチームの色のまま */
+  .monitor-globe{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #4aa3ff); }
+  .monitor-cave{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #ffb347); }
+  .monitor-wild{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #5ee08a); }
+
+  /* ■端末の統計についてのおしらせ（目立たないように、小さく） */
+  .privacy-note{
+      margin: 0 auto 8px;
+      padding: 0 12px;
+      max-width: 420px;
+      font-size: 10px;
+      line-height: 1.5;
+      text-align: center;
+      color: var(--team-accent, #0ff);
+      opacity: 0.55;
   }
 </style>
