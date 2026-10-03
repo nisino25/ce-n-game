@@ -39,13 +39,10 @@
                         <span class="deploy-meta">
                             <span class="deploy-date">{{ card.pending ? "これから" : card.date }}</span>
                             <span v-if="card.pr" class="deploy-pr">{{ card.pr }}</span>
+                            <span v-if="card.meta.work" class="deploy-who">🛠 {{ card.meta.work.who }}</span>
                         </span>
                         <span class="deploy-title">{{ card.title }}</span>
                         <span class="deploy-summary">{{ card.summary }}</span>
-                        <span v-if="card.meta.branch || card.meta.work" class="deploy-people">
-                            <span v-if="card.meta.branch">🌱 {{ card.meta.branch.who }}</span>
-                            <span v-if="card.meta.work">🛠 {{ card.meta.work.who }}</span>
-                        </span>
                         <span class="deploy-more">くわしく見る ›</span>
                     </button>
                 </div>
@@ -62,10 +59,10 @@
                 <div class="deploy-modal-meta">
                     <span class="deploy-date">{{ openedCard.pending ? "これから" : openedCard.date }}</span>
                     <span v-if="openedCard.pr" class="deploy-pr">{{ openedCard.pr }}</span>
+                    <span v-if="openedCard.meta.work" class="deploy-who">🛠 {{ openedCard.meta.work.who }}</span>
                 </div>
+                <p v-if="openedCard.meta.work && openedCard.meta.work.detail" class="deploy-work-detail">{{ openedCard.meta.work.detail }}</p>
                 <h2 class="deploy-modal-title">{{ openedCard.title }}</h2>
-                <!-- eslint-disable-next-line vue/no-v-html -->
-                <div v-if="openedCard.detailHtml" class="deploy-modal-people" v-html="openedCard.detailHtml"></div>
                 <!-- eslint-disable-next-line vue/no-v-html -->
                 <div class="docs-content deploy-modal-body" @click="onContentClick" v-html="openedCard.html"></div>
             </div>
@@ -139,7 +136,7 @@ const parseCards = source => {
         const [headLine, ...rest] = chunk.split("\n");
         const meta = {};
         const lines = rest.filter(line => {
-            const found = line.match(/^@(branch|work):\s*(.+)$/);
+            const found = line.match(/^@(work):\s*(.+)$/);
             if (!found) return true;
             const [who, detail = ""] = found[2].split("|").map(text => text.trim());
             meta[found[1]] = { who, detail };
@@ -155,7 +152,6 @@ const parseCards = source => {
             pending: !head,
             summary,
             meta,
-            detailHtml: meta.branch || meta.work ? marked.parse(["- 🌱 ブランチ：" + (meta.branch ? meta.branch.who + (meta.branch.detail ? "（" + meta.branch.detail + "）" : "") : "—"), "- 🛠 おもな作業：" + (meta.work ? meta.work.who + (meta.work.detail ? "（" + meta.work.detail + "）" : "") : "—")].join("\n")) : "",
             html: marked.parse(body)
         };
     });
@@ -329,15 +325,14 @@ export default {
 }
 .deploy-card:hover{transform:translateY(-2px);border-color:#22d3ee;background:#202b3a}
 .deploy-card.pending{border-style:dashed;border-color:#64748b;background:rgba(255,255,255,.03)}
+.deploy-who{display:inline-block;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:bold;background:rgba(255,255,255,.1);color:#e2e8f0}
+.deploy-work-detail{margin:0 0 12px;font-size:13px;color:#94a3b8}
 .deploy-date,.deploy-pr{display:inline-block;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:bold}
 .deploy-date{background:#0e7490;color:#fff}
 .deploy-pr{background:#f59e0b;color:#1f2937}
 .deploy-meta{display:flex;flex-wrap:wrap;gap:6px}
 .deploy-title{font-size:15px;font-weight:900;line-height:1.5;color:#e2e8f0}
 .deploy-summary{font-size:13px;line-height:1.6;color:#94a3b8}
-.deploy-people{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;font-weight:bold;color:#cbd5e1}
-.deploy-modal-people{margin:0 0 12px;padding:8px 14px;border-radius:10px;background:rgba(255,255,255,.05);font-size:13px}
-.deploy-modal-people :deep(ul){margin:0;padding-left:0;list-style:none}
 .deploy-more{margin-top:auto;padding-top:4px;font-size:12px;font-weight:bold;color:#67e8f9}
 
 .deploy-modal-back{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,12,.7)}
