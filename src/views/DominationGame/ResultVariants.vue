@@ -113,6 +113,56 @@
             </div>
         </div>
 
+        <!-- 案H：ぼうグラフ（レベルごとに、チームを ならべる） -->
+        <div v-else-if="variant === 'bars'" class="rv-bars">
+            <div v-for="tier in [4, 3, 2, 1]" :key="tier" class="rv-bars-group">
+                <span class="rv-bars-level">Lv{{ tier }}</span>
+                <span class="rv-bars-lines">
+                    <span v-for="team in ranking" :key="team.id" class="rv-bars-line">
+                        <span class="rv-bars-fill" :style="{ width: Math.max(count(team.id, tier) / maxCell * 100, count(team.id, tier) ? 4 : 0) + '%', background: team.color }"></span>
+                        <small>{{ count(team.id, tier) }}</small>
+                    </span>
+                </span>
+            </div>
+        </div>
+
+        <!-- 案I：タイル（おおきさで くらべる） -->
+        <div v-else-if="variant === 'treemap'" class="rv-tree">
+            <div v-for="team in treemap" :key="team.id" class="rv-tree-team" :style="{ flex: Math.max(team.territory, 0.5) }">
+                <span class="rv-tree-title"><span class="rv-dot" :style="{ background: team.color }"></span>{{ team.name.replace('チーム', '') }} {{ team.territory }}</span>
+                <span class="rv-tree-cells">
+                    <span
+                        v-for="cell in team.cells"
+                        :key="cell.tier"
+                        class="rv-tree-cell"
+                        :style="{ flex: cell.value, background: `linear-gradient(135deg, color-mix(in srgb, ${team.color} 85%, #fff), ${team.color})`, opacity: tierOpacity(cell.tier) + 0.2 }"
+                    >Lv{{ cell.tier }}<b>{{ cell.value }}</b></span>
+                </span>
+            </div>
+        </div>
+
+        <!-- 案J：ねんりん（まるい ピラミッド） -->
+        <svg v-else-if="variant === 'rings'" viewBox="0 0 220 220" class="rv-svg rv-rings" role="img" aria-label="ねんりんの グラフ">
+            <g v-for="ring in rings" :key="ring.tier">
+                <circle cx="110" cy="110" :r="ring.r" fill="none" stroke="rgba(255,255,255,.08)" :stroke-width="ring.width" />
+                <circle
+                    v-for="arc in ring.arcs"
+                    :key="arc.id"
+                    cx="110"
+                    cy="110"
+                    :r="ring.r"
+                    fill="none"
+                    :stroke="arc.color"
+                    :stroke-width="ring.width - 2"
+                    :stroke-dasharray="`${arc.length} ${ring.circumference}`"
+                    :stroke-dashoffset="arc.offset"
+                    transform="rotate(-90 110 110)"
+                />
+                <text x="110" :y="110 - ring.r + 4" class="rv-ring-label" text-anchor="middle">Lv{{ ring.tier }}</text>
+            </g>
+            <text x="110" y="114" class="rv-donut-num" style="font-size:12px">LEVEL</text>
+        </svg>
+
         <!-- 案G：あわの ひょう（チーム × レベル） -->
         <div v-else-if="variant === 'bubble'" class="rv-bubble">
             <div class="rv-bubble-row rv-bubble-head">
@@ -237,6 +287,35 @@ export default {
             }).map(band => ({ ...band, labelX: Math.max(band.labelX, 34) }));
         },
 
+        // タイル：チームごとの四角を、じんちの大きさで ならべる
+        treemap() {
+            return this.ranking.map(team => ({
+                ...team,
+                cells: [4, 3, 2, 1]
+                    .map(tier => ({ tier, value: this.count(team.id, tier) }))
+                    .filter(cell => cell.value > 0)
+            }));
+        },
+
+        // ねんりん：外がわが Lv1、うちがわが Lv4
+        rings() {
+            return [1, 2, 3, 4].map((tier, index) => {
+                const r = 98 - index * 21;
+                const circumference = 2 * Math.PI * r;
+                const total = this.tierTotal(tier);
+                let offset = 0;
+                const arcs = this.players
+                    .filter(player => this.count(player.id, tier))
+                    .map(player => {
+                        const length = (this.count(player.id, tier) / total) * circumference;
+                        const arc = { id: player.id, color: player.color, length: Math.max(length - 1.5, 0.5), offset: -offset };
+                        offset += length;
+                        return arc;
+                    });
+                return { tier, r, width: 19, circumference, arcs };
+            });
+        },
+
         radarAxes() {
             // Lv1＝上、Lv2＝右、Lv3＝下、Lv4＝左
             const center = { x: 130, y: 115 };
@@ -337,6 +416,26 @@ export default {
 .rv-picto-icon{ width: 20px; height: 20px; stroke: rgba(0,0,0,.6); stroke-width: 1.5px; stroke-linejoin: round; }
 .rv-picto-icons small{ margin-left: 4px; font-size: 11px; font-weight: 900; color: #cbd5e1; }
 .rv-none{ color: #64748b !important; font-weight: 700 !important; }
+
+/* 案H */
+.rv-bars-group{ display: flex; gap: 8px; padding: 5px 0; border-bottom: 1px dashed rgba(255,255,255,.1); }
+.rv-bars-level{ flex: none; width: 30px; padding-top: 2px; text-align: right; font-size: 11px; font-weight: 900; color: #94a3b8; }
+.rv-bars-lines{ flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.rv-bars-line{ display: flex; align-items: center; gap: 6px; height: 11px; }
+.rv-bars-fill{ display: block; height: 100%; border-radius: 0 6px 6px 0; transition: width .5s; }
+.rv-bars-line small{ font-size: 10px; font-weight: 900; color: #cbd5e1; }
+
+/* 案I */
+.rv-tree{ display: flex; gap: 6px; height: 190px; }
+.rv-tree-team{ display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.rv-tree-title{ font-size: 11px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rv-tree-cells{ flex: 1; display: flex; flex-direction: column; gap: 3px; min-height: 0; }
+.rv-tree-cell{ display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 18px; padding: 0 6px; border-radius: 6px; font-size: 10px; font-weight: 900; color: #0b1220; overflow: hidden; }
+.rv-tree-cell b{ font-size: 12px; }
+
+/* 案J */
+.rv-rings{ max-width: 250px; margin: 0 auto; }
+.rv-ring-label{ font-size: 8px; font-weight: 900; fill: #e2e8f0; paint-order: stroke; stroke: rgba(0,0,0,.6); stroke-width: 2px; }
 
 /* 案G */
 .rv-bubble-row{ display: grid; grid-template-columns: 56px repeat(4, 1fr); align-items: center; gap: 4px; }

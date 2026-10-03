@@ -1,5 +1,6 @@
 // ■効果音（Web Audio APIで、その場で作る音。音声ファイルは使わない）。
 //   ・ゲーム機のような「ピコピコ」ではなく、水・木・風・鈴のような、静かで自然な音にしている（ゆったり・禅のような音）
+//   ・置く音・選ぶ音・食べる音などは、フリー素材（CC0）の録音を使う。鈴の音（番・勝ち・負け）は、その場で作る
 //   ・スマホ（iPhoneなど）は、画面をタップしたあとでないと音が出ないため、最初のタップで unlock() する
 //   ・ミュートの設定は localStorage の sfxMuted に保存する
 
@@ -45,6 +46,67 @@ function audio() {
     }
     if (context.state === "suspended") context.resume();
     return context;
+}
+
+// ■録音の素材（public/sounds/pack/*.mp3。CC0の素材。出どころは public/sounds/CREDITS.txt）。
+//   どの場面に、どの録音を使うかは、「音くらべ」の画面（/sound-test）で決める。決めたものは、この端末の localStorage（sfxSlots）に入る。
+//   決めていない場面、読み込めないときは、下の、その場で作る音を使う
+const buffers = {};
+const loading = {};
+
+function readSlots() {
+    try {
+        return JSON.parse(localStorage.getItem("sfxSlots")) || {};
+    } catch (e) {
+        return {};
+    }
+}
+let slots = readSlots();
+
+function loadFile(file) {
+    if (buffers[file] || loading[file]) return loading[file] || Promise.resolve();
+    const ac = audio();
+    if (!ac) return Promise.resolve();
+    loading[file] = fetch(`/sounds/pack/${file}.mp3`)
+        .then(response => {
+            if (!response.ok) throw new Error(`${file}: ${response.status}`);
+            return response.arrayBuffer();
+        })
+        .then(data => ac.decodeAudioData(data))
+        .then(buffer => {
+            buffers[file] = buffer;
+        })
+        .catch(() => {
+            loading[file] = null;
+        });
+    return loading[file];
+}
+
+// 録音ファイルを1回鳴らす。鳴らせたら true。毎回、ほんの少し高さを変えて、同じ音ばかりにならないようにする
+function playFile(file, { volume = 1, rate = 1, at = 0, vary = true } = {}) {
+    if (muted) return true;
+    const ac = audio();
+    if (!ac) return false;
+    const buffer = buffers[file];
+    if (!buffer) {
+        loadFile(file);
+        return false;
+    }
+    const source = ac.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = rate * (vary ? 0.96 + Math.random() * 0.08 : 1);
+    const gain = ac.createGain();
+    gain.gain.value = volume;
+    source.connect(gain).connect(master);
+    source.start(ac.currentTime + at);
+    return true;
+}
+
+// 場面（slot）に決めた録音があれば、それを鳴らす。決めていなければ false
+function sample(slot, { volume = 1 } = {}) {
+    const chosen = slots[slot];
+    if (!chosen || !chosen.file) return false;
+    return playFile(chosen.file, { volume: volume * (chosen.volume || 1) });
 }
 
 // やわらかい音を1つ。freq＝高さ(Hz)、slideTo＝その高さまで変化、overtone＝倍音（木や鈴らしさ）の強さ、
@@ -148,6 +210,7 @@ export const sfx = {
     // 最初のタップで呼ぶ（スマホで音を出せる状態にする）
     unlock() {
         audio();
+        Object.values(slots).forEach(chosen => chosen && chosen.file && loadFile(chosen.file));
     },
 
     isMuted() {
@@ -165,25 +228,29 @@ export const sfx = {
 
     // カードや丸いボタンをタップしたとき：木をそっとたたく音
     select() {
-        wood(560, 0, 0.07);
+        if (!sample("select", { volume: 0.7 })) wood(560, 0, 0.07);
     },
 
     // 自分がカードを置いたとき：置いた場所の地形の音 ＋ 小さな鈴（置けたよ、の合図）
     place(area) {
         const terrain = PLACE_SOUNDS[area];
-        if (terrain) terrain(1);
-        else wood(660, 0, 0.1);
-        bell(PENTA[2], terrain ? 0.22 : 0.1, 0.035, 0.9);
+        if (!sample(`place_${area}`, { volume: 0.95 })) {
+            if (terrain) terrain(1);
+            else wood(660, 0, 0.1);
+        }
+        bell(PENTA[2], 0.22, 0.035, 0.9);
     },
 
     // 食べたとき：やわらかく低い、「ぼふっ」（こわくない音）
     eat() {
+        if (sample("eat", { volume: 0.8 })) return;
         tone({ freq: 190, slideTo: 95, duration: 0.3, volume: 0.13, attack: 0.02 });
         noise({ duration: 0.2, volume: 0.04, filter: "lowpass", freq: 320, attack: 0.03 });
     },
 
     // AIがカードを置いたとき：自分より小さく、地形の音だけ
     aiPlace(area) {
+        if (sample(`place_${area}`, { volume: 0.55 })) return;
         const terrain = PLACE_SOUNDS[area];
         if (terrain) terrain(0.6);
         else wood(520, 0, 0.06);
@@ -191,21 +258,25 @@ export const sfx = {
 
     // 自分の番になったとき：うつわの鈴をひとつ「りーん」
     turn() {
+        if (sample("turn", { volume: 0.8 })) return;
         bell(PENTA[3], 0, 0.06, 1.1);
     },
 
     // スキップ：ゆっくり下がる、やさしい音
     skip() {
+        if (sample("skip", { volume: 0.7 })) return;
         tone({ freq: 392, slideTo: 330, duration: 0.5, volume: 0.07, attack: 0.04 });
     },
 
     // 置けないなどの注意：木を低くコトッ（しかる音ではなく、そっと知らせる）
     error() {
+        if (sample("error", { volume: 0.7 })) return;
         wood(220, 0, 0.09);
     },
 
     // 勝ったとき：ペンタトニックの鈴が、ゆっくり上がっていく
     win() {
+        if (sample("win", { volume: 0.9 })) return;
         [0, 1, 2, 3, 5].forEach((note, index) => {
             bell(PENTA[note], index * 0.2, 0.06, 1.6);
         });
@@ -213,7 +284,58 @@ export const sfx = {
 
     // 負けたとき：低い鈴をひとつ、ゆっくり消える
     lose() {
+        if (sample("lose", { volume: 0.9 })) return;
         bell(329.63, 0, 0.07, 2.0);
         bell(246.94, 0.35, 0.05, 2.2);
+    },
+
+    // ----------------------------------------
+    // 「音くらべ」の画面（/sound-test）用
+    // ----------------------------------------
+    // 場面の一覧（ゲームが鳴らしている名前）
+    slotNames: ["select", "place_sea", "place_river", "place_forest", "place_town", "place_dirt", "eat", "turn", "skip", "error", "win", "lose"],
+
+    // 場面ごとに、いま決めている録音
+    getSlots() {
+        return { ...slots };
+    },
+
+    // 場面に録音を決める（file が空ならもどす＝その場で作る音）
+    setSlot(slot, file, volume = 1) {
+        slots = { ...slots };
+        if (file) {
+            slots[slot] = { file, volume };
+            loadFile(file);
+        } else {
+            delete slots[slot];
+        }
+        try {
+            localStorage.setItem("sfxSlots", JSON.stringify(slots));
+        } catch (e) {
+            // 保存できなくても、このあいだは有効
+        }
+    },
+
+    // 録音を、そのまま鳴らす（聞きくらべ用。ファイルが読み込めるまで待つ）
+    async previewFile(file, volume = 1) {
+        await loadFile(file);
+        playFile(file, { volume, vary: false });
+    },
+
+    // 場面の、その場で作る音を鳴らす（録音のかわりの音）
+    previewSynth(slot) {
+        const saved = slots;
+        slots = {};
+        try {
+            this.playSlot(slot);
+        } finally {
+            slots = saved;
+        }
+    },
+
+    // 場面の名前で、いまの設定のまま鳴らす
+    playSlot(slot) {
+        if (slot.startsWith("place_")) return this.place(slot.slice(6));
+        if (typeof this[slot] === "function") return this[slot]();
     }
 };

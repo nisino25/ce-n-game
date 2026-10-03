@@ -1,0 +1,8 @@
+効果音の素材 / Sound effect materials
+
+出典 / Source : "100 CC0 SFX #2" by rubberduck
+URL          : https://opengameart.org/content/100-cc0-sfx-2
+ライセンス / License : CC0 1.0 (Public Domain) - クレジット表示は不要 / attribution not required
+
+public/sounds/pack/ に、100こ全部を、音量をそろえて（-22 LUFS）、5秒までに切って、mp3 にして入れている。
+どの場面に どの音を使うかは、「音くらべ」の画面（/sound-test）で決める（決めたものは、その端末の localStorage の sfxSlots）。
