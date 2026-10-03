@@ -6,6 +6,43 @@
             <h1 class="rc-heading">けっか くらべ<small>RESULT COMPARE</small></h1>
         </header>
 
+        <nav class="rc-tabs" aria-label="くらべかた">
+            <button class="rc-tab" :class="{ active: mode === 'styles' }" @click="mode = 'styles'">🎨 見せ方くらべ</button>
+            <button class="rc-tab" :class="{ active: mode === 'games' }" @click="mode = 'games'">🆚 ゲームくらべ</button>
+        </nav>
+
+        <!-- ■見せ方くらべ：同じデータを、ちがう見せ方で ならべる -->
+        <template v-if="mode === 'styles'">
+            <p class="rc-lead">
+                おなじ ゲームの けっか（じんち・レベルごとの カードの かず）を、ちがう 見せ方で ならべたよ。
+                下の ゲームを えらぶと、すべての 見せ方が その ゲームに かわるよ。
+            </p>
+
+            <div class="rc-pick">
+                <button
+                    v-for="game in games"
+                    :key="game.key"
+                    class="rc-chip"
+                    :class="{ active: game.key === selected.key }"
+                    @click="selectedKey = game.key"
+                >{{ game.sample ? '見本' : 'プレイ' }}：{{ game.shortTitle }}</button>
+            </div>
+
+            <div class="rc-grid rc-grid-styles">
+                <section class="rc-card">
+                    <div class="rc-card-head"><span class="rc-kind rc-kind-play">案A</span><p class="rc-card-title">つみあげ ピラミッド（いまの）</p></div>
+                    <p class="rc-card-note">レベルごとの かずが、一目で分かる。チームの内わけは、色の長さで見る</p>
+                    <GameResultSummary :players="selected.players" :tier-team="selected.tierTeam" :self-id="selected.selfId" dark />
+                </section>
+                <section v-for="style in styles" :key="style.id" class="rc-card">
+                    <div class="rc-card-head"><span class="rc-kind rc-kind-play">{{ style.label }}</span><p class="rc-card-title">{{ style.title }}</p></div>
+                    <p class="rc-card-note">{{ style.note }}</p>
+                    <ResultVariants :players="selected.players" :tier-team="selected.tierTeam" :scores="selected.scores" :variant="style.id" />
+                </section>
+            </div>
+        </template>
+
+        <template v-else>
         <p class="rc-lead">
             ゲームが おわったときの 画面（じんち・生態系ピラミッド）を、ならべて くらべられるよ。
             「見本」は 決まった かず、「プレイ」は テストモードで 最後まで あそんだ ゲームが、じどうで ふえていくよ
@@ -47,6 +84,8 @@
             </section>
         </div>
 
+        </template>
+
         <p v-if="loading" class="rc-foot">プレイの けっかを よみこみ中…</p>
         <p v-else-if="!played.length" class="rc-foot">まだ「プレイ」は ないよ。AIテストエリアで 1ゲーム あそんでみてね</p>
     </div>
@@ -56,6 +95,7 @@
 import db from "@/firebase.js";
 import { TEAM_COLORS } from "@/utils/dominationSlots.js";
 import GameResultSummary from "./GameResultSummary.vue";
+import ResultVariants from "./ResultVariants.vue";
 
 const TIER_POINTS = { 1: 1, 2: 3, 3: 5, 4: 8 };
 const PLAYERS = [
@@ -98,17 +138,36 @@ const pyramidShape = game => {
 
 export default {
     name: "ResultCompare",
-    components: { GameResultSummary },
+    components: { GameResultSummary, ResultVariants },
 
     data() {
-        return { played: [], loading: true };
+        return {
+            played: [],
+            loading: true,
+            mode: "styles",
+            selectedKey: "",
+            // ■ちがう見せ方の案（同じデータを、これらで見くらべる）
+            styles: [
+                { id: "triangle", label: "案B", title: "三角ピラミッド", note: "ほんものの ピラミッドの形。下の段ほど ひろくなる。チームの色で、段ごとに分ける" },
+                { id: "podium", label: "案C", title: "ひょうしょうだい", note: "順位を、いちばん先に見せる。上に、じんちの わりあい（％）" },
+                { id: "donut", label: "案D", title: "ドーナツ（チームごと）", note: "チームごとに、どのレベルを おいたか。こい色が したのレベル" },
+                { id: "radar", label: "案E", title: "レーダー", note: "チームの「とくい」な レベルの かたよりが、形で分かる" },
+                { id: "pictogram", label: "案F", title: "カードの ならべ", note: "おいた カードの 形（▲■●★）を、そのまま ならべる。数えやすく、子どもに分かりやすい" },
+                { id: "bubble", label: "案G", title: "あわの ひょう", note: "チーム × レベルを、あわの 大きさで。だれが どこに 多いかが、くらべやすい" }
+            ]
+        };
     },
 
     computed: {
+        selected() {
+            return this.games.find(game => game.key === this.selectedKey) || this.games[0];
+        },
+
         games() {
             return [...this.played, ...SAMPLES].map(game => ({
                 ...game,
                 shortTitle: game.shortTitle || game.title.replace(" のゲーム", ""),
+                scores: Object.fromEntries(game.players.map(player => [player.id, player.score])),
                 shape: pyramidShape(game),
                 winner: [...game.players].sort((a, b) => b.score - a.score)[0] || { name: "", color: "#94a3b8", score: 0 }
             }));
@@ -189,6 +248,43 @@ export default {
     text-shadow: 0 0 12px rgba(34,211,238,.7);
 }
 .rc-heading small{ display: block; font-size: 9px; letter-spacing: .3em; color: #64748b; text-shadow: none; }
+.rc-tabs{
+    display: flex;
+    gap: 8px;
+    max-width: 960px;
+    margin: 14px auto 0;
+    padding: 0 16px;
+}
+.rc-tab{
+    padding: 7px 16px;
+    border: 1.5px solid rgba(103,232,249,.35);
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 900;
+    color: #94a3b8;
+}
+.rc-tab.active{ background: rgba(34,211,238,.18); border-color: #67e8f9; color: #e0f7ff; box-shadow: 0 0 12px rgba(34,211,238,.35); }
+.rc-pick{
+    display: flex;
+    gap: 8px;
+    max-width: 960px;
+    margin: 12px auto 0;
+    padding: 0 16px 6px;
+    overflow-x: auto;
+}
+.rc-chip{
+    flex: none;
+    padding: 5px 12px;
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #cbd5e1;
+    white-space: nowrap;
+}
+.rc-chip.active{ background: #0e7490; border-color: #67e8f9; color: #fff; }
+.rc-grid-styles{ margin-top: 12px; }
+
 .rc-lead{
     max-width: 960px;
     margin: 16px auto 0;
