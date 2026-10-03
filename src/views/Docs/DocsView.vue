@@ -45,6 +45,7 @@ const docs = context.keys().map(key => {
 
 // ■上から並べる順番（ここに無いものは最後にファイル名順）
 const ORDER = [
+    "deploy-log.md",
     "release-notes.md",
     "currency.md",
     "TODO.md",
@@ -61,6 +62,8 @@ const orderOf = path => {
     const index = ORDER.indexOf(path);
     return index === -1 ? ORDER.length : index;
 };
+// ■「本番への反映」タブに入れるもの
+const PRODUCTION = ["deploy-log.md"];
 docs.sort((a, b) => orderOf(a.path) - orderOf(b.path) || a.path.localeCompare(b.path));
 
 export default {
@@ -75,9 +78,11 @@ export default {
 
     computed: {
         groups() {
+            const production = docs.filter(doc => PRODUCTION.includes(doc.path));
             const requirements = docs.filter(doc => doc.path.startsWith("requirements/"));
-            const others = docs.filter(doc => !doc.path.startsWith("requirements/"));
+            const others = docs.filter(doc => !doc.path.startsWith("requirements/") && !PRODUCTION.includes(doc.path));
             return [
+                { label: "本番への反映", docs: production },
                 { label: "通貨・やること・データ", docs: others },
                 { label: "要件定義", docs: requirements }
             ].filter(group => group.docs.length);
