@@ -494,7 +494,7 @@
                 <button aria-label="ひとつ すすむ" @click="stepReplay(1)">▶</button>
                 <button aria-label="さいごへ" @click="stepReplay(moveLog.length)">⏭</button>
                 <select class="replay-speed" aria-label="1手ごとの はやさ" :value="replay.interval" @change="setReplayInterval(Number($event.target.value))">
-                    <option v-for="seconds in replayIntervals" :key="seconds" :value="seconds">{{ seconds }}秒 / 手</option>
+                    <option v-for="seconds in replayIntervals" :key="seconds" :value="seconds">{{ seconds }}秒 / 手{{ seconds <= 0.02 ? "（さいそく）" : "" }}</option>
                 </select>
                 <button class="replay-close" @click="closeReplay()">✕ とじる</button>
             </div>
@@ -687,7 +687,7 @@ export default {
         resigned: false, // 「まけました」で終わったか
         moveLog: [], // 置いた手の記録（ふりかえり用）：{ t:マスID, p:チームID, tier, l:カード名, e:食べたマスID[] }
         replay: null, // ふりかえり中の状態
-        replayIntervals: [0.25, 0.5, 1, 2, 3, 5], // 1手ごとの間（秒）の えらびかた
+        replayIntervals: [0.02, 0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5], // 1手ごとの間（秒）の えらびかた
         spectator: false, // 観戦モード（ほかの人の・おわったゲームを、見るだけ）
         spectateUnsub: null,
         savedAiWon: false, // 読み込んだ保存が、AIが勝って終わったものか（昔のデータ）
