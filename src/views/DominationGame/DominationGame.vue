@@ -121,7 +121,7 @@
                                     class="tile-shape"
                                     viewBox="0 0 24 24"
                                     aria-hidden="true"
-                                    :style="{ fill: shapeFill(tile), fillOpacity: tile.eatenByTileId ? 0.7 : 1 }"
+                                    :style="{ fill: shapeFill(tile), fillOpacity: tile.eatenByTileId ? 0.95 : 1 }"
                                 >
                                     <polygon v-if="tile.placedCard?.tier === 1" points="12,3 22.5,21 1.5,21" />
                                     <rect v-else-if="tile.placedCard?.tier === 2" x="3" y="3" width="18" height="18" rx="1.5" />
@@ -609,9 +609,9 @@ import {
 //   ce-n.org の updatePoints で加算する（ハブサイトの「合計得点」にも反映される）。地図のゲーム（ゲーム枠）だけが対象。「まけました」は対象外
 const RANK_REWARD_TERA = { 1: 10, 2: 5, 3: 2 }
 
-// ■AIが「かしこく」打つ割合（0〜1）。かしこい手＝いちばん点の高いカードを、相手のカードを食べられる場所に置く。
+// ■AIが「かしこく」打つ割合（0〜1）。かしこい手＝点の高いカードを、相手のカードを食べられる場所に置く。さらに、上のレベルのカードを置ける場所（まわりに同じレベルが2こ）を、じぶんで作っていく（レベル4をめざす）。
 //   それ以外のときは、ランダム。大きくするほどAIが強くなる（シミュレーションでは、いつも賢いとあなたの勝率が下がる）
-const AI_SMART_RATE = 0.5
+const AI_SMART_RATE = 0.75
 
 // ■黒いマス（未開発地）の「かんきょうチャレンジ」（ABゲーム2問）に成功したときの、ゲーム内の点数（仮の数）
 const AB_CHALLENGE_POINTS = 3
@@ -1508,7 +1508,7 @@ export default {
                 const eater = this.eaterTile(tile)
                 if (eater) {
                     // ■食べられたマス：黒い地に、もとのカード（もとのチームの色で、うすく）と、白い「ひび」。ふちは、食べたチームの色
-                    base.background = '#0b0d12'
+                    base.background = `color-mix(in srgb, ${this.teamColor(tile.ownerTeam)} 30%, #0a0f1c)`
                     base.backgroundImage = 'none'
                     base.boxShadow = `inset 0 0 0 2px ${this.teamColor(eater.ownerTeam)}`
                 }
@@ -2273,28 +2273,68 @@ export default {
         // ■かしこい手：置けるカードのうち、点がいちばん高いカードを選び、置ける場所のうち、
         //   相手のカードをたくさん食べられて、自分のカードを食べない場所を選ぶ
         findSmartAIMove(cards) {
-            const sorted = this.shuffleArray(cards).sort((a, b) => this.getScoreForTile(b.tier) - this.getScoreForTile(a.tier))
+            // 手札の（レベル・陸/水）ごとに、いちばんよい場所を探して、その中で いちばん よい手を えらぶ
+            const handKinds = new Set(cards.map(card => `${card.tier}-${card.area}`))
+            const seen = new Set()
+            const kinds = this.shuffleArray(cards).filter(card => {
+                const key = `${card.tier}-${card.area}`
+                if (seen.has(key)) return false
+                seen.add(key)
+                return true
+            })
 
-            for (const card of sorted) {
+            let best = null
+            let bestScore = -Infinity
+
+            for (const card of kinds) {
                 const validTiles = this.tiles.filter(t => this.isTileValidForCard(t, card))
                 if (!validTiles.length) continue
 
-                // 場所の数が多いときは、ランダムに選んだ一部だけ調べる
-                const candidates = this.shuffleArray(validTiles).slice(0, 60)
-                let best = candidates[0]
-                let bestScore = -Infinity
+                // Lv1は場所が多いので、ランダムに選んだ一部だけ調べる。Lv2以上は、ぜんぶの場所を調べる
+                //   （「上のレベルを置ける場所」を作る手を、見のがさないように）
+                const candidates = card.tier >= 2 ? validTiles : this.shuffleArray(validTiles).slice(0, 60)
                 candidates.forEach(tile => {
                     const lower = this.getNeighbors(tile).filter(n => n.placedCard && n.placedCard.tier < card.tier && !n.eatenByTileId)
-                    const score = lower.filter(n => n.ownerTeam !== this.currentPlayerId).length - 2 * lower.filter(n => n.ownerTeam === this.currentPlayerId).length
+                    const eat = lower.filter(n => n.ownerTeam !== this.currentPlayerId).length - 2 * lower.filter(n => n.ownerTeam === this.currentPlayerId).length
+                    const score = this.getScoreForTile(card.tier) + eat * 1.5 + this.unlockBonus(tile, card, handKinds) + this.clusterBonus(tile, card)
                     if (score > bestScore) {
                         bestScore = score
-                        best = tile
+                        best = { card, tile }
                     }
                 })
-                return { card, tile: best }
             }
 
-            return null
+            return best
+        },
+
+        // ■すでにある「上のレベル」の近くに置くと、点数がつく（上のレベルが、あつまった「やま」ができて、レベル4に届きやすい）。
+        //   まわり3マスいないの、このカードより上のレベル（食べられていないもの）の数
+        clusterBonus(tile, card) {
+            if (card.tier >= 4) return 0
+            let near = 0
+            this.tiles.forEach(other => {
+                if (!other.placedCard || other.eatenByTileId || other.placedCard.tier <= card.tier) return
+                if (Math.abs(other.row - tile.row) <= 3 && Math.abs(other.col - tile.col) <= 3) near += other.placedCard.tier - card.tier
+            })
+            return Math.min(near, 8) * 0.6
+        },
+
+        // ■「上のレベルを置ける場所」を作れるかの点数：このカードを置くと、となりの空きマスのまわりに、同じレベルが2こそろう（＝ひとつ上のレベルが置けるようになる）。
+        //   上のレベルほど大きい点（レベル4へ向かう手を、よく選ぶ）。上のレベルのカードを持っていて、そのマスに置けるときだけ
+        unlockBonus(tile, card, handKinds) {
+            if (card.tier >= 4) return 0
+            const weight = { 1: 1.5, 2: 3, 3: 7 }[card.tier]
+            const next = card.tier + 1
+            let bonus = 0
+            this.getNeighbors(tile).forEach(site => {
+                if (site.ownerTeam !== null || site.area === 'undeveloped') return
+                const kind = site.area === 'river' || site.area === 'sea' ? 'water' : 'land'
+                if (!handKinds.has(`${next}-${kind}`)) return
+                const count = this.getNeighbors(site).filter(n => n.placedCard?.tier === card.tier && !n.eatenByTileId).length
+                if (count === 1) bonus += weight // これで 2こ そろう
+                else if (count === 0) bonus += weight * 0.25 // まず 1こ目
+            })
+            return bonus
         },
 
         delay(ms) {
@@ -2926,8 +2966,8 @@ export default {
       pointer-events: none;
       overflow: visible;
   }
-  .tile-eaten .tile-crack-under{ stroke: #000; stroke-width: 2.2; vector-effect: non-scaling-stroke; }
-  .tile-eaten .tile-crack{ stroke: #fff; stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .tile-eaten .tile-crack-under{ stroke: #000; stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+  .tile-eaten .tile-crack{ stroke: #fff; stroke-width: 0.9; vector-effect: non-scaling-stroke; }
 
   .tile-terrain{
       position: absolute;
