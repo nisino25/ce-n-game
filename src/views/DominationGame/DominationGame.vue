@@ -22,6 +22,7 @@
 
                         <!-- ■ヘッダーの右はし：？（説明をモーダルで）／🔍（盤面ぜんたい、スマホのみ） -->
                         <div class="ml-auto flex flex-none items-center gap-1.5 sm:gap-2">
+                            <button v-if="testMode" class="header-tool" aria-label="テスト：カードを えらぶ" title="テスト：カードを えらぶ" @click="showTestCards = true">🧪</button>
                             <button class="header-tool" :aria-label="sfxMuted ? '効果音をつける' : '効果音を消す'" @click="toggleSfx">{{ sfxMuted ? '🔇' : '🔊' }}</button>
                             <button class="header-tool" aria-label="地形・レベルの説明を見る" @click="isShowingTuorial = true">?</button>
                             <button
@@ -280,13 +281,16 @@
 
                     <!-- ■1位のごほうび（テラ） -->
                     <p v-if="rewardTera" class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-4 py-1 text-base font-black text-amber-700">
-                        🎉 {{ finishedResult ? finishedResult.humanRank : '' }}位 +{{ rewardTera }}テラ
+                        🎉 +{{ rewardTera }}テラ
                         <img src="/images/coin.png" alt="テラ" class="h-5 w-5 object-contain">
+                    </p>
+                    <p v-if="rewardTera && rewardParts" class="mb-2 text-xs font-bold text-amber-700">
+                        てんすう {{ rewardParts.score }}点 ＋ {{ finishedResult ? finishedResult.humanRank : '' }}位ボーナス {{ rewardParts.bonus }}
                     </p>
                     <p v-else-if="rewardState === 'pending'" class="mb-2 text-sm font-bold text-amber-600">テラを もらっているよ…</p>
                     <p v-else-if="rewardState === 'error'" class="mb-2 text-sm font-bold text-red-500">テラを もらえなかったよ（ネットを たしかめて、あとで もういちど）</p>
                     <p v-else-if="isSlotGame() && finishedResult && finishedResult.resigned" class="mb-2 text-xs font-bold text-slate-500">まけましたの ときは、テラは もらえないよ</p>
-                    <p v-else-if="isSlotGame() && finishedResult" class="mb-2 text-xs font-bold text-slate-500">{{ rankRewardText }} もらえるよ</p>
+                    <p v-else-if="isSlotGame() && finishedResult" class="mb-2 text-xs font-bold text-slate-500">てんすうぶんの テラ ＋ {{ rankRewardText }} もらえるよ</p>
 
                     <p class="text-sm text-slate-500 mb-2">さいごの てんすう</p>
                     <ul class="text-left mb-4 space-y-2">
@@ -321,6 +325,28 @@
                         <button class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100" @click="showTerritory = true">
                             🗺 じんちを ばんめんで みる
                         </button>
+                    </div>
+
+                    <!-- ■生態系ピラミッド：レベルごとの、おかれたカードの数（下の ひろい ところが Lv1） -->
+                    <div class="mb-4 rounded-xl bg-emerald-50 p-3">
+                        <p class="mb-2 text-center text-sm font-black text-emerald-800">🔺 生態系ピラミッド</p>
+                        <div class="flex flex-col items-center gap-1">
+                            <div v-for="row in pyramid" :key="row.tier" class="flex w-full items-center gap-2">
+                                <span class="w-8 flex-none text-right text-[11px] font-black text-slate-600">Lv{{ row.tier }}</span>
+                                <div class="flex flex-1 justify-center">
+                                    <div
+                                        v-if="row.total"
+                                        class="flex h-6 overflow-hidden rounded-md shadow-sm"
+                                        :style="{ width: row.width + '%' }"
+                                    >
+                                        <span v-for="part in row.parts" :key="part.id" class="block h-full" :style="{ flex: part.flex, background: part.color }"></span>
+                                    </div>
+                                    <span v-else class="text-[11px] font-bold text-slate-300">なし</span>
+                                </div>
+                                <span class="w-8 flex-none text-[11px] font-bold text-slate-600">{{ row.total }}</span>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-center text-[10px] leading-relaxed text-emerald-700">したの レベルが たくさん いると、うえの いきものが くらせるよ。ひろい ピラミッドが、げんきな 生態系！</p>
                     </div>
 
                     <!-- ■地図の場所のゲームは、おわった枠はそのまま残る（もう一回はできない）ので、街の画面にもどる -->
@@ -448,6 +474,34 @@
             </div>
         </div>
 
+        <!-- ■テストモード（手元の開発環境、または ?test=1）：カードを自由に手札へ足す。テラは もらえなくなる -->
+        <div v-if="testMode && showTestCards" class="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-3 sm:items-center" @click.self="showTestCards = false">
+            <div class="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white p-4 shadow-xl">
+                <div class="mb-2 flex items-center justify-between">
+                    <p class="text-base font-black text-slate-700">🧪 テスト：カードを えらぶ</p>
+                    <button class="header-tool" aria-label="とじる" @click="showTestCards = false">✕</button>
+                </div>
+                <p class="mb-2 text-xs font-bold text-slate-500">タップすると、じぶんの カードに ふえるよ（テスト用。DBには入らない・つかうと このゲームの テラは もらえない）</p>
+                <div class="overflow-y-auto">
+                    <div v-for="group in testCardGroups" :key="group.level" class="mb-3">
+                        <p class="mb-1 text-xs font-black text-slate-600">Lv{{ group.level }}</p>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button
+                                v-for="card in group.cards"
+                                :key="card.cardId"
+                                class="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-700 hover:bg-emerald-100"
+                                @click="addTestCard(card)"
+                            >
+                                {{ card.name }}
+                            </button>
+                        </div>
+                    </div>
+                    <p v-if="!testCardGroups.length" class="py-6 text-center text-sm text-slate-400">カードを よみこみ中…</p>
+                </div>
+                <p v-if="testMessage" class="mt-2 text-center text-xs font-bold text-emerald-600">{{ testMessage }}</p>
+            </div>
+        </div>
+
         <!-- ■黒いマスの「かんきょうチャレンジ」（ABゲーム2問。ぜんぶ1回で正解なら成功） -->
         <div v-if="showChallenge" class="fixed inset-0 z-[65] flex items-center justify-center bg-black/60 p-3">
             <div class="relative w-full max-w-lg">
@@ -503,8 +557,8 @@ import { getSession } from '@/utils/session.js';
 import { generateSpotBoard } from './habitatBoard.js';
 import { isFresh } from '@/utils/dominationSlots.js';
 import { sfx } from '@/utils/sfx.js';
-import mapSpotsSeed from './mapSpots.json';
 import { addPoints } from '@/utils/points.js';
+import { isLocalEnv } from '@/utils/env.js';
 import {
     fetchCardLibrary,
     getCurrentUser,
@@ -611,6 +665,10 @@ export default {
         rewardTera: 0, // 1位でもらったテラ（もらえたときだけ）
         rewardState: '', // '' | 'pending' | 'error'
         showTerritory: false, // ゲームのおわりに、じんち（チームごとのマス）を盤面で見る
+        testMode: isLocalEnv() || new URLSearchParams(window.location.search).get('test') === '1', // テストモード（カードを自由にえらべる）
+        showTestCards: false,
+        usedTestCards: false, // テストのカードをつかったゲームは、テラをもらえない
+        testMessage: '',
         sfxMuted: sfx.isMuted(), // 効果音のミュート
         recentMoves: [], // 自分の番が終わってから、AIが置いた手（{ tileId, teamId, label, eatenIds }）。自分が動くまで、地図でわかるようにする
         toastMessage: '',
@@ -618,7 +676,7 @@ export default {
 
         players: [
             { id: 1, name: '水チーム', color: '#00BFA6', score: 0, isAI: humanPlayerId !== 1 }, // teal (water but not blue)
-            { id: 2, name: '風チーム', color: '#9B5DE5', score: 0, isAI: humanPlayerId !== 2 }, // purple (air = light / abstract)
+            { id: 2, name: '風チーム', color: '#84CC16', score: 0, isAI: humanPlayerId !== 2 }, // green (air)
             { id: 3, name: '土チーム', color: '#FFB97A', score: 0, isAI: humanPlayerId !== 3 }  // sand/orange (earth)
         ],
 
@@ -1024,9 +1082,6 @@ export default {
                 return { blocked: true, loaded }
             }
             if (!user) return goBack('busy')
-
-            // まだ遊べない街（準備中）の枠には入れない
-            if (mapSpotsSeed.cities[place.city] && mapSpotsSeed.cities[place.city].playable === false) return goBack('closed')
 
             const me = { uid: user.uid, name: user.name || '', team: TEAM_NAME_BY_ID[this.humanPlayerId] }
 
@@ -1737,7 +1792,9 @@ export default {
         // ■順位のごほうび：テラを加算する（ce-n.org の updatePoints。地図のゲームで1位になったときだけ、1ゲームにつき1回）
         async awardTera() {
             if (this.rewardState === 'pending' || this.rewardTera) return
-            const amount = RANK_REWARD_TERA[this.humanRank()] || 0
+            // ■ゲームの てんすう（カードを おくたびに ふえた点）を、おわったときに テラに かえる。順位のボーナスも、いっしょに
+            const me = this.players.find(player => player.id === this.humanPlayerId)
+            const amount = (RANK_REWARD_TERA[this.humanRank()] || 0) + (me ? me.score : 0)
             const cenId = getSession('loginCenId')
             if (!cenId || !amount) return
             this.rewardState = 'pending'
@@ -1778,6 +1835,17 @@ export default {
             this.goToNextPlayer()
             this.saveGame()
             this.maybeTriggerAI()
+        },
+
+        // ■テストモード：えらんだカードを、じぶんのカードに足す（DBには入れない仮のカード）
+        addTestCard(card) {
+            const hand = this.hands[this.humanPlayerId]
+            if (!hand) return
+            hand.push(toDominationCard(card, `test-${Date.now()}-${hand.length}`, true))
+            this.usedTestCards = true
+            this.testMessage = `「${card.name}」を ふやしたよ`
+            clearTimeout(this.testMessageTimer)
+            this.testMessageTimer = setTimeout(() => { this.testMessage = '' }, 1500)
         },
 
         // ■効果音のオン・オフ
@@ -1878,7 +1946,7 @@ export default {
           this.recentMoves = []
           const result = this.computeResult()
           if (result) setTimeout(() => (result.humanWon ? sfx.win() : sfx.lose()), 300)
-          if (result && !result.resigned && this.isSlotGame() && !this.rewardTera && RANK_REWARD_TERA[result.humanRank]) this.awardTera()
+          if (result && !result.resigned && this.isSlotGame() && !this.usedTestCards && !this.rewardTera && RANK_REWARD_TERA[result.humanRank]) this.awardTera()
           this.saveGame()
         },
 
@@ -2095,6 +2163,47 @@ export default {
                   percent: Math.round(((counts[player.id] || 0) / max) * 100)
               }))
               .sort((a, b) => b.count - a.count)
+      },
+
+      testCardGroups() {
+          const groups = {}
+          this.cardLibrary.forEach(card => {
+              const level = card.level || 1
+              ;(groups[level] = groups[level] || []).push(card)
+          })
+          return Object.keys(groups).sort((a, b) => a - b).map(level => ({ level, cards: groups[level] }))
+      },
+
+      // ■生態系ピラミッド：盤面に置かれたカードを、レベルごとに数える（下がLv1。チームの色で分けて見せる）
+      pyramid() {
+          const rows = {}
+          this.tiles.forEach(tile => {
+              if (!tile.placedCard) return
+              const tier = tile.placedCard.tier || 1
+              const team = this.controllingTeam(tile)
+              rows[tier] = rows[tier] || { tier, total: 0, teams: {} }
+              rows[tier].total++
+              rows[tier].teams[team] = (rows[tier].teams[team] || 0) + 1
+          })
+          const maxTotal = Math.max(1, ...Object.values(rows).map(row => row.total))
+          return [4, 3, 2, 1].map(tier => {
+              const row = rows[tier] || { total: 0, teams: {} }
+              return {
+                  tier,
+                  total: row.total,
+                  width: row.total ? Math.max(14, Math.round((row.total / maxTotal) * 100)) : 0,
+                  parts: this.players
+                      .filter(player => row.teams[player.id])
+                      .map(player => ({ id: player.id, color: player.color, count: row.teams[player.id], flex: row.teams[player.id] }))
+              }
+          })
+      },
+
+      // ■もらったテラの内わけ（てんすう ぶん ＋ 順位ボーナス）
+      rewardParts() {
+          const bonus = RANK_REWARD_TERA[this.humanRank()] || 0
+          if (!this.rewardTera || this.rewardTera < bonus) return null
+          return { bonus, score: this.rewardTera - bonus }
       },
 
       rankRewardText() {

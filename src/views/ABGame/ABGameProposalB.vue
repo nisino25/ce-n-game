@@ -60,24 +60,30 @@
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <button
-                        class="choice-card border-sky-200 bg-sky-50"
-                        :class="choiceClass('A')"
-                        :disabled="phase === 'correct'"
-                        @click="choose('A')"
-                    >
-                        <img src="/images/ABGames/env1.jpg" class="w-full h-28 object-cover rounded-xl mb-2">
-                        <span class="font-bold text-sky-800 text-sm">すいがら・海ごみ</span>
-                    </button>
-                    <button
-                        class="choice-card border-emerald-200 bg-emerald-50"
-                        :class="choiceClass('C')"
-                        :disabled="phase === 'correct'"
-                        @click="choose('C')"
-                    >
-                        <img src="/images/ABGames/env2.jpg" class="w-full h-28 object-cover rounded-xl mb-2">
-                        <span class="font-bold text-emerald-800 text-sm">里山のくらし</span>
-                    </button>
+                    <div class="relative">
+                        <button
+                            class="choice-card w-full border-sky-200 bg-sky-50"
+                            :class="choiceClass('A')"
+                            :disabled="phase === 'correct'"
+                            @click="choose('A')"
+                        >
+                            <img src="/images/ABGames/env1.jpg" class="w-full h-28 object-cover rounded-xl mb-2">
+                            <span class="font-bold text-sky-800 text-sm">すいがら・海ごみ</span>
+                        </button>
+                        <button class="help-button" aria-label="すいがら・海ごみって？" @click="helpSide = 'A'">？</button>
+                    </div>
+                    <div class="relative">
+                        <button
+                            class="choice-card w-full border-emerald-200 bg-emerald-50"
+                            :class="choiceClass('C')"
+                            :disabled="phase === 'correct'"
+                            @click="choose('C')"
+                        >
+                            <img src="/images/ABGames/env2.jpg" class="w-full h-28 object-cover rounded-xl mb-2">
+                            <span class="font-bold text-emerald-800 text-sm">里山のくらし</span>
+                        </button>
+                        <button class="help-button" aria-label="里山のくらしって？" @click="helpSide = 'C'">？</button>
+                    </div>
                 </div>
 
                 <p v-if="hint" class="text-center text-rose-600 font-bold text-sm mt-3">
@@ -103,6 +109,7 @@
                         </div>
                         <div class="text-center">
                             <button
+                                ref="nextButton"
                                 class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-2.5 rounded-xl shadow-sm transition-colors"
                                 @click="next"
                             >
@@ -156,6 +163,15 @@
             </div>
 
         </div>
+
+        <!-- ■選択肢の説明（？ボタン） -->
+        <div v-if="helpSide" class="fixed inset-0 z-[4000] flex items-center justify-center bg-black/60 p-4" @click.self="helpSide = null">
+            <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+                <p class="mb-2 text-lg font-bold" :class="helpSide === 'A' ? 'text-sky-800' : 'text-emerald-800'">{{ helps[helpSide].title }}</p>
+                <p class="text-sm leading-relaxed text-gray-700">{{ helps[helpSide].body }}</p>
+                <button class="mt-4 w-full rounded-xl bg-emerald-600 py-2 font-bold text-white hover:bg-emerald-700" @click="helpSide = null">とじる</button>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -198,6 +214,17 @@ export default {
             loadError: "",
 
             qIndex: -1,
+            helpSide: null, // ？ボタンで説明を開いている選択肢（A / C）
+            helps: {
+                A: {
+                    title: "すいがら・海ごみ",
+                    body: "道に すてられた すいがらや ごみは、雨で川に ながされて、さいごは 海に たどりつくよ。海の いきものが まちがえて たべてしまうことも あるんだ。ごみを へらす・ひろう・ポイすてを しない、という とりくみが こたえだよ。"
+                },
+                C: {
+                    title: "里山のくらし",
+                    body: "里山は、人の くらしの まわりに ある 森・田んぼ・はたけ・小川の ことだよ。木を きって つかったり、草を かったりして 手を いれることで、いきものの すみかが まもられてきたんだ。森や 田んぼを まもり、そだてる とりくみが こたえだよ。"
+                }
+            },
             phase: "intro", // intro | question | correct | finished
 
             selectedSide: null,
@@ -291,6 +318,14 @@ export default {
                     this.correctCountC++;
                 }
 
+                // ■せいかいしたら、「次へ」ボタンが見えるところまでスクロール（説明が下に出るため）
+                this.$nextTick(() => {
+                    setTimeout(() => {
+                        const button = this.$refs.nextButton;
+                        if (button && button.scrollIntoView) button.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 300);
+                });
+
                 return;
             }
 
@@ -339,6 +374,25 @@ export default {
 </script>
 
 <style scoped>
+.help-button{
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 9999px;
+    background: rgba(255,255,255,.95);
+    border: 2px solid #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 900;
+    line-height: 1;
+    color: #475569;
+    box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.help-button:hover{
+    background: #fef9c3;
+}
+
 .choice-card{
     border-width: 2px;
     border-radius: 1.25rem;

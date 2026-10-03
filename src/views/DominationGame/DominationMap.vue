@@ -125,10 +125,10 @@
             </div>
         </div>
 
-        <!-- ■地域チュートリアル（初回のみ）：YouTube視聴 → ABゲーム（提案B） -->
+        <!-- ■地域チュートリアル（初回のみ）：拡大のあと、六角形が出る前に YouTube視聴 → ABゲーム（提案B） -->
         <div
             v-if="tutorial"
-            class="fixed inset-0 z-[3000] flex items-center justify-center bg-black/75 p-4"
+            class="fixed inset-0 z-[3000] flex items-center justify-center overflow-y-auto bg-black/75 p-4"
         >
             <div
                 v-show="tutorial.phase === 'video'"
@@ -141,8 +141,15 @@
                     <div ref="tutorialPlayer" class="absolute inset-0 h-full w-full"></div>
                 </div>
                 <p class="mt-3 text-center text-sm text-gray-500">
-                    動画が終わると、ちずが ひらくよ
+                    動画が終わると、つぎは ABゲームだよ
                 </p>
+            </div>
+
+            <div
+                v-if="tutorial.phase === 'game'"
+                class="my-auto max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl bg-[#f4f1e8] shadow-xl"
+            >
+                <ABGameProposalB embedded @finish="finishTutorial" />
             </div>
         </div>
 
@@ -155,6 +162,7 @@ import "leaflet/dist/leaflet.css";
 import db from "@/firebase.js";
 import { getSession } from "@/utils/session.js";
 import mapSpotsSeed from "./mapSpots.json";
+import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
 import { slotId, isFresh, TEAM_COLORS, TEAM_NAMES, AI_COLOR } from "@/utils/dominationSlots.js";
 
 // ■日本全体の表示範囲（九州の南〜北海道の北）
@@ -193,6 +201,7 @@ const loadYouTubeApi = () => {
 };
 
 export default {
+    components: { ABGameProposalB },
 
     data() {
         return {
@@ -230,7 +239,7 @@ export default {
             userLoading: null,
             // ■最後に入った場所（平塚市・釧路市）。ハチの巣をタップして陣取りゲームに入るときに保存し、モニタールームの「つづきから」で使う
             currentPlace: null,
-            tutorial: null // { location, cityName, phase: "video", onDone }
+            tutorial: null // { location, cityName, phase: "video" | "game", onDone }
 
         };
     },
@@ -245,8 +254,7 @@ export default {
     mounted() {
 
         // ■陣取りゲームの「平塚市にもどる」から来たときは、日本の地図を見せず、その街の六角形の画面から始める
-        // （まだ遊べない街 ＝ playable が false の街は、直接開けない）
-        const directCity = mapSpotsSeed.cities[this.$route.query.city] && mapSpotsSeed.cities[this.$route.query.city].playable !== false ? this.$route.query.city : null;
+        const directCity = mapSpotsSeed.cities[this.$route.query.city] ? this.$route.query.city : null;
         this.directCity = directCity;
         if (directCity) {
             this.currentPlace = { city: directCity, cityName: mapSpotsSeed.cities[directCity].name };
@@ -259,8 +267,7 @@ export default {
         const notices = {
             busy: "そのゲームは、ほかの人が あそび中だったよ",
             done: "そのゲームは、もう おわっているよ",
-            active: "この街で あそび中の ゲームが あるよ。おわらせてから、ほかの ゲームを あそんでね",
-            closed: "釧路市は、まだ あそべないよ。もうすこし まっててね"
+            active: "この街で あそび中の ゲームが あるよ。おわらせてから、ほかの ゲームを あそんでね"
         };
         if (notices[this.$route.query.notice]) this.showNotice(notices[this.$route.query.notice]);
 
@@ -452,12 +459,12 @@ L.tileLayer(
 
         createStartMarkers() {
             // ■平塚市・釧路市は同じデザインのマーカーにそろえる（光る緑の地域の上に、タップできる街として出す）
-            const cityMarker = (position, name, onClick, closed = false) => L.marker(position, {
+            const cityMarker = (position, name, onClick) => L.marker(position, {
                 icon: L.divIcon({
                     className: "",
-                    // 名前のふだだけ。街の場所（緑の地域）が隠れないよう、ふだは地点の少し下に置く。まだ遊べない街は、灰色で「じゅんびちゅう」
-                    html: `<div class="city-marker${closed ? " city-marker-closed" : ""}">${name}${closed ? "<small>じゅんびちゅう</small>" : ""}</div>`,
-                    iconSize: [110, closed ? 44 : 34],
+                    // 名前のふだだけ。街の場所（緑の地域）が隠れないよう、ふだは地点の少し下に置く。
+                    html: `<div class="city-marker">${name}</div>`,
+                    iconSize: [110, 34],
                     iconAnchor: [55, -22]
                 })
             })
@@ -465,7 +472,7 @@ L.tileLayer(
                 .on("click", onClick);
 
             this.hiratsukaMarker = cityMarker([35.3150, 139.3497], "平塚市", () => this.startHiratsuka());
-            this.kushiroMarker = cityMarker([42.9849, 144.3814], "釧路市", () => this.startKushiro(), mapSpotsSeed.cities.kushiro.playable === false);
+            this.kushiroMarker = cityMarker([42.9849, 144.3814], "釧路市", () => this.startKushiro());
         },
 
 
@@ -499,7 +506,7 @@ L.tileLayer(
             }
         },
 
-        // ■未完了の地域なら、チュートリアル（動画→ABゲーム）を挟んでから進む
+        // ■未完了の地域なら、チュートリアル（動画→ABゲーム）を挟んでから進む（拡大が終わったあと、六角形が出る前）
         async withTutorial(location, cityName, onDone) {
             if (this.tutorial) return;
 
@@ -517,8 +524,8 @@ L.tileLayer(
 
             const goToGame = () => {
                 this.destroyTutorialPlayer();
-                // ■動画が終わったら、そのまま地図へ（以前はここでABゲームを挟んでいたが、黒いマスのチャレンジに移した）
-                if (this.tutorial) this.finishTutorial();
+                // ■動画が終わったら、ABゲームへ（そのあと六角形が出る）
+                if (this.tutorial) this.tutorial.phase = "game";
             };
 
             // ■YT.PlayerはVueのリアクティブにすると動作が壊れるため、dataに入れず保持する
@@ -570,17 +577,12 @@ L.tileLayer(
 
         startHiratsuka() {
             this.currentPlace = { city: "hiratsuka", cityName: "平塚市" };
-            this.withTutorial("hiratsuka", "平塚市", () => this.startZoom("平塚市", [35.3250, 139.3497], 13));
+            this.startZoom("平塚市", [35.3250, 139.3497], 13);
         },
 
         startKushiro() {
-            // ■釧路市は、まだ遊べない（準備中）
-            if (mapSpotsSeed.cities.kushiro.playable === false) {
-                this.showNotice("釧路市は、まだ あそべないよ。もうすこし まっててね");
-                return;
-            }
             this.currentPlace = { city: "kushiro", cityName: "釧路市" };
-            this.withTutorial("kushiro", "釧路市", () => this.startZoom("釧路市", [42.9849, 144.3814], 13));
+            this.startZoom("釧路市", [42.9849, 144.3814], 13);
         },
 
         // ■その街の「場所」を、ハチの巣のように並べた六角形で表示する（4・3・4・3・4個の5段で18か所）。
@@ -822,7 +824,7 @@ L.tileLayer(
         },
 
         // ■日本全体から街へ、ひと続きでなめらかに拡大する（途中で止まったり、別の動きに切りかわったりしない）。
-        //   拡大が終わってから、六角形をふわっと出す
+        //   拡大が終わってから（初回は、動画とABゲームのあとに）、六角形をふわっと出す
         startZoom(cityName, cityPos, cityZoom) {
             if (this.japanLayer) {
               this.map.removeLayer(this.japanLayer);
@@ -850,7 +852,13 @@ L.tileLayer(
             const showHoneycomb = () => {
                 if (shown) return;
                 shown = true;
-                this.createHoneycomb(cityPos);
+                // ■初回だけ、六角形の前にチュートリアル（動画→ABゲーム）。終わってから六角形を出す
+                const city = this.currentPlace;
+                if (!city) return;
+                this.withTutorial(city.city, cityName, () => {
+                    // チュートリアル中に「もどる」などで街を離れていたら、六角形は出さない
+                    if (this.currentPlace && this.currentPlace.city === city.city && this.showTitle) this.createHoneycomb(cityPos);
+                });
             };
             this.showHoneycombHandler = showHoneycomb;
             this.map.once("moveend", showHoneycomb);
@@ -972,21 +980,6 @@ L.tileLayer(
     text-align: center;
     box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.45), 0 4px 10px rgba(0, 0, 0, 0.4);
     animation: city-pulse 1.8s ease-in-out infinite;
-}
-
-:deep(.city-marker-closed) {
-    background: #6b7280;
-    border-color: #d1d5db;
-    box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.45), 0 4px 10px rgba(0, 0, 0, 0.4);
-    animation: none;
-    line-height: 1.2;
-}
-
-:deep(.city-marker-closed small) {
-    display: block;
-    font-size: 10px;
-    font-weight: 700;
-    opacity: 0.9;
 }
 
 @keyframes city-pulse {

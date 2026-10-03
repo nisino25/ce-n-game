@@ -457,23 +457,33 @@ export default {
 
         teamTheme() {
             const themes = {
+                // ■チームの色は、陣取りゲームのチームの色（水＝青緑・風＝緑・土＝オレンジ）にそろえる
                 water: {
                     accent: "#22d3ee",
                     bgGlow: "#15324a",
                     bgDark: "#030a12",
-                    titleGlow: "#67e8f9"
-                },
-                earth: {
-                    accent: "#4ade80",
-                    bgGlow: "#1f3320",
-                    bgDark: "#060d04",
-                    titleGlow: "#86efac"
+                    titleGlow: "#2dd4bf",
+                    floorTop: "#1f4a52",
+                    floorBottom: "#041012",
+                    floorGrid: "rgba(45,212,191,0.22)"
                 },
                 air: {
-                    accent: "#7dd3fc",
-                    bgGlow: "#33475a",
-                    bgDark: "#10181f",
-                    titleGlow: "#bae6fd"
+                    accent: "#a3e635",
+                    bgGlow: "#2a3d17",
+                    bgDark: "#070d04",
+                    titleGlow: "#a3e635",
+                    floorTop: "#3a5224",
+                    floorBottom: "#0a1204",
+                    floorGrid: "rgba(163,230,53,0.22)"
+                },
+                earth: {
+                    accent: "#fb923c",
+                    bgGlow: "#3d2a17",
+                    bgDark: "#0e0904",
+                    titleGlow: "#fdba74",
+                    floorTop: "#54392a",
+                    floorBottom: "#120a05",
+                    floorGrid: "rgba(251,146,60,0.22)"
                 }
             };
 
@@ -481,14 +491,20 @@ export default {
                 accent: "#00ffff",
                 bgGlow: "#1c2435",
                 bgDark: "#05070d",
-                titleGlow: "#67e8f9"
+                titleGlow: "#67e8f9",
+                floorTop: "#263b43",
+                floorBottom: "#050b0e",
+                floorGrid: "rgba(0,255,255,0.16)"
             };
         },
 
         themeVars() {
             return {
                 "--team-accent": this.teamTheme.accent,
-                "--room-accent": this.teamTheme.accent, // モニターごとの色（少しずつ変える）の元になる色
+                "--room-accent": "#22d3ee", // モニターの枠の色（チームに関係なく、全チーム共通。モニターごとに少しずつ変える元の色）
+                "--team-floor-top": this.teamTheme.floorTop,
+                "--team-floor-bottom": this.teamTheme.floorBottom,
+                "--team-floor-grid": this.teamTheme.floorGrid,
                 "--team-bg-glow": this.teamTheme.bgGlow,
                 "--team-bg-dark": this.teamTheme.bgDark,
                 "--team-title-glow": this.teamTheme.titleGlow
@@ -607,8 +623,6 @@ export default {
                 let local = null;
                 try { local = JSON.parse(localStorage.getItem("dominationPlace")); } catch (e) { local = null; }
                 const place = local || data.place;
-                // まだ遊べない街（準備中）のゲームは、「つづきから」に出さない
-                if (place && mapSpotsSeed.cities[place.city] && mapSpotsSeed.cities[place.city].playable === false) return;
                 this.resumePlaceName = (place && (place.spotName || place.cityName)) || "前回の陣取りゲーム";
 
                 this.resumeRoom = roomCode;
@@ -1084,8 +1098,11 @@ export default {
       .monitor-cave{ order:3; }
       .monitor-wild{ order:4; }
       /* ■ドアを低くして、下のアイコン（ずかん・かんばん）が画面の下端に追いやられないようにする */
-      .room-main-door{ height:9rem; margin-top:1.25rem; margin-bottom:1.25rem; }
   }
+
+  /* ■ドアを低くして、下のアイコン（ずかん・かんばん）が画面の下端に追いやられないようにする（PCもスマホも） */
+  .room-main-door{ height:10rem; margin-top:1.25rem; margin-bottom:1.25rem; }
+  @media (max-width: 640px){ .room-main-door{ height:9rem; } }
 
   .room-icon-row{
       position:relative;
@@ -1109,6 +1126,7 @@ export default {
 
   /* ■上のモニターは、それぞれ少しずつ色を変える（チームの色を元に、ほかの色を混ぜる）。
      color-mix に対応していないブラウザでは、これまで通りチームの色のまま */
+  .monitor-team{ --team-accent: var(--room-accent, #0ff); }
   .monitor-globe{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #4aa3ff); }
   .monitor-cave{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #ffb347); }
   .monitor-wild{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #5ee08a); }
@@ -1144,20 +1162,20 @@ export default {
       background:
           linear-gradient(
               to bottom,
-              #263b43 0%,
-              #182a31 35%,
-              #0d1b21 70%,
-              #050b0e 100%
+              var(--team-floor-top, #263b43) 0%,
+              color-mix(in srgb, var(--team-floor-top, #263b43) 55%, var(--team-floor-bottom, #050b0e)) 35%,
+              color-mix(in srgb, var(--team-floor-top, #263b43) 20%, var(--team-floor-bottom, #050b0e)) 70%,
+              var(--team-floor-bottom, #050b0e) 100%
           );
       /* 床のグリッド */
       background-image:
           linear-gradient(
-              rgba(0,255,255,0.16) 2px,
+              var(--team-floor-grid, rgba(0,255,255,0.16)) 2px,
               transparent 2px
           ),
           linear-gradient(
               90deg,
-              rgba(0,255,255,0.16) 2px,
+              var(--team-floor-grid, rgba(0,255,255,0.16)) 2px,
               transparent 2px
           );
       background-size:
