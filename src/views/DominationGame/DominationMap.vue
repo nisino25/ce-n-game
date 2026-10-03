@@ -2,14 +2,14 @@
     <div class="relative h-screen w-full">
 
         <div id="returnGate" @click="returnHome">
-        ◉
-            <div>帰還ゲート</div>
+            <span class="gate-core"></span>
+            <span class="gate-label">帰還ゲート</span>
         </div>
         <div id="warpEffect"></div>
         <!-- Start Message -->
         <div
             v-if="showStartScreen"
-            class="absolute bottom-12 left-1/2 z-[1000] -translate-x-1/2 rounded-xl bg-white/90 px-5 py-2.5 text-2xl font-bold shadow"
+            class="map-hint absolute bottom-12 left-1/2 z-[1000] -translate-x-1/2"
         >
             まちを タップしてね
         </div>
@@ -17,16 +17,16 @@
         <!-- ■ひとつもどる：拡大したあと、日本全体の地図にもどす -->
         <button
             v-if="showTitle"
-            class="absolute right-4 top-5 z-[1000] rounded-xl bg-white/90 px-4 py-2.5 text-lg font-bold shadow"
+            class="map-back absolute right-4 top-5 z-[1000]"
             @click="backToJapan"
         >
-            ◀ もどる
+            <span class="map-back-arrow">◀</span> もどる
         </button>
 
         <!-- Title -->
         <div
             v-if="showTitle"
-            class="absolute left-1/2 top-5 z-[1000] -translate-x-1/2 rounded-xl bg-white/90 px-5 py-2.5 text-2xl font-bold"
+            class="map-title absolute left-1/2 top-5 z-[1000] -translate-x-1/2"
         >
             {{ title }}
         </div>
@@ -52,18 +52,16 @@
             v-if="showTally && showTitle"
             class="absolute bottom-4 left-1/2 z-[1000] flex max-w-[96vw] -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-2xl bg-[#10151c]/90 px-3 py-2 shadow-lg"
         >
-            <span class="mr-0.5 text-xs font-bold text-slate-300">かった かず</span>
+            <span class="mr-0.5 text-xs font-bold text-slate-300">{{ isAiTest ? '勝率' : 'かった かず' }}</span>
             <span
                 v-for="team in ['water', 'air', 'earth']"
                 :key="team"
                 class="flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-black text-slate-900"
                 :style="{ background: teamColors[team] }"
             >
-                {{ teamNames[team] }} {{ teamTally[team] }}
+                {{ teamNames[team] }} {{ teamTally[team] }}<template v-if="isAiTest"> ({{ tallyTotal ? Math.round(teamTally[team] / tallyTotal * 100) : 0 }}%)</template>
             </span>
-            <span class="flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-black text-white" :style="{ background: aiColor }">
-                AI {{ teamTally.ai }}
-            </span>
+            <span v-if="isAiTest" class="ml-0.5 text-xs font-bold text-slate-400">{{ tallyTotal }}戦</span>
         </div>
 
         <!-- ■案内メッセージ（ゲームの画面から追い返されたときなど） -->
@@ -100,20 +98,28 @@
                 </div>
 
                 <div class="flex flex-col gap-2.5">
-                    <button
-                        v-for="gameNo in [1, 2, 3]"
-                        :key="gameNo"
-                        class="flex items-center gap-3 rounded-xl border-2 px-3 py-3 text-left active:scale-[.98] disabled:cursor-not-allowed"
-                        :style="gameButtonStyle(slotInfo(spotSheet, gameNo), isSlotDisabled(spotSheet, gameNo))"
-                        :disabled="isSlotDisabled(spotSheet, gameNo)"
-                        @click="startSpotGame(spotSheet, gameNo)"
-                    >
-                        <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-black/25 text-2xl font-black">{{ gameNo }}</span>
-                        <span>
-                            <span class="block text-lg font-black">ゲーム{{ gameNo }}</span>
-                            <span class="block text-sm font-bold">{{ gameStateLabel(slotInfo(spotSheet, gameNo)) }}</span>
-                        </span>
-                    </button>
+                    <div v-for="gameNo in [1, 2, 3]" :key="gameNo" class="flex flex-col gap-1.5">
+                        <button
+                            class="flex items-center gap-3 rounded-xl border-2 px-3 py-3 text-left active:scale-[.98] disabled:cursor-not-allowed"
+                            :style="gameButtonStyle(slotInfo(spotSheet, gameNo), isSlotDisabled(spotSheet, gameNo))"
+                            :disabled="isSlotDisabled(spotSheet, gameNo)"
+                            @click="startSpotGame(spotSheet, gameNo)"
+                        >
+                            <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-black/25 text-2xl font-black">{{ gameNo }}</span>
+                            <span>
+                                <span class="block text-lg font-black">ゲーム{{ gameNo }}</span>
+                                <span class="block text-sm font-bold">{{ gameStateLabel(slotInfo(spotSheet, gameNo)) }}</span>
+                            </span>
+                        </button>
+                        <!-- ■AIテスト：おわったゲームの結果（盤面・じんち・生態系ピラミッド）を、観戦モードで見られる -->
+                        <button
+                            v-if="isAiTest && slotInfo(spotSheet, gameNo).state === 'won'"
+                            class="rounded-lg border border-violet-300 bg-violet-500/20 px-3 py-1.5 text-sm font-black text-violet-100 active:scale-[.98]"
+                            @click="startSpotGame(spotSheet, gameNo, { spectate: true })"
+                        >
+                            👀 おわった けっかを 見る
+                        </button>
+                    </div>
                 </div>
 
                 <button
@@ -125,10 +131,10 @@
             </div>
         </div>
 
-        <!-- ■地域チュートリアル（初回のみ）：YouTube視聴 → ABゲーム（提案B） -->
+        <!-- ■地域チュートリアル（初回のみ）：拡大のあと、六角形が出る前に YouTube視聴 → ABゲーム（提案B） -->
         <div
             v-if="tutorial"
-            class="fixed inset-0 z-[3000] flex items-center justify-center bg-black/75 p-4"
+            class="fixed inset-0 z-[3000] flex items-center justify-center overflow-y-auto bg-black/75 p-4"
         >
             <div
                 v-show="tutorial.phase === 'video'"
@@ -141,8 +147,15 @@
                     <div ref="tutorialPlayer" class="absolute inset-0 h-full w-full"></div>
                 </div>
                 <p class="mt-3 text-center text-sm text-gray-500">
-                    動画が終わると、ちずが ひらくよ
+                    動画が終わると、つぎは ABゲームだよ
                 </p>
+            </div>
+
+            <div
+                v-if="tutorial.phase === 'game'"
+                class="my-auto max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl bg-[#f4f1e8] shadow-xl"
+            >
+                <ABGameProposalB embedded @finish="finishTutorial" />
             </div>
         </div>
 
@@ -154,8 +167,10 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import db from "@/firebase.js";
 import { getSession } from "@/utils/session.js";
+import { isTestMode } from "@/utils/env.js";
 import mapSpotsSeed from "./mapSpots.json";
-import { slotId, isFresh, TEAM_COLORS, TEAM_NAMES, AI_COLOR } from "@/utils/dominationSlots.js";
+import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
+import { slotId, isFresh, TEAM_COLORS, TEAM_NAMES } from "@/utils/dominationSlots.js";
 
 // ■日本全体の表示範囲（九州の南〜北海道の北）
 const JAPAN_BOUNDS = [[30.9, 129.3], [45.8, 146.2]];
@@ -193,6 +208,7 @@ const loadYouTubeApi = () => {
 };
 
 export default {
+    components: { ABGameProposalB },
 
     data() {
         return {
@@ -208,17 +224,17 @@ export default {
             hiratsukaMarker: null,
 
             kushiroMarker: null,
+            testMarker: null,
             // ■追加：エリア表示
             honeycombLayers: [],
             spots: mapSpotsSeed.spots, // 場所の一覧。Firestoreのmapspots（loadSpots）で上書きする。読めないときは同梱のデータを使う
             directCity: null, // 街の六角形の画面から始めたときの街（hiratsuka / kushiro）
             hexRadius: 80, // いまの六角形の大きさ（画面のピクセル）
-            slots: {}, // 「場所ID-ゲーム番号」→ { state: none / mine / other / won / lost, ownerName, winnerTeam }
+            slots: {}, // 「場所ID-ゲーム番号」→ { state: none / mine / other / won, ownerName, winnerTeam }
             myActiveSlots: {}, // 街ごとの、自分があそび中のゲーム（街ごとに1つだけ。平塚と釧路は1つずつ同時に遊べる）
-            teamTally: { water: 0, air: 0, earth: 0, ai: 0 }, // チームごとの勝った数
+            teamTally: { water: 0, air: 0, earth: 0 }, // チームごとの勝った数
             teamColors: TEAM_COLORS,
             teamNames: TEAM_NAMES,
-            aiColor: AI_COLOR,
             notice: "",
             spotShapes: {}, // 場所ID → 地図に描いたひし形（塗り直し用）
             spotSheet: null, // 3つのゲームを選ぶ画面を開いている場所
@@ -230,7 +246,7 @@ export default {
             userLoading: null,
             // ■最後に入った場所（平塚市・釧路市）。ハチの巣をタップして陣取りゲームに入るときに保存し、モニタールームの「つづきから」で使う
             currentPlace: null,
-            tutorial: null // { location, cityName, phase: "video", onDone }
+            tutorial: null // { location, cityName, phase: "video" | "game", onDone }
 
         };
     },
@@ -238,15 +254,23 @@ export default {
     computed: {
         // ■水・風・土のチームごとの勝った数を出す（平塚市の画面だけ）
         showTally() {
-            return !!this.currentPlace && this.currentPlace.city === "hiratsuka";
+            return !!this.currentPlace && (this.currentPlace.city === "hiratsuka" || this.currentPlace.city === "aitest");
+        },
+
+        // ■AIテストでは、勝った数に加えて、勝率（おわったゲームのうち、そのチームが勝った割合）を出す
+        isAiTest() {
+            return !!this.currentPlace && this.currentPlace.city === "aitest";
+        },
+
+        tallyTotal() {
+            return this.teamTally.water + this.teamTally.air + this.teamTally.earth;
         }
     },
 
     mounted() {
 
         // ■陣取りゲームの「平塚市にもどる」から来たときは、日本の地図を見せず、その街の六角形の画面から始める
-        // （まだ遊べない街 ＝ playable が false の街は、直接開けない）
-        const directCity = mapSpotsSeed.cities[this.$route.query.city] && mapSpotsSeed.cities[this.$route.query.city].playable !== false ? this.$route.query.city : null;
+        const directCity = mapSpotsSeed.cities[this.$route.query.city] && (!mapSpotsSeed.cities[this.$route.query.city].test || isTestMode()) ? this.$route.query.city : null;
         this.directCity = directCity;
         if (directCity) {
             this.currentPlace = { city: directCity, cityName: mapSpotsSeed.cities[directCity].name };
@@ -260,7 +284,7 @@ export default {
             busy: "そのゲームは、ほかの人が あそび中だったよ",
             done: "そのゲームは、もう おわっているよ",
             active: "この街で あそび中の ゲームが あるよ。おわらせてから、ほかの ゲームを あそんでね",
-            closed: "釧路市は、まだ あそべないよ。もうすこし まっててね"
+            nogame: "そのゲームは、もう 見られないよ"
         };
         if (notices[this.$route.query.notice]) this.showNotice(notices[this.$route.query.notice]);
 
@@ -437,9 +461,21 @@ L.tileLayer(
             if (this.showHoneycombHandler) this.map.off("moveend", this.showHoneycombHandler);
             this.clearHoneycomb();
 
-            if (this.japanLayer) this.japanLayer.addTo(this.map);
+            // ■日本の緑の地域は、拡大が終わってから出す（拡大の途中で出すと、緑の光の形が、四角くくずれて見える）
+            if (this.showJapanHandler) this.map.off("moveend", this.showJapanHandler);
+            let japanShown = false;
+            const showJapan = () => {
+                if (japanShown) return;
+                japanShown = true;
+                if (this.japanLayer && !this.map.hasLayer(this.japanLayer)) this.japanLayer.addTo(this.map);
+            };
+            this.showJapanHandler = showJapan;
+            this.map.once("moveend", showJapan);
+            this.zoomTimers.push(setTimeout(showJapan, 4000));
+
             if (this.hiratsukaMarker) this.map.removeLayer(this.hiratsukaMarker);
             if (this.kushiroMarker) this.map.removeLayer(this.kushiroMarker);
+            if (this.testMarker) this.map.removeLayer(this.testMarker);
             this.createStartMarkers();
 
             this.currentPlace = null;
@@ -452,20 +488,22 @@ L.tileLayer(
 
         createStartMarkers() {
             // ■平塚市・釧路市は同じデザインのマーカーにそろえる（光る緑の地域の上に、タップできる街として出す）
-            const cityMarker = (position, name, onClick, closed = false) => L.marker(position, {
+            const cityMarker = (position, name, onClick) => L.marker(position, {
                 icon: L.divIcon({
                     className: "",
-                    // 名前のふだだけ。街の場所（緑の地域）が隠れないよう、ふだは地点の少し下に置く。まだ遊べない街は、灰色で「じゅんびちゅう」
-                    html: `<div class="city-marker${closed ? " city-marker-closed" : ""}">${name}${closed ? "<small>じゅんびちゅう</small>" : ""}</div>`,
-                    iconSize: [110, closed ? 44 : 34],
-                    iconAnchor: [55, -22]
+                    // 名前のふだだけ。街の場所（緑の地域）が隠れないよう、ふだは地点の少し下に置く。
+                    html: `<div class="city-marker">${name}</div>`,
+                    iconSize: [160, 34],
+                    iconAnchor: [80, -22]
                 })
             })
                 .addTo(this.map)
                 .on("click", onClick);
 
             this.hiratsukaMarker = cityMarker([35.3150, 139.3497], "平塚市", () => this.startHiratsuka());
-            this.kushiroMarker = cityMarker([42.9849, 144.3814], "釧路市", () => this.startKushiro(), mapSpotsSeed.cities.kushiro.playable === false);
+            this.kushiroMarker = cityMarker([42.9849, 144.3814], "釧路市", () => this.startKushiro());
+            // ■AIテストエリア（テストモードのときだけ）：平塚・釧路とは別に、AIとの試しのゲームを、何回でも遊べる
+            if (isTestMode()) this.testMarker = cityMarker([37.5, 134.5], "🧪 AIテスト", () => this.startAiTest());
         },
 
 
@@ -474,7 +512,10 @@ L.tileLayer(
             try {
                 const snapshot = await db.collection("mapSpots").get();
                 const spots = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                if (spots.length) this.spots = spots.sort((a, b) => (a.order || 0) - (b.order || 0));
+                // Firestoreに無い街（AIテスト。同梱のデータだけにある）は、同梱のデータから足す
+                const cities = new Set(spots.map(spot => spot.city));
+                const extra = mapSpotsSeed.spots.filter(spot => !cities.has(spot.city));
+                if (spots.length) this.spots = [...spots, ...extra].sort((a, b) => (a.order || 0) - (b.order || 0));
             } catch (error) {
                 console.error("場所の一覧の読み込みに失敗しました（同梱のデータを使います）:", error);
             }
@@ -499,7 +540,7 @@ L.tileLayer(
             }
         },
 
-        // ■未完了の地域なら、チュートリアル（動画→ABゲーム）を挟んでから進む
+        // ■未完了の地域なら、チュートリアル（動画→ABゲーム）を挟んでから進む（拡大が終わったあと、六角形が出る前）
         async withTutorial(location, cityName, onDone) {
             if (this.tutorial) return;
 
@@ -517,8 +558,8 @@ L.tileLayer(
 
             const goToGame = () => {
                 this.destroyTutorialPlayer();
-                // ■動画が終わったら、そのまま地図へ（以前はここでABゲームを挟んでいたが、黒いマスのチャレンジに移した）
-                if (this.tutorial) this.finishTutorial();
+                // ■動画が終わったら、ABゲームへ（そのあと六角形が出る）
+                if (this.tutorial) this.tutorial.phase = "game";
             };
 
             // ■YT.PlayerはVueのリアクティブにすると動作が壊れるため、dataに入れず保持する
@@ -570,17 +611,12 @@ L.tileLayer(
 
         startHiratsuka() {
             this.currentPlace = { city: "hiratsuka", cityName: "平塚市" };
-            this.withTutorial("hiratsuka", "平塚市", () => this.startZoom("平塚市", [35.3250, 139.3497], 13));
+            this.startZoom("平塚市", [35.3250, 139.3497], 13);
         },
 
         startKushiro() {
-            // ■釧路市は、まだ遊べない（準備中）
-            if (mapSpotsSeed.cities.kushiro.playable === false) {
-                this.showNotice("釧路市は、まだ あそべないよ。もうすこし まっててね");
-                return;
-            }
             this.currentPlace = { city: "kushiro", cityName: "釧路市" };
-            this.withTutorial("kushiro", "釧路市", () => this.startZoom("釧路市", [42.9849, 144.3814], 13));
+            this.startZoom("釧路市", [42.9849, 144.3814], 13);
         },
 
         // ■その街の「場所」を、ハチの巣のように並べた六角形で表示する（4・3・4・3・4個の5段で18か所）。
@@ -664,7 +700,6 @@ L.tileLayer(
             if (state === "mine") return { fillColor: "#facc15", fillOpacity: 0.95 };
             if (state === "other") return { fillColor: "#94a3b8", fillOpacity: 0.9 };
             if (state === "won") return { fillColor: TEAM_COLORS[info.winnerTeam] || "#34d399", fillOpacity: 0.92 };
-            if (state === "lost") return { fillColor: AI_COLOR, fillOpacity: 0.92 };
             return { fillColor: "#0b1220", fillOpacity: 0.62 };
         },
 
@@ -676,7 +711,7 @@ L.tileLayer(
             if (!city) return;
 
             const slots = {};
-            const tally = { water: 0, air: 0, earth: 0, ai: 0 };
+            const tally = { water: 0, air: 0, earth: 0 };
             try {
                 const [citySnap, mineSnap] = await Promise.all([
                     db.collection("mapSlots").where("city", "==", city).get(),
@@ -689,14 +724,13 @@ L.tileLayer(
                     const data = doc.data();
                     const key = `${data.spotId}-${data.gameNo}`;
                     if (data.state === "finished") {
-                        if (data.humanWon === false) {
-                            slots[key] = { state: "lost", ownerName: data.ownerName };
-                            tally.ai++;
-                        } else {
+                        // ■AIが勝った枠（昔のデータ）は、決着にしない（色をつけず、ほかの人が再戦できる）
+                        // AIテストは、AIが勝ったときも、勝ったチームの色をぬる
+                        if (data.humanWon !== false || data.test) {
                             slots[key] = { state: "won", ownerName: data.ownerName, winnerTeam: data.winnerTeam };
                             if (tally[data.winnerTeam] !== undefined) tally[data.winnerTeam]++;
                         }
-                    } else if (data.state === "playing" && isFresh(data.updatedAt)) {
+                    } else if (data.state === "playing" && isFresh(data.updatedAt) && !data.test) {
                         slots[key] = { state: data.ownerUid === this.uid ? "mine" : "other", ownerName: data.ownerName };
                     }
                 });
@@ -704,7 +738,7 @@ L.tileLayer(
                 // 自分があそび中のゲーム（街ごとに1つ）
                 const mineBy = {};
                 if (mineSnap) {
-                    mineSnap.docs.map(doc => doc.data()).filter(data => isFresh(data.updatedAt)).forEach(data => {
+                    mineSnap.docs.map(doc => doc.data()).filter(data => isFresh(data.updatedAt) && !data.test).forEach(data => {
                         const mineSpot = this.spots.find(spot => spot.id === data.spotId);
                         mineBy[data.city] = { spotId: data.spotId, gameNo: data.gameNo, spotName: mineSpot ? mineSpot.name : "" };
                     });
@@ -766,7 +800,7 @@ L.tileLayer(
 
         isSlotDisabled(spot, gameNo) {
             const state = this.slotInfo(spot, gameNo).state;
-            if (state === "other" || state === "won" || state === "lost") return true;
+            // ■ほかの人があそび中・決着ずみの枠は、「観戦」で入れる（見るだけ）
             return state === "none" && this.isLockedByMyGame(spot, gameNo);
         },
 
@@ -778,24 +812,36 @@ L.tileLayer(
         gameButtonStyle(info, disabled) {
             const dim = disabled && info.state === "none" ? { opacity: 0.4 } : {};
             if (info.state === "won") return { background: TEAM_COLORS[info.winnerTeam] || "#34d399", borderColor: "#fff", color: "#10151c" };
-            if (info.state === "lost") return { background: AI_COLOR, borderColor: "#fff", color: "#fff" };
             if (info.state === "mine") return { background: "rgba(250,204,21,.22)", borderColor: "#facc15", color: "#fef9c3" };
             if (info.state === "other") return { background: "#94a3b8", borderColor: "#fff", color: "#10151c" };
             return { background: "rgba(255,255,255,.06)", borderColor: "#67e8f9", color: "#fff", ...dim };
         },
 
         gameStateLabel(info) {
+            // AIテストは、何回でも、最初から遊べる（前の結果の色は、そのまま残る）
+            if (this.isAiTest) return info.state === "won" ? `${TEAM_NAMES[info.winnerTeam] || ""}チームが かった（もういちど あそべる）` : "あそべるよ";
             if (info.state === "mine") return "つづきから あそぶ";
-            if (info.state === "other") return `${info.ownerName ? info.ownerName + "さんが " : "ほかの人が "}あそび中`;
-            if (info.state === "won") return `${TEAM_NAMES[info.winnerTeam] || ""}チームが かったよ`;
-            if (info.state === "lost") return "AIが かったよ";
+            if (info.state === "other") return `${info.ownerName ? info.ownerName + "さんが " : "ほかの人が "}あそび中 👀 観戦できるよ`;
+            if (info.state === "won") return `${TEAM_NAMES[info.winnerTeam] || ""}チームが かったよ 👀 観戦できるよ`;
             return "あそべるよ";
         },
 
+        // ■AIテストエリア：街と同じ、六角形（18か所×3ゲーム）。何回でも、最初から遊べて、勝ったチームの色がぬられる（勝率が見える）。
+        //   テラは入らない。動画・ABゲームのチュートリアルもなし
+        startAiTest() {
+            const city = mapSpotsSeed.cities.aitest;
+            this.currentPlace = { city: "aitest", cityName: city.name };
+            this.startZoom(city.name, city.center, 13);
+        },
+
         // ■3つのゲームのどれかを選んで、陣取りゲームへ
-        startSpotGame(spot, gameNo) {
+        startSpotGame(spot, gameNo, options = {}) {
             if (this.isSlotDisabled(spot, gameNo)) return;
             const cityInfo = mapSpotsSeed.cities[spot.city];
+            // ■ほかの人があそび中・決着ずみの枠は、観戦モード（見るだけ）で入る
+            const state = this.slotInfo(spot, gameNo).state;
+            if (options.spectate || ((state === "other" || state === "won") && !cityInfo.test)) localStorage.setItem("dominationSpectate", "1");
+            else localStorage.removeItem("dominationSpectate");
             localStorage.setItem("dominationRoomCode", slotId(spot.id, gameNo));
             localStorage.setItem("dominationPlace", JSON.stringify({
                 city: spot.city,
@@ -803,7 +849,8 @@ L.tileLayer(
                 spotId: spot.id,
                 spotName: spot.name,
                 habitat: spot.habitat,
-                gameNo
+                gameNo,
+                test: !!cityInfo.test
             }));
             this.$router.push("/dominationGame");
         },
@@ -822,7 +869,7 @@ L.tileLayer(
         },
 
         // ■日本全体から街へ、ひと続きでなめらかに拡大する（途中で止まったり、別の動きに切りかわったりしない）。
-        //   拡大が終わってから、六角形をふわっと出す
+        //   拡大が終わってから（初回は、動画とABゲームのあとに）、六角形をふわっと出す
         startZoom(cityName, cityPos, cityZoom) {
             if (this.japanLayer) {
               this.map.removeLayer(this.japanLayer);
@@ -838,9 +885,13 @@ L.tileLayer(
             if (this.kushiroMarker) {
                 this.map.removeLayer(this.kushiroMarker);
             }
+            if (this.testMarker) {
+                this.map.removeLayer(this.testMarker);
+            }
 
             this.zoomTimers.forEach(clearTimeout);
             this.zoomTimers = [];
+            if (this.showJapanHandler) this.map.off("moveend", this.showJapanHandler);
 
             this.map.invalidateSize();
             this.map.flyTo(cityPos, cityZoom, { animate: true, duration: 2.5, easeLinearity: 0.15 });
@@ -850,7 +901,14 @@ L.tileLayer(
             const showHoneycomb = () => {
                 if (shown) return;
                 shown = true;
-                this.createHoneycomb(cityPos);
+                // ■初回だけ、六角形の前にチュートリアル（動画→ABゲーム）。終わってから六角形を出す
+                const city = this.currentPlace;
+                if (!city) return;
+                const tutorialArea = city.city === "aitest" ? (location, name, done) => done() : this.withTutorial;
+                tutorialArea.call(this, city.city, cityName, () => {
+                    // チュートリアル中に「もどる」などで街を離れていたら、六角形は出さない
+                    if (this.currentPlace && this.currentPlace.city === city.city && this.showTitle) this.createHoneycomb(cityPos);
+                });
             };
             this.showHoneycombHandler = showHoneycomb;
             this.map.once("moveend", showHoneycomb);
@@ -961,32 +1019,32 @@ L.tileLayer(
 }
 
 :deep(.city-marker) {
+    width: max-content;
+    margin: 0 auto;
     white-space: nowrap;
     border-radius: 999px;
-    border: 2px solid #fff;
-    background: #059669;
-    color: #fff;
-    padding: 4px 12px;
+    border: 2px solid #34d399;
+    background: linear-gradient(180deg, rgba(10, 34, 26, 0.92), rgba(5, 18, 14, 0.92));
+    color: #d1fae5;
+    padding: 4px 14px 5px 12px;
     font-size: 15px;
     font-weight: 900;
+    letter-spacing: 0.1em;
     text-align: center;
-    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.45), 0 4px 10px rgba(0, 0, 0, 0.4);
+    text-shadow: 0 0 8px rgba(52, 211, 153, 0.9);
+    box-shadow: 0 0 14px rgba(52, 211, 153, 0.65), inset 0 0 8px rgba(52, 211, 153, 0.25);
     animation: city-pulse 1.8s ease-in-out infinite;
 }
-
-:deep(.city-marker-closed) {
-    background: #6b7280;
-    border-color: #d1d5db;
-    box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.45), 0 4px 10px rgba(0, 0, 0, 0.4);
-    animation: none;
-    line-height: 1.2;
-}
-
-:deep(.city-marker-closed small) {
-    display: block;
-    font-size: 10px;
-    font-weight: 700;
-    opacity: 0.9;
+:deep(.city-marker)::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: #6ee7b7;
+    box-shadow: 0 0 8px #34d399;
+    vertical-align: middle;
 }
 
 @keyframes city-pulse {
@@ -1010,32 +1068,105 @@ L.tileLayer(
 
 #returnGate {
     position: fixed;
-    left: 7.5%;
-    top: 30px;
-    width: 100px;
-    height: 100px;
+    left: 14px;
+    top: 14px;
+    width: 84px;
+    height: 84px;
     border-radius: 50%;
-    border: 4px solid #00ffff;
-    color: #00ffff;
-    background: rgba(0, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    line-height: 1.2;
     cursor: pointer;
-    box-shadow:
-        0 0 20px #00ffff,
-        inset 0 0 20px #00ffff;
-    animation: pulse 2s infinite;
+    background: radial-gradient(circle at 50% 40%, rgba(34, 211, 238, 0.28), rgba(6, 14, 26, 0.92) 70%);
+    box-shadow: 0 0 22px rgba(34, 211, 238, 0.55), inset 0 0 18px rgba(34, 211, 238, 0.35);
     z-index: 1000;
 }
+/* まわりをまわる光の輪 */
+#returnGate::before {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, rgba(34, 211, 238, 0), #22d3ee, rgba(167, 139, 250, 0.9), rgba(34, 211, 238, 0));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+    animation: gate-spin 3s linear infinite;
+}
+#returnGate .gate-core {
+    width: 22px;
+    height: 22px;
+    margin-bottom: 4px;
+    border-radius: 50%;
+    border: 2px solid #a5f3fc;
+    background: radial-gradient(circle, #e0f7ff 0 25%, transparent 30%);
+    box-shadow: 0 0 10px #22d3ee;
+    animation: gate-breathe 2s ease-in-out infinite;
+}
+#returnGate .gate-label {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    color: #cffafe;
+    text-shadow: 0 0 6px rgba(34, 211, 238, 0.9);
+}
+#returnGate:active { transform: scale(0.95); }
 
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
+@keyframes gate-spin {
+    to { transform: rotate(360deg); }
+}
+@keyframes gate-breathe {
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50% { transform: scale(1.18); opacity: 1; }
+}
+
+/* ■地図の上のボタン・見出し：モニタールームと同じ、暗いガラスに光るふち */
+.map-title,
+.map-back,
+.map-hint {
+    border: 1.5px solid rgba(103, 232, 249, 0.75);
+    background: linear-gradient(180deg, rgba(14, 26, 44, 0.9), rgba(6, 12, 24, 0.9));
+    color: #e0f7ff;
+    box-shadow: 0 0 14px rgba(34, 211, 238, 0.4), inset 0 0 10px rgba(34, 211, 238, 0.12);
+    text-shadow: 0 0 8px rgba(34, 211, 238, 0.7);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+.map-title {
+    padding: 7px 26px 8px;
+    border-radius: 14px;
+    font-size: 21px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    white-space: nowrap;
+}
+.map-title::before {
+    content: "";
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 10px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 8px #34d399;
+    vertical-align: middle;
+}
+.map-back {
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+}
+.map-back:hover { background: rgba(34, 211, 238, 0.22); }
+.map-back:active { transform: scale(0.96); }
+.map-back-arrow { font-size: 11px; margin-right: 2px; color: #67e8f9; }
+.map-hint {
+    padding: 9px 24px;
+    border-radius: 999px;
+    font-size: 17px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
 }
 
 #warpEffect {
