@@ -98,20 +98,28 @@
                 </div>
 
                 <div class="flex flex-col gap-2.5">
-                    <button
-                        v-for="gameNo in [1, 2, 3]"
-                        :key="gameNo"
-                        class="flex items-center gap-3 rounded-xl border-2 px-3 py-3 text-left active:scale-[.98] disabled:cursor-not-allowed"
-                        :style="gameButtonStyle(slotInfo(spotSheet, gameNo), isSlotDisabled(spotSheet, gameNo))"
-                        :disabled="isSlotDisabled(spotSheet, gameNo)"
-                        @click="startSpotGame(spotSheet, gameNo)"
-                    >
-                        <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-black/25 text-2xl font-black">{{ gameNo }}</span>
-                        <span>
-                            <span class="block text-lg font-black">ゲーム{{ gameNo }}</span>
-                            <span class="block text-sm font-bold">{{ gameStateLabel(slotInfo(spotSheet, gameNo)) }}</span>
-                        </span>
-                    </button>
+                    <div v-for="gameNo in [1, 2, 3]" :key="gameNo" class="flex flex-col gap-1.5">
+                        <button
+                            class="flex items-center gap-3 rounded-xl border-2 px-3 py-3 text-left active:scale-[.98] disabled:cursor-not-allowed"
+                            :style="gameButtonStyle(slotInfo(spotSheet, gameNo), isSlotDisabled(spotSheet, gameNo))"
+                            :disabled="isSlotDisabled(spotSheet, gameNo)"
+                            @click="startSpotGame(spotSheet, gameNo)"
+                        >
+                            <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-black/25 text-2xl font-black">{{ gameNo }}</span>
+                            <span>
+                                <span class="block text-lg font-black">ゲーム{{ gameNo }}</span>
+                                <span class="block text-sm font-bold">{{ gameStateLabel(slotInfo(spotSheet, gameNo)) }}</span>
+                            </span>
+                        </button>
+                        <!-- ■AIテスト：おわったゲームの結果（盤面・じんち・生態系ピラミッド）を、観戦モードで見られる -->
+                        <button
+                            v-if="isAiTest && slotInfo(spotSheet, gameNo).state === 'won'"
+                            class="rounded-lg border border-violet-300 bg-violet-500/20 px-3 py-1.5 text-sm font-black text-violet-100 active:scale-[.98]"
+                            @click="startSpotGame(spotSheet, gameNo, { spectate: true })"
+                        >
+                            👀 おわった けっかを 見る
+                        </button>
+                    </div>
                 </div>
 
                 <button
@@ -827,12 +835,12 @@ L.tileLayer(
         },
 
         // ■3つのゲームのどれかを選んで、陣取りゲームへ
-        startSpotGame(spot, gameNo) {
+        startSpotGame(spot, gameNo, options = {}) {
             if (this.isSlotDisabled(spot, gameNo)) return;
             const cityInfo = mapSpotsSeed.cities[spot.city];
             // ■ほかの人があそび中・決着ずみの枠は、観戦モード（見るだけ）で入る
             const state = this.slotInfo(spot, gameNo).state;
-            if ((state === "other" || state === "won") && !cityInfo.test) localStorage.setItem("dominationSpectate", "1");
+            if (options.spectate || ((state === "other" || state === "won") && !cityInfo.test)) localStorage.setItem("dominationSpectate", "1");
             else localStorage.removeItem("dominationSpectate");
             localStorage.setItem("dominationRoomCode", slotId(spot.id, gameNo));
             localStorage.setItem("dominationPlace", JSON.stringify({

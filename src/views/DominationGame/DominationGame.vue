@@ -288,7 +288,8 @@
             <div v-if="gameState === 'finished' && !showTerritory" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
                 <div class="bg-white p-5 rounded-2xl shadow-xl text-center max-w-sm w-full max-h-[92vh] overflow-y-auto">
                     <h2 class="text-2xl font-bold mb-1">ゲーム終了！</h2>
-                    <p v-if="spectator" class="mb-2 inline-block rounded-full bg-violet-100 px-4 py-1 text-sm font-black text-violet-700">👀 観戦：{{ ownerLabel }}の ゲーム</p>
+                    <p v-if="spectator" class="mb-1 inline-block rounded-full bg-violet-100 px-4 py-1 text-sm font-black text-violet-700">👀 観戦：{{ ownerLabel }}の ゲーム</p>
+                    <p v-if="spectator && winnerPlayer" class="mb-2 text-lg font-black" :style="{ color: winnerPlayer.color }">🏆 {{ winnerPlayer.name }}の かち！</p>
                     <template v-if="!spectator">
                     <p v-if="finishedResult" class="mb-1 text-lg font-black" :style="{ color: finishedResult.humanWon ? '#059669' : '#dc2626' }">
                         {{ finishedResult.humanWon ? '1位！ かったよ！' : (finishedResult.resigned ? 'まけました…' : `${finishedResult.humanRank}位 だったよ`) }}
@@ -2290,6 +2291,12 @@ export default {
                   percent: Math.round(((counts[player.id] || 0) / max) * 100)
               }))
               .sort((a, b) => b.count - a.count)
+      },
+
+      // ■観戦モードの結果の画面に出す、勝ったチーム
+      winnerPlayer() {
+          const result = this.finishedResult
+          return result ? this.players.find(player => player.id === result.winnerId) : null
       },
 
       ownerLabel() {
