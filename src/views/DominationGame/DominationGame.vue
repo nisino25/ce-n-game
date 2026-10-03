@@ -108,9 +108,10 @@
                             <!-- ■置いたあとも、その下が何の地形だったか分かるように、すみに小さな絵文字を出す -->
                             <span v-if="tile.ownerTeam && tile.area && !tile.eatenByTileId && !(gameState === 'finished' && showTerritory)" class="tile-terrain" aria-hidden="true">{{ areaIcon(tile.area) }}</span>
 
-                            <!-- ■食べられたマスには、食べたチームの色の「×」を出す（小さい虫眼鏡の表示でも分かる） -->
-                            <svg v-if="tile.eatenByTileId && !(gameState === 'finished' && showTerritory)" class="tile-eaten" viewBox="0 0 24 24" aria-hidden="true" :style="{ stroke: eatenColor(tile) }">
-                                <path d="M5 5L19 19M19 5L5 19" />
+                            <!-- ■食べられたマスには、白い「ひび」を入れる（もとのカードの形が読める。小さい虫眼鏡の表示でも分かる） -->
+                            <svg v-if="tile.eatenByTileId && !(gameState === 'finished' && showTerritory)" class="tile-eaten" viewBox="0 0 24 24" aria-hidden="true">
+                                <path class="tile-crack-under" d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" />
+                                <path class="tile-crack" d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" />
                             </svg>
 
                             <!-- ■置いたカードの形（Lv1=三角／Lv2=四角／Lv3=丸／Lv4=★）。
@@ -120,7 +121,7 @@
                                     class="tile-shape"
                                     viewBox="0 0 24 24"
                                     aria-hidden="true"
-                                    :style="{ fill: shapeFill(tile), fillOpacity: tile.eatenByPlayerId ? 0.4 : 1 }"
+                                    :style="{ fill: shapeFill(tile), fillOpacity: tile.eatenByTileId ? 0.7 : 1 }"
                                 >
                                     <polygon v-if="tile.placedCard?.tier === 1" points="12,3 22.5,21 1.5,21" />
                                     <rect v-else-if="tile.placedCard?.tier === 2" x="3" y="3" width="18" height="18" rx="1.5" />
@@ -1506,10 +1507,10 @@ export default {
            if (tile.eatenByTileId) {
                 const eater = this.eaterTile(tile)
                 if (eater) {
-                    // ■食べられたマス：まっ黒にして、食べたチームの色のふち（上に、同じ色の「×」も出る）。ほかのマスと、ひと目で見分けがつく
-                    base.background = '#05060a'
+                    // ■食べられたマス：黒い地に、もとのカード（もとのチームの色で、うすく）と、白い「ひび」。ふちは、食べたチームの色
+                    base.background = '#0b0d12'
                     base.backgroundImage = 'none'
-                    base.boxShadow = `inset 0 0 0 3px ${this.teamColor(eater.ownerTeam)}`
+                    base.boxShadow = `inset 0 0 0 2px ${this.teamColor(eater.ownerTeam)}`
                 }
             } else if (tile.ownerTeam !== null) {
                 // ■使われた（カードが置かれた）マス：そのチームの色を、こく暗くした色にして、チームの色の太いふちをつける。
@@ -2081,16 +2082,12 @@ export default {
             return current
         },
 
-        eatenColor(tile) {
-            const eater = this.eaterTile(tile)
-            return eater ? this.teamColor(eater.ownerTeam) : '#ef4444'
-        },
-
         areaIcon(area) {
             return AREA_ICONS[area] || ''
         },
         shapeFill(tile) {
-            return tile.eatenByPlayerId ? '#666666' : this.teamColor(tile.ownerTeam)
+            // 食べられたカードも、もとのチームの色のまま（うすくして、ひびを入れる）
+            return this.teamColor(tile.ownerTeam)
         },
 
         // ■スキップ：画面の中の確認ダイアログを出す（標準の confirm は、埋め込みのブラウザなどで出ずに止まることがあるため）
@@ -2920,15 +2917,17 @@ export default {
 
   .tile-eaten{
       position: absolute;
-      inset: 8%;
-      width: 84%;
-      height: 84%;
+      inset: 11%;
+      width: 78%;
+      height: 78%;
       fill: none;
-      stroke-width: 3.2;
+      stroke-linejoin: round;
       stroke-linecap: round;
       pointer-events: none;
-      filter: drop-shadow(0 0 1.5px #000);
+      overflow: visible;
   }
+  .tile-eaten .tile-crack-under{ stroke: #000; stroke-width: 2.2; vector-effect: non-scaling-stroke; }
+  .tile-eaten .tile-crack{ stroke: #fff; stroke-width: 1; vector-effect: non-scaling-stroke; }
 
   .tile-terrain{
       position: absolute;
