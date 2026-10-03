@@ -132,6 +132,62 @@
                                         <path d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" />
                                     </template>
 
+                                    <!-- 案N：ひび（食べた色） -->
+                                    <template v-else-if="style.id === 'crackcolor'">
+                                        <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.2" :opacity="0.7" />
+                                        <path d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" fill="none" stroke="#000" stroke-width="3.6" stroke-linejoin="round" />
+                                        <path d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" fill="none" :stroke="color(cell.eaterTeam)" stroke-width="1.8" stroke-linejoin="round" />
+                                    </template>
+
+                                    <!-- 案O：ふたつに 割れる -->
+                                    <template v-else-if="style.id === 'split2'">
+                                        <clipPath :id="`l-${cell.key}`"><polygon points="0,0 13,0 10,8.5 14.5,12 9,16.5 12.5,24 0,24" /></clipPath>
+                                        <clipPath :id="`r-${cell.key}`"><polygon points="13,0 24,0 24,24 12.5,24 9,16.5 14.5,12 10,8.5" /></clipPath>
+                                        <g :clip-path="`url(#l-${cell.key})`" transform="translate(-1.2 0)">
+                                            <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.4" :opacity="0.85" />
+                                        </g>
+                                        <g :clip-path="`url(#r-${cell.key})`" transform="translate(1.2 0.8) rotate(3 12 12)">
+                                            <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.4" :opacity="0.85" />
+                                        </g>
+                                    </template>
+
+                                    <!-- 案P：ガラス われ -->
+                                    <template v-else-if="style.id === 'web'">
+                                        <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.2" :opacity="0.7" />
+                                        <path d="M12 12L3 3.5M12 12L21 2.5M12 12L22.5 14M12 12L9 22.5M12 12L1.5 15M12 12L16.5 22" fill="none" stroke="#000" stroke-width="2.8" stroke-linecap="round" />
+                                        <path d="M12 12L3 3.5M12 12L21 2.5M12 12L22.5 14M12 12L9 22.5M12 12L1.5 15M12 12L16.5 22" fill="none" stroke="#fff" stroke-width="1.1" stroke-linecap="round" />
+                                        <path d="M7.5 9.5L11 7L15 8.5L16.5 12.5L14.5 16.5L9.5 16L7 12.5Z" fill="none" stroke="#fff" stroke-width="0.9" stroke-linejoin="round" />
+                                    </template>
+
+                                    <!-- 案Q：かけた -->
+                                    <template v-else-if="style.id === 'chip'">
+                                        <mask :id="`c-${cell.key}`">
+                                            <rect width="24" height="24" fill="#fff" />
+                                            <polygon :points="chipPoints(cell)" fill="#000" />
+                                        </mask>
+                                        <g :mask="`url(#c-${cell.key})`">
+                                            <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.4" />
+                                        </g>
+                                        <polygon :points="chipPoints(cell)" fill="none" :stroke="color(cell.eaterTeam)" stroke-width="1.4" stroke-linejoin="round" />
+                                    </template>
+
+                                    <!-- 案R：くだけた -->
+                                    <template v-else-if="style.id === 'shatter'">
+                                        <template v-for="(piece, index) in shards" :key="index">
+                                            <clipPath :id="`s${index}-${cell.key}`"><polygon :points="piece.points" /></clipPath>
+                                            <g :clip-path="`url(#s${index}-${cell.key})`" :transform="`translate(${piece.dx} ${piece.dy}) rotate(${piece.rot} 12 12)`">
+                                                <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.4" :opacity="0.85" />
+                                            </g>
+                                        </template>
+                                    </template>
+
+                                    <!-- 案S：ひび＋くらく -->
+                                    <template v-else-if="style.id === 'crackdark'">
+                                        <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.2" :opacity="0.35" />
+                                        <path d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" fill="none" stroke="#000" stroke-width="3.2" stroke-linejoin="round" />
+                                        <path d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" />
+                                    </template>
+
                                     <!-- 案M：シルエット -->
                                     <template v-else-if="style.id === 'silhouette'">
                                         <TierShape :tier="cell.tier" fill="#000" :stroke="color(cell.owner)" :stroke-width="1.8" :opacity="0.9" />
@@ -191,6 +247,13 @@ export default {
     data() {
         return {
             loading: true,
+            // くだけた：4つの かけら（それぞれの 範囲と、はなれる むき）
+            shards: [
+                { points: "0,0 13,0 11,11 0,13", dx: -1.2, dy: -1.2, rot: -4 },
+                { points: "13,0 24,0 24,12 11,11", dx: 1.2, dy: -1, rot: 4 },
+                { points: "24,12 24,24 12,24 11,11", dx: 1.3, dy: 1.3, rot: -3 },
+                { points: "11,11 12,24 0,24 0,13", dx: -1.2, dy: 1.3, rot: 5 }
+            ],
             real: [],
             selectedKey: "",
             styles: [
@@ -206,7 +269,13 @@ export default {
                 { id: "gray", label: "案J", title: "モノクロ＋かど", note: "もとの カードを 灰色に して、かどに 食べた チームの 色の 三角。色が うるさくならない" },
                 { id: "split", label: "案K", title: "はんぶんこ", note: "マスを ななめに 2つに わけて、ひだりうえに「もとの カード」、みぎしたに「食べた カード」" },
                 { id: "crack", label: "案L", title: "ひび われ", note: "もとの カードに、白い ひびを 入れる。こわれた かんじが 出る" },
-                { id: "silhouette", label: "案M", title: "シルエット", note: "もとの カードを 黒い かげに して、ふちだけ もとの チームの 色。形が 読みやすい" }
+                { id: "silhouette", label: "案M", title: "シルエット", note: "もとの カードを 黒い かげに して、ふちだけ もとの チームの 色。形が 読みやすい" },
+                { id: "crackcolor", label: "案N", title: "ひび（食べた色）", note: "案Lの ひびを、白では なく、食べた チームの 色に。だれに 割られたかが 分かる" },
+                { id: "split2", label: "案O", title: "ふたつに 割れる", note: "もとの カードが、ギザギザの 線で ふたつに 割れて、すこし ずれる。形は 読めるまま" },
+                { id: "web", label: "案P", title: "ガラス われ", note: "まん中から ひびが 広がる、ガラスが われたような、くもの巣の ひび" },
+                { id: "chip", label: "案Q", title: "かけた", note: "食べられた ほうの かどが、ギザギザに 欠ける。どちらから 食べられたかも 分かる" },
+                { id: "shatter", label: "案R", title: "くだけた", note: "もとの カードが 4つの かけらに くだけて、すこしずつ はなれる" },
+                { id: "crackdark", label: "案S", title: "ひび＋くらく", note: "案Lの ひびわれを、もとの カードを くらくして、白い ひびが 目立つように" }
             ]
         };
     },
@@ -338,6 +407,13 @@ export default {
                 }
             }
             return cells;
+        },
+
+        // かけた：食べられた ほうの かどに、ギザギザの 欠け
+        chipPoints(cell) {
+            const cx = 12 + cell.dx * 11;
+            const cy = 12 + cell.dy * 11;
+            return [[-6, 0], [-2, -5], [1, -2], [5, -6], [6, 1], [2, 3], [4, 7], [-2, 5]].map(([x, y]) => `${(cx + x).toFixed(1)},${(cy + y).toFixed(1)}`).join(" ");
         },
 
         cellStyle(cell, variant) {
