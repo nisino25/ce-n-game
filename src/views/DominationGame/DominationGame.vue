@@ -832,7 +832,7 @@ export default {
           this.currentPlayer.score += points
 
           const ate = this.handleEating(tile)
-          sfx.place()
+          sfx.place(tile.area)
           if (ate.length) setTimeout(() => sfx.eat(), 160)
           this.recentMoves = [] // 自分が置いたら、AIの動きの表示は消す
 
@@ -1357,9 +1357,10 @@ export default {
 
                 if (currentTile) {
                     // ■食べられたマス：食べたチームの色に、ななめのしま模様をかさねる（ふつうの色つきのマスや、使われたマスと見分けがつくように）
-                    base.background = this.teamColor(currentTile.ownerTeam)
-                    base.backgroundImage = 'repeating-linear-gradient(45deg, rgba(0,0,0,0.3) 0 3px, transparent 3px 6px)'
+                    base.background = '#0b0d12'
+                    base.backgroundImage = `repeating-linear-gradient(45deg, ${this.teamColor(currentTile.ownerTeam)} 0 2px, transparent 2px 6px)`
                     base.backgroundSize = 'auto'
+                    base.boxShadow = `inset 0 0 0 2px ${this.teamColor(currentTile.ownerTeam)}`
                 }
             } else if (tile.ownerTeam !== null) {
                 // ■使われた（カードが置かれた）マス：そのチームの色を、こく暗くした色にして、チームの色の太いふちをつける。
@@ -2197,8 +2198,10 @@ export default {
             player.score += this.getScoreForTile(card.tier)
 
             const eatenIds = this.handleEating(tile)
-            sfx.aiPlace()
+            sfx.aiPlace(tile.area)
             if (eatenIds.length) setTimeout(() => sfx.eat(), 160)
+            // 人間がいない（AIどうし）ときは、最新の1手だけを強調する（積み上げると、ぜんぶのマスが「前の手」みたいに光ってしまう）
+            if (!this.players.some(p => !p.isAI)) this.recentMoves = []
             this.recentMoves.push({ tileId: tile.id, teamId: player.id, eatenIds })
 
             this.removeFromHand(hand, card)

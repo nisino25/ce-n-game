@@ -40,6 +40,57 @@ function tone({ freq, slideTo, type = "sine", at = 0, duration = 0.12, volume = 
     oscillator.stop(start + duration + 0.02);
 }
 
+// ノイズ（さーっ・ざぱっ、という音のもと）を1回鳴らす。filter＝フィルターの種類、freq＝その中心の高さ、slideTo＝そこまで変化
+function noise({ at = 0, duration = 0.2, volume = 0.15, filter = "lowpass", freq = 800, slideTo }) {
+    if (muted) return;
+    const ac = audio();
+    if (!ac) return;
+    const start = ac.currentTime + at;
+    const length = Math.max(1, Math.floor(ac.sampleRate * duration));
+    const buffer = ac.createBuffer(1, length, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+    const source = ac.createBufferSource();
+    source.buffer = buffer;
+    const biquad = ac.createBiquadFilter();
+    biquad.type = filter;
+    biquad.frequency.setValueAtTime(freq, start);
+    if (slideTo) biquad.frequency.exponentialRampToValueAtTime(slideTo, start + duration);
+    const gain = ac.createGain();
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    source.connect(biquad).connect(gain).connect(ac.destination);
+    source.start(start);
+    source.stop(start + duration + 0.02);
+}
+
+// ■カードを置いたときの音を、置いた場所の地形で変える（海＝ぽちゃん／川＝ぽとん／森＝さわさわ＋コッ／町＝コツッ／土＝ドスッ）
+const PLACE_SOUNDS = {
+    sea() {
+        noise({ duration: 0.28, volume: 0.16, filter: "lowpass", freq: 1400, slideTo: 300 });
+        tone({ freq: 620, slideTo: 180, type: "sine", duration: 0.22, volume: 0.2 });
+        tone({ freq: 900, slideTo: 380, type: "sine", at: 0.12, duration: 0.14, volume: 0.1 });
+    },
+    river() {
+        tone({ freq: 1100, slideTo: 520, type: "sine", duration: 0.1, volume: 0.18 });
+        tone({ freq: 880, slideTo: 460, type: "sine", at: 0.09, duration: 0.12, volume: 0.12 });
+        noise({ at: 0.02, duration: 0.14, volume: 0.07, filter: "bandpass", freq: 2200 });
+    },
+    forest() {
+        noise({ duration: 0.22, volume: 0.13, filter: "bandpass", freq: 3200, slideTo: 1800 });
+        tone({ freq: 330, slideTo: 280, type: "triangle", at: 0.04, duration: 0.1, volume: 0.17 });
+    },
+    town() {
+        tone({ freq: 1320, type: "square", duration: 0.04, volume: 0.1 });
+        tone({ freq: 880, type: "triangle", at: 0.03, duration: 0.12, volume: 0.17 });
+    },
+    dirt() {
+        tone({ freq: 150, slideTo: 60, type: "sine", duration: 0.16, volume: 0.28 });
+        noise({ duration: 0.12, volume: 0.1, filter: "lowpass", freq: 500 });
+    }
+};
+
 export const sfx = {
     // 最初のタップで呼ぶ（スマホで音を出せる状態にする）
     unlock() {
@@ -64,10 +115,16 @@ export const sfx = {
         tone({ freq: 660, slideTo: 880, type: "sine", duration: 0.07, volume: 0.14 });
     },
 
-    // 自分がカードを置いたとき：ポン、ピン（上がる2音）
-    place() {
-        tone({ freq: 523, type: "triangle", duration: 0.12, volume: 0.2 });
-        tone({ freq: 784, type: "triangle", at: 0.09, duration: 0.18, volume: 0.2 });
+    // 自分がカードを置いたとき：置いた場所の地形の音 ＋ ピン（置けたよ、の合図）
+    place(area) {
+        const terrain = PLACE_SOUNDS[area];
+        if (!terrain) {
+            tone({ freq: 523, type: "triangle", duration: 0.12, volume: 0.2 });
+            tone({ freq: 784, type: "triangle", at: 0.09, duration: 0.18, volume: 0.2 });
+            return;
+        }
+        terrain();
+        tone({ freq: 988, type: "sine", at: 0.16, duration: 0.14, volume: 0.1 });
     },
 
     // 食べたとき：がぶっ（下がる音を2回）
@@ -77,8 +134,13 @@ export const sfx = {
     },
 
     // AIがカードを置いたとき：ぽこっ（やわらかい音）
-    aiPlace() {
-        tone({ freq: 392, slideTo: 330, type: "sine", duration: 0.14, volume: 0.13 });
+    aiPlace(area) {
+        const terrain = PLACE_SOUNDS[area];
+        if (!terrain) {
+            tone({ freq: 392, slideTo: 330, type: "sine", duration: 0.14, volume: 0.13 });
+            return;
+        }
+        terrain();
     },
 
     // 自分の番になったとき：ピンポン
