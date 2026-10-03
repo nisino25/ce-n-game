@@ -154,6 +154,12 @@
             </button>
             <button
                 class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                @click="$router.push({ name: 'EatenCompare' })"
+            >
+                食べられ方くらべ（仮）
+            </button>
+            <button
+                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
                 @click="$router.push({ name: 'CreatureScan' })"
             >
                 生き物スキャン（仮）

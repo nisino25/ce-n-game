@@ -32,6 +32,7 @@ import CommentsAdmin from "@/views/Admin/CommentsAdmin.vue";
 import HabitatCompare from "@/views/HabitatCompare/HabitatCompare.vue";
 import ResultCompare from "@/views/DominationGame/ResultCompare.vue";
 import SoundTest from "@/views/DominationGame/SoundTest.vue";
+import EatenCompare from "@/views/DominationGame/EatenCompare.vue";
 import DeviceStats from "@/views/Admin/DeviceStats.vue";
 import CardAdminOld from "@/views/Admin/CardAdminOld.vue";
 
@@ -171,6 +172,13 @@ const routes = [
         path: "/result-compare",
         name: "ResultCompare",
         component: ResultCompare
+    },
+
+    // ■試作：食べられたカードの見せ方くらべ（開発用）
+    {
+        path: "/eaten-compare",
+        name: "EatenCompare",
+        component: EatenCompare
     },
 
     // ■試作：効果音の聞きくらべ（フリー素材から、場面ごとにえらぶ。開発用）
