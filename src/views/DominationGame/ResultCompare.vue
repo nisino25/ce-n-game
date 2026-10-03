@@ -35,10 +35,11 @@
                 <div class="rc-card-head">
                     <span class="rc-kind" :class="selected.sample ? 'rc-kind-sample' : 'rc-kind-play'">{{ selected.sample ? '見本' : 'プレイ' }}</span>
                     <p class="rc-card-title">{{ selected.title }}</p>
-                    <button v-if="selected.gameLink" class="rc-open" @click="openGame(selected)">🎮 ゲームの画面で 見る</button>
+                    <button v-if="selected.gameLink" class="rc-open" @click="openGame(selected)">🎮 そのゲームを 見る</button>
                 </div>
                 <p v-if="selected.note" class="rc-card-note">{{ selected.note }}</p>
-                <p v-if="selected.gameLink" class="rc-card-note">ゲームの画面では、盤面・「ふりかえる」も 見られるよ（その 枠の いちばん あたらしい ゲームが ひらくよ）</p>
+                <p v-if="selected.gameLink" class="rc-card-note">この けっかの ゲームそのものが ひらくよ（盤面・「ふりかえる」も 見られるよ）</p>
+                <p v-else-if="!selected.sample" class="rc-card-note">この けっかは、ゲームの きろくが ないので、ゲームの 画面は ひらけないよ（あたらしい けっかから ひらけるよ）</p>
 
                 <div class="rc-selected-body">
                     <div class="rc-winner" :style="{ '--c': selected.winner.color }">
@@ -80,7 +81,6 @@ import db from "@/firebase.js";
 import { TEAM_COLORS } from "@/utils/dominationSlots.js";
 import GameResultSummary from "./GameResultSummary.vue";
 import ResultVariants from "./ResultVariants.vue";
-import mapSpotsSeed from "./mapSpots.json";
 
 const TIER_POINTS = { 1: 1, 2: 3, 3: 5, 4: 10 };
 const PLAYERS = [
@@ -188,7 +188,9 @@ export default {
                     tierTeam: data.tierTeam || {},
                     selfId: data.humanPlayerId || null,
                     roomCode: data.roomCode || "",
-                    gameLink: /^aitest-\d+-\d$/.test(data.roomCode || "")
+                    resultId: doc.id,
+                    // そのゲームそのものを開けるのは、置いた手の記録がある結果だけ
+                    gameLink: Array.isArray(data.moves) && data.moves.length > 0 && !!data.slot
                 };
             });
         } catch (e) {
@@ -207,23 +209,10 @@ export default {
             if (el) this.miniRefs[key] = el;
         },
 
-        // ■結果のゲームの画面へ（AIテストの枠の、いちばん新しいゲームを、観戦モードで開く）
+        // ■結果のゲームそのものの画面へ（記録した手から、盤面をつくって、見るだけで開く）
         openGame(game) {
-            const match = /^(aitest-\d+)-(\d)$/.exec(game.roomCode || "");
-            if (!match) return;
-            const spot = mapSpotsSeed.spots.find(item => item.id === match[1]);
-            if (!spot) return;
-            localStorage.setItem("dominationRoomCode", game.roomCode);
-            localStorage.setItem("dominationPlace", JSON.stringify({
-                city: spot.city,
-                cityName: mapSpotsSeed.cities[spot.city].name,
-                spotId: spot.id,
-                spotName: spot.name,
-                habitat: spot.habitat,
-                gameNo: Number(match[2]),
-                test: true
-            }));
-            localStorage.setItem("dominationSpectate", "1");
+            if (!game.gameLink) return;
+            localStorage.setItem("dominationViewResult", game.resultId);
             this.$router.push("/dominationGame");
         },
 

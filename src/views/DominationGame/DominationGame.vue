@@ -5,7 +5,7 @@
             <!-- ■観戦モード：見るだけ。自分が観戦中だと、はっきり分かるように、ずっと出しておく -->
             <div v-if="spectator" class="spectator-banner">
                 <span class="spectator-badge">👀 観戦モード</span>
-                <span class="spectator-text">{{ ownerLabel }}の ゲームを 見ているよ（見るだけ。さわれないよ）</span>
+                <span class="spectator-text">{{ resultView ? 'けっか くらべの ゲームを 見ているよ（見るだけ。さわれないよ）' : ownerLabel + 'の ゲームを 見ているよ（見るだけ。さわれないよ）' }}</span>
                 <button class="spectator-back" @click="backFromGame()">もどる</button>
             </div>
 
@@ -111,10 +111,12 @@
                             <!-- ■置いたあとも、その下が何の地形だったか分かるように、すみに小さな絵文字を出す -->
                             <span v-if="tile.ownerTeam && tile.area && !tile.eatenByTileId && !(gameState === 'finished' && showTerritory)" class="tile-terrain" aria-hidden="true">{{ areaIcon(tile.area) }}</span>
 
-                            <!-- ■食べられたマスには、白い「ひび」を入れる（もとのカードの形が読める。小さい虫眼鏡の表示でも分かる） -->
+                            <!-- ■食べられたマスには、赤い「とまれ」（赤い丸＋斜線）を出す（もう使えない、が一目で分かる。小さい虫眼鏡の表示でも分かる） -->
                             <svg v-if="tile.eatenByTileId && !(gameState === 'finished' && showTerritory)" class="tile-eaten" viewBox="0 0 24 24" aria-hidden="true">
-                                <path class="tile-crack-under" d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" />
-                                <path class="tile-crack" d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" />
+                                <circle class="tile-stop-under" cx="12" cy="12" r="10" />
+                                <path class="tile-stop-under" d="M5 19L19 5" />
+                                <circle class="tile-stop" cx="12" cy="12" r="10" />
+                                <path class="tile-stop" d="M5 19L19 5" />
                             </svg>
 
                             <!-- ■置いたカードの形（Lv1=三角／Lv2=四角／Lv3=丸／Lv4=★）。
@@ -124,7 +126,7 @@
                                     class="tile-shape"
                                     viewBox="0 0 24 24"
                                     aria-hidden="true"
-                                    :style="{ fill: shapeFill(tile), fillOpacity: tile.eatenByTileId ? 0.95 : 1 }"
+                                    :style="{ fill: shapeFill(tile), fillOpacity: tile.eatenByTileId ? 0.55 : 1 }"
                                 >
                                     <polygon v-if="tile.placedCard?.tier === 1" points="12,3 22.5,21 1.5,21" />
                                     <rect v-else-if="tile.placedCard?.tier === 2" x="3" y="3" width="18" height="18" rx="1.5" />
@@ -297,7 +299,7 @@
             <div v-if="gameState === 'finished' && !showTerritory && !replay" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
                 <div class="bg-white p-5 rounded-2xl shadow-xl text-center max-w-sm w-full max-h-[92vh] overflow-y-auto">
                     <h2 class="text-2xl font-bold mb-1">ゲーム終了！</h2>
-                    <p v-if="spectator" class="mb-1 inline-block rounded-full bg-violet-100 px-4 py-1 text-sm font-black text-violet-700">👀 観戦：{{ ownerLabel }}の ゲーム</p>
+                    <p v-if="spectator" class="mb-1 inline-block rounded-full bg-violet-100 px-4 py-1 text-sm font-black text-violet-700">👀 {{ resultView ? 'けっかの ゲーム' : '観戦：' + ownerLabel + 'の ゲーム' }}</p>
                     <p v-if="spectator && winnerPlayer" class="mb-2 text-lg font-black" :style="{ color: winnerPlayer.color }">🏆 {{ winnerPlayer.name }}の かち！</p>
                     <template v-if="!spectator">
                     <p v-if="finishedResult" class="mb-1 text-lg font-black" :style="{ color: finishedResult.humanWon ? '#059669' : '#dc2626' }">
@@ -706,6 +708,7 @@ export default {
         slotOwner: null, // 地図のゲーム枠を遊んでいる人 { uid, name, team }
         resigned: false, // 「まけました」で終わったか
         moveLog: [], // 置いた手の記録（ふりかえり用）：{ t:マスID, p:チームID, tier, l:カード名, e:食べたマスID[] }
+        resultView: false, // 「けっか くらべ」から開いた、結果のゲームそのもの（見るだけ）
         replay: null, // ふりかえり中の状態
         replayIntervals: [0.02, 0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5], // 1手ごとの間（秒）の えらびかた
         spectator: false, // 観戦モード（ほかの人の・おわったゲームを、見るだけ）
@@ -801,6 +804,10 @@ export default {
     methods: {
         // ■地図の場所から始めたゲームは、「ホーム」ではなく、その街（平塚市など）の六角形の画面にもどる
         backFromGame() {
+            if (this.resultView) {
+                this.$router.push({ name: 'ResultCompare' })
+                return
+            }
             const place = this.loadPlace()
             if (place && place.city) {
                 this.$router.push({ name: 'DominationMap', query: { city: place.city } })
@@ -810,6 +817,7 @@ export default {
         },
 
         backLabelText() {
+            if (this.resultView) return '📊 けっか くらべに もどる'
             const place = this.loadPlace()
             return place && place.cityName ? `📍 ${place.cityName}にもどる` : '🏠 ホームにもどる'
         },
@@ -1119,6 +1127,56 @@ export default {
             if (this.isSlotGame()) this.saveSlotStatus()
         },
 
+        // ■結果のゲームそのものを開く（見るだけ）。記録した手（moves）と、場所・ゲーム番号から、盤面をつくって、ぜんぶの手を重ねる
+        async startResultView(resultId) {
+            let data = null
+            try {
+                const doc = await db.collection('gameResults').doc(resultId).get()
+                data = doc.exists ? doc.data() : null
+            } catch (e) {
+                console.error('けっかの読み込みに失敗しました', e)
+            }
+            if (!data || !Array.isArray(data.moves) || !data.moves.length || !data.slot || !data.slot.habitat) {
+                this.$router.replace({ name: 'ResultCompare' })
+                return
+            }
+            this.resultView = true
+            this.spectator = true
+            this.savedPlace = { city: 'aitest', cityName: data.slot.cityName || 'AIテスト', spotId: data.slot.spotId, spotName: data.slot.spotName, habitat: data.slot.habitat, gameNo: data.slot.gameNo, test: true }
+            try { localStorage.setItem('dominationPlace', JSON.stringify(this.savedPlace)) } catch (e) { /* 保存できなくても、このあいだは有効 */ }
+            this.slotOwner = { uid: '', name: 'AIテスト', team: TEAM_NAME_BY_ID[data.humanPlayerId] || 'air' }
+
+            const seed = this.spotSeed(data.slot.spotId, data.slot.gameNo || 1)
+            const tiles = generateSpotBoard(data.slot.habitat, { rows: this.rows, cols: this.cols, seed })
+                .map(tile => ({ ...tile, type: 'none', selected: false, ownerTeam: null }))
+            const byId = new Map(tiles.map(tile => [tile.id, tile]))
+            data.moves.forEach(move => {
+                const tile = byId.get(move.t)
+                if (!tile) return
+                tile.ownerTeam = move.p
+                tile.placedCard = { tier: move.tier, label: move.l }
+                ;(move.e || []).forEach(id => {
+                    const eaten = byId.get(id)
+                    if (eaten) {
+                        eaten.eatenByTileId = move.t
+                        eaten.eatenByPlayerId = move.p
+                    }
+                })
+            })
+            this.tiles = tiles
+            this.moveLog = data.moves
+            this.humanPlayerId = data.humanPlayerId || this.humanPlayerId
+            this.players.forEach(player => {
+                const saved = (data.players || []).find(item => item.id === player.id)
+                player.score = saved ? saved.score : 0
+                player.isAI = player.id !== this.humanPlayerId
+            })
+            this.resigned = !!data.resigned
+            this.currentPlayerId = null
+            this.gameState = 'finished'
+            this.hands = {}
+        },
+
         // ■観戦モード：保存されているゲームを読んで、見るだけにする。進行中のゲームは、動きに合わせて更新する
         async startSpectating() {
             const [library, found] = await Promise.all([
@@ -1282,7 +1340,13 @@ export default {
                     humanRank: result.humanRank,
                     resigned: !!result.resigned,
                     players: this.players.map(p => ({ id: p.id, name: p.name, color: p.color, score: p.score, isAI: p.isAI })),
-                    tierTeam: JSON.parse(JSON.stringify(this.tierTeam))
+                    tierTeam: JSON.parse(JSON.stringify(this.tierTeam)),
+                    // ■そのゲームそのものを、あとから開けるように：置いた手と、盤面のもと（場所・ゲーム番号）
+                    moves: this.moveLog,
+                    slot: (() => {
+                        const place = this.loadPlace()
+                        return place && place.spotId ? { spotId: place.spotId, spotName: place.spotName || '', habitat: place.habitat || '', gameNo: place.gameNo || 1, cityName: place.cityName || '' } : null
+                    })()
                 })
             } catch (e) {
                 console.error('ゲームの記録を保存できませんでした', e)
@@ -1434,6 +1498,14 @@ export default {
             this.selectedCard = null
             this.tilePreviewCard = null
 
+            // ■「けっか くらべ」から、その結果の ゲームそのものを 開く（記録した手から、盤面を作りなおす）
+            const viewResult = localStorage.getItem('dominationViewResult')
+            localStorage.removeItem('dominationViewResult')
+            if (viewResult) {
+                await this.startResultView(viewResult)
+                return
+            }
+
             const slot = this.isSlotGame()
             const team = TEAM_NAME_BY_ID[this.humanPlayerId]
 
@@ -1532,8 +1604,9 @@ export default {
            if (tile.eatenByTileId) {
                 const eater = this.eaterTile(tile)
                 if (eater) {
-                    // ■食べられたマス：黒い地に、もとのカード（もとのチームの色で、うすく）と、白い「ひび」。ふちは、食べたチームの色
-                    base.background = `color-mix(in srgb, ${this.teamColor(tile.ownerTeam)} 30%, #0a0f1c)`
+                    // ■食べられたマス：まっ黒な地に、もとのカード（うすく）と、赤い「とまれ」（赤い丸＋斜線）。ふちは、食べたチームの色。
+                    //   生きているカード（明るい色・太いふち）と、ひと目で見分けがつく
+                    base.background = '#07090f'
                     base.backgroundImage = 'none'
                     base.boxShadow = `inset 0 0 0 2px ${this.teamColor(eater.ownerTeam)}`
                 }
@@ -3078,8 +3151,8 @@ export default {
       pointer-events: none;
       overflow: visible;
   }
-  .tile-eaten .tile-crack-under{ stroke: #000; stroke-width: 1.6; vector-effect: non-scaling-stroke; }
-  .tile-eaten .tile-crack{ stroke: #fff; stroke-width: 0.9; vector-effect: non-scaling-stroke; }
+  .tile-eaten .tile-stop-under{ stroke: #000; stroke-width: 3.6; vector-effect: non-scaling-stroke; }
+  .tile-eaten .tile-stop{ stroke: #ef4444; stroke-width: 2; vector-effect: non-scaling-stroke; }
 
   .tile-terrain{
       position: absolute;
