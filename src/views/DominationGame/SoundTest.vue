@@ -7,7 +7,7 @@
         </header>
 
         <p class="st-lead">
-            場面ごとに、「いまの音」「作った音（シンセ）」と、素材（100こ）から えらんだ音を、聞きくらべられるよ。
+            場面ごとに、「いまの音」「作った音（シンセ）」と、素材（23こ）から えらんだ音を、聞きくらべられるよ。
             えらぶと、この端末の ゲームで すぐ その音に なるよ（「なし」にすると、作った音に もどる）。
         </p>
 
@@ -36,11 +36,15 @@
         <section class="st-box">
             <p class="st-box-title">いまの えらびかた（Claude に そのまま はりつけて つたえられる）</p>
             <pre class="st-pre">{{ summary }}</pre>
-            <button class="st-play st-play-soft" @click="resetAll">ぜんぶ 作った音に もどす</button>
+            <div class="st-slot-buttons">
+                <button class="st-play" @click="useRecommended">おすすめを ためす</button>
+                <button class="st-play st-play-soft" @click="resetAll">ぜんぶ 作った音に もどす</button>
+            </div>
+            <p class="st-credit">素材：Nature Sounds Pack / Antoinemax（CC-BY 4.0）</p>
         </section>
 
         <section class="st-box">
-            <p class="st-box-title">素材 100こ（タップで 聞く）</p>
+            <p class="st-box-title">素材 23こ（タップで 聞く）</p>
             <div v-for="group in groups" :key="group.name" class="st-group">
                 <p class="st-group-title">{{ group.label }}</p>
                 <div class="st-chips">
@@ -55,28 +59,24 @@
 import { sfx } from "@/utils/sfx.js";
 
 const GROUP_LABELS = {
-    air: "かぜ・空気",
-    door: "ドア",
-    footstep: "足音（地面）",
-    footstep_wet: "足音（ぬれた地面）",
-    footstep_wood: "足音（木）",
-    glass: "ガラス",
-    hit: "たたく",
-    items: "どうぐ",
-    lock: "かぎ",
-    loop_ambient: "かんきょう音（ループ）",
-    loop_construction: "工事（ループ）",
-    loop_highway: "道路（ループ）",
-    loop_machine: "きかい（ループ）",
-    loop_water: "水（ループ）",
-    metal: "金属",
-    metal_hit: "金属をたたく",
-    misc: "そのほか",
-    stones: "石",
-    switch: "スイッチ",
-    thunder: "かみなり",
-    wood: "木",
-    wood_hit: "木をたたく"
+    foliage: "葉ずれ",
+    grass_step: "草の足音",
+    stream: "小川（水の音）",
+    stream_birds: "小川と鳥",
+    ambient: "かんきょう音（鳥・雨・風など）"
+};
+
+// ■おすすめの組み合わせ（聞かずに決めた、たたき台。「おすすめを ためす」で入れて、聞きながら、かえる）
+const RECOMMENDED = {
+    select: "grass_step_02",
+    place_sea: "stream_01",
+    place_river: "stream_01",
+    place_forest: "foliage_01",
+    place_town: "grass_step_05",
+    place_dirt: "grass_step_03",
+    eat: "foliage_06",
+    skip: "foliage_04",
+    error: "grass_step_01"
 };
 
 export default {
@@ -162,6 +162,11 @@ export default {
             this.chosen = sfx.getSlots();
         },
 
+        useRecommended() {
+            Object.entries(RECOMMENDED).forEach(([slot, file]) => sfx.setSlot(slot, file, 1));
+            this.chosen = sfx.getSlots();
+        },
+
         resetAll() {
             this.slotList.forEach(slot => sfx.setSlot(slot.id, ""));
             this.chosen = sfx.getSlots();
@@ -223,6 +228,7 @@ export default {
 .st-box{ max-width: 960px; margin: 14px auto 0; padding: 14px 16px; border: 1px solid rgba(255,255,255,.12); border-radius: 16px; background: rgba(255,255,255,.04); }
 .st-box-title{ margin: 0 0 8px; font-size: 13px; font-weight: 900; color: #a5f3fc; }
 .st-pre{ margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: #0b1220; font-size: 11px; line-height: 1.7; color: #cbd5e1; white-space: pre-wrap; user-select: all; }
+.st-credit{ margin: 8px 0 0; font-size: 10px; font-weight: 700; color: #64748b; }
 .st-group{ margin-bottom: 10px; }
 .st-group-title{ margin: 0 0 4px; font-size: 11px; font-weight: 900; color: #94a3b8; }
 .st-chips{ display: flex; flex-wrap: wrap; gap: 5px; }

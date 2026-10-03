@@ -89,6 +89,7 @@ const ORDER = [
     "deploy-log.md",
     "image-storage.md",
     "currency.md",
+    "credits.md",
     "TODO.md",
     "data-access.md",
     "device-stats.md",
@@ -111,6 +112,7 @@ const SHARED = ["image-storage.md"];
 const NAV = {
     "deploy-log.md": ["📜", "反映の履歴"],
     "image-storage.md": ["💰", "画像の保存先と料金"],
+    "credits.md": ["🙏", "クレジット（素材）"],
     "currency.md": ["🪙", "テラ（ポイント）"],
     "TODO.md": ["✅", "やること"],
     "data-access.md": ["🗄️", "データの取得・更新"],

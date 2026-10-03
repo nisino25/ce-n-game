@@ -1,8 +1,10 @@
 効果音の素材 / Sound effect materials
 
-出典 / Source : "100 CC0 SFX #2" by rubberduck
-URL          : https://opengameart.org/content/100-cc0-sfx-2
-ライセンス / License : CC0 1.0 (Public Domain) - クレジット表示は不要 / attribution not required
+"Nature Sounds Pack" by Antoinemax
+URL      : https://opengameart.org/content/nature-sounds-pack
+License  : CC-BY 4.0  https://creativecommons.org/licenses/by/4.0/
+           作者のクレジットを表示すれば、商用でも自由に使える / free to use, commercially too, with attribution to the author
+変更点 / Changes : 音量をそろえ、6秒までに切って、モノラルのmp3にした（converted to short mono mp3, volume normalized）
 
-public/sounds/pack/ に、100こ全部を、音量をそろえて（-22 LUFS）、5秒までに切って、mp3 にして入れている。
+public/sounds/pack/ に、23こ全部を入れている（葉ずれ・草の足音・小川・鳥・雨など）。
 どの場面に どの音を使うかは、「音くらべ」の画面（/sound-test）で決める（決めたものは、その端末の localStorage の sfxSlots）。
