@@ -179,7 +179,7 @@ export default {
 
     async mounted() {
         try {
-            const snap = await db.collection("gameResults").orderBy("createdAt", "desc").limit(12).get();
+            const snap = await db.collection("gameResults").orderBy("createdAt", "desc").limit(60).get();
             this.played = snap.docs.map(doc => {
                 const data = doc.data();
                 const time = data.createdAt ? new Date(data.createdAt) : null;

@@ -108,6 +108,11 @@
                             <!-- ■置いたあとも、その下が何の地形だったか分かるように、すみに小さな絵文字を出す -->
                             <span v-if="tile.ownerTeam && tile.area && !tile.eatenByTileId && !(gameState === 'finished' && showTerritory)" class="tile-terrain" aria-hidden="true">{{ areaIcon(tile.area) }}</span>
 
+                            <!-- ■食べられたマスには、食べたチームの色の「×」を出す（小さい虫眼鏡の表示でも分かる） -->
+                            <svg v-if="tile.eatenByTileId && !(gameState === 'finished' && showTerritory)" class="tile-eaten" viewBox="0 0 24 24" aria-hidden="true" :style="{ stroke: eatenColor(tile) }">
+                                <path d="M5 5L19 19M19 5L5 19" />
+                            </svg>
+
                             <!-- ■置いたカードの形（Lv1=三角／Lv2=四角／Lv3=丸／Lv4=★）。
                                  SVGで作って、マスの大きさ（虫眼鏡・スマホ・PC）に合わせて拡大・縮小し、黒縁はどの大きさでも同じ太さで付ける -->
                             <div v-if="tile.ownerTeam && !(gameState === 'finished' && showTerritory)" class="flex justify-center items-center w-full h-full">
@@ -115,7 +120,7 @@
                                     class="tile-shape"
                                     viewBox="0 0 24 24"
                                     aria-hidden="true"
-                                    :style="{ fill: shapeFill(tile), fillOpacity: tile.eatenByPlayerId ? 0.55 : 1 }"
+                                    :style="{ fill: shapeFill(tile), fillOpacity: tile.eatenByPlayerId ? 0.4 : 1 }"
                                 >
                                     <polygon v-if="tile.placedCard?.tier === 1" points="12,3 22.5,21 1.5,21" />
                                     <rect v-else-if="tile.placedCard?.tier === 2" x="3" y="3" width="18" height="18" rx="1.5" />
@@ -1499,29 +1504,12 @@ export default {
             }
 
            if (tile.eatenByTileId) {
-                let currentTile = this.tiles.find(t => t.id === tile.eatenByTileId)
-
-                // keep going up the chain until we find
-                // a tile that has NOT been eaten
-                while (currentTile && currentTile.eatenByTileId) {
-                    const nextTile = this.tiles.find(
-                        t => t.id === currentTile.eatenByTileId
-                    )
-
-                    // safety break in case of broken reference
-                    if (!nextTile) {
-                        break
-                    }
-
-                    currentTile = nextTile
-                }
-
-                if (currentTile) {
-                    // ■食べられたマス：食べたチームの色に、ななめのしま模様をかさねる（ふつうの色つきのマスや、使われたマスと見分けがつくように）
-                    base.background = '#0b0d12'
-                    base.backgroundImage = `repeating-linear-gradient(45deg, ${this.teamColor(currentTile.ownerTeam)} 0 2px, transparent 2px 6px)`
-                    base.backgroundSize = 'auto'
-                    base.boxShadow = `inset 0 0 0 2px ${this.teamColor(currentTile.ownerTeam)}`
+                const eater = this.eaterTile(tile)
+                if (eater) {
+                    // ■食べられたマス：まっ黒にして、食べたチームの色のふち（上に、同じ色の「×」も出る）。ほかのマスと、ひと目で見分けがつく
+                    base.background = '#05060a'
+                    base.backgroundImage = 'none'
+                    base.boxShadow = `inset 0 0 0 3px ${this.teamColor(eater.ownerTeam)}`
                 }
             } else if (tile.ownerTeam !== null) {
                 // ■使われた（カードが置かれた）マス：そのチームの色を、こく暗くした色にして、チームの色の太いふちをつける。
@@ -2082,6 +2070,22 @@ export default {
         },
 
         // ■置いたカードの形の色：自分のチームの色。食べられたカードは、うすい灰色
+        // ■食べられたマスを食べたタイル（食べたタイルがさらに食べられていたら、その上をたどる）
+        eaterTile(tile) {
+            let current = this.tiles.find(t => t.id === tile.eatenByTileId)
+            while (current && current.eatenByTileId) {
+                const next = this.tiles.find(t => t.id === current.eatenByTileId)
+                if (!next) break
+                current = next
+            }
+            return current
+        },
+
+        eatenColor(tile) {
+            const eater = this.eaterTile(tile)
+            return eater ? this.teamColor(eater.ownerTeam) : '#ef4444'
+        },
+
         areaIcon(area) {
             return AREA_ICONS[area] || ''
         },
@@ -2913,6 +2917,18 @@ export default {
       white-space: nowrap;
   }
   .test-card-button:active{ transform: scale(0.95); }
+
+  .tile-eaten{
+      position: absolute;
+      inset: 8%;
+      width: 84%;
+      height: 84%;
+      fill: none;
+      stroke-width: 3.2;
+      stroke-linecap: round;
+      pointer-events: none;
+      filter: drop-shadow(0 0 1.5px #000);
+  }
 
   .tile-terrain{
       position: absolute;
