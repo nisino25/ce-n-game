@@ -13,6 +13,14 @@
         42.9849,
         144.3814
       ]
+    },
+    "aitest": {
+      "name": "AIテスト",
+      "center": [
+        37.5,
+        134.5
+      ],
+      "test": true
     }
   },
   "spots": [
@@ -373,6 +381,186 @@
       "icon": "🌫",
       "habitat": "sea",
       "order": 15,
+      "row": 4,
+      "col": 3
+    },
+    {
+      "id": "aitest-01",
+      "city": "aitest",
+      "name": "うみテスト1",
+      "icon": "🌊",
+      "habitat": "sea",
+      "order": 100,
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "aitest-02",
+      "city": "aitest",
+      "name": "もりテスト2",
+      "icon": "🌲",
+      "habitat": "forest",
+      "order": 101,
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "aitest-03",
+      "city": "aitest",
+      "name": "まちテスト3",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 102,
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "aitest-04",
+      "city": "aitest",
+      "name": "かわテスト4",
+      "icon": "🏞",
+      "habitat": "river",
+      "order": 103,
+      "row": 0,
+      "col": 3
+    },
+    {
+      "id": "aitest-05",
+      "city": "aitest",
+      "name": "つちテスト5",
+      "icon": "🟫",
+      "habitat": "dirt",
+      "order": 104,
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "aitest-06",
+      "city": "aitest",
+      "name": "うみテスト6",
+      "icon": "🌊",
+      "habitat": "sea",
+      "order": 105,
+      "row": 1,
+      "col": 1
+    },
+    {
+      "id": "aitest-07",
+      "city": "aitest",
+      "name": "もりテスト7",
+      "icon": "🌲",
+      "habitat": "forest",
+      "order": 106,
+      "row": 1,
+      "col": 2
+    },
+    {
+      "id": "aitest-08",
+      "city": "aitest",
+      "name": "まちテスト8",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 107,
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "aitest-09",
+      "city": "aitest",
+      "name": "かわテスト9",
+      "icon": "🏞",
+      "habitat": "river",
+      "order": 108,
+      "row": 2,
+      "col": 1
+    },
+    {
+      "id": "aitest-10",
+      "city": "aitest",
+      "name": "つちテスト10",
+      "icon": "🟫",
+      "habitat": "dirt",
+      "order": 109,
+      "row": 2,
+      "col": 2
+    },
+    {
+      "id": "aitest-11",
+      "city": "aitest",
+      "name": "うみテスト11",
+      "icon": "🌊",
+      "habitat": "sea",
+      "order": 110,
+      "row": 2,
+      "col": 3
+    },
+    {
+      "id": "aitest-12",
+      "city": "aitest",
+      "name": "もりテスト12",
+      "icon": "🌲",
+      "habitat": "forest",
+      "order": 111,
+      "row": 3,
+      "col": 0
+    },
+    {
+      "id": "aitest-13",
+      "city": "aitest",
+      "name": "まちテスト13",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 112,
+      "row": 3,
+      "col": 1
+    },
+    {
+      "id": "aitest-14",
+      "city": "aitest",
+      "name": "かわテスト14",
+      "icon": "🏞",
+      "habitat": "river",
+      "order": 113,
+      "row": 3,
+      "col": 2
+    },
+    {
+      "id": "aitest-15",
+      "city": "aitest",
+      "name": "つちテスト15",
+      "icon": "🟫",
+      "habitat": "dirt",
+      "order": 114,
+      "row": 4,
+      "col": 0
+    },
+    {
+      "id": "aitest-16",
+      "city": "aitest",
+      "name": "うみテスト16",
+      "icon": "🌊",
+      "habitat": "sea",
+      "order": 115,
+      "row": 4,
+      "col": 1
+    },
+    {
+      "id": "aitest-17",
+      "city": "aitest",
+      "name": "もりテスト17",
+      "icon": "🌲",
+      "habitat": "forest",
+      "order": 116,
+      "row": 4,
+      "col": 2
+    },
+    {
+      "id": "aitest-18",
+      "city": "aitest",
+      "name": "まちテスト18",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 117,
       "row": 4,
       "col": 3
     }

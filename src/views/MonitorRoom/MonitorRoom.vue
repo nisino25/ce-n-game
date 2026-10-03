@@ -142,6 +142,12 @@
             </button>
             <button
                 class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                @click="$router.push({ name: 'ResultCompare' })"
+            >
+                けっか くらべ（仮）
+            </button>
+            <button
+                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
                 @click="$router.push({ name: 'CreatureScan' })"
             >
                 生き物スキャン（仮）
@@ -468,13 +474,13 @@ export default {
                     floorGrid: "rgba(45,212,191,0.22)"
                 },
                 air: {
-                    accent: "#a3e635",
-                    bgGlow: "#2a3d17",
-                    bgDark: "#070d04",
-                    titleGlow: "#a3e635",
-                    floorTop: "#3a5224",
-                    floorBottom: "#0a1204",
-                    floorGrid: "rgba(163,230,53,0.22)"
+                    accent: "#22c55e",
+                    bgGlow: "#17382a",
+                    bgDark: "#040d08",
+                    titleGlow: "#4ade80",
+                    floorTop: "#1f5236",
+                    floorBottom: "#04120a",
+                    floorGrid: "rgba(34,197,94,0.24)"
                 },
                 earth: {
                     accent: "#fb923c",

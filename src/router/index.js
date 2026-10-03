@@ -30,6 +30,7 @@ import DocsView from "@/views/Docs/DocsView.vue";
 import NoticeBoard from "@/views/NoticeBoard/NoticeBoard.vue";
 import CommentsAdmin from "@/views/Admin/CommentsAdmin.vue";
 import HabitatCompare from "@/views/HabitatCompare/HabitatCompare.vue";
+import ResultCompare from "@/views/DominationGame/ResultCompare.vue";
 import DeviceStats from "@/views/Admin/DeviceStats.vue";
 import CardAdminOld from "@/views/Admin/CardAdminOld.vue";
 
@@ -162,6 +163,13 @@ const routes = [
         path: "/habitat-compare",
         name: "HabitatCompare",
         component: HabitatCompare
+    },
+
+    // ■試作：ゲーム終了時の画面（じんち・生態系ピラミッド）を、いくつものゲームで見くらべる（開発用）
+    {
+        path: "/result-compare",
+        name: "ResultCompare",
+        component: ResultCompare
     },
 
     // ■ドキュメント一覧（docs/ のmdを表示。モニタールームの仮リンクから）

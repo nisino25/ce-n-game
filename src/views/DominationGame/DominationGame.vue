@@ -1,6 +1,13 @@
 <template>
     <template v-if="dominationMode == 'standard'">
-        <div class="domination-app app-shell bg-slate-100">
+        <div class="domination-app app-shell bg-slate-100" :class="{ spectating: spectator }">
+
+            <!-- ■観戦モード：見るだけ。自分が観戦中だと、はっきり分かるように、ずっと出しておく -->
+            <div v-if="spectator" class="spectator-banner">
+                <span class="spectator-badge">👀 観戦モード</span>
+                <span class="spectator-text">{{ ownerLabel }}の ゲームを 見ているよ（見るだけ。さわれないよ）</span>
+                <button class="spectator-back" @click="backFromGame()">もどる</button>
+            </div>
 
             <!-- Header: title + scoreboard -->
             <header class="app-header bg-white">
@@ -22,7 +29,6 @@
 
                         <!-- ■ヘッダーの右はし：？（説明をモーダルで）／🔍（盤面ぜんたい、スマホのみ） -->
                         <div class="ml-auto flex flex-none items-center gap-1.5 sm:gap-2">
-                            <button v-if="testMode" class="header-tool" aria-label="テスト：カードを えらぶ" title="テスト：カードを えらぶ" @click="showTestCards = true">🧪</button>
                             <button class="header-tool" :aria-label="sfxMuted ? '効果音をつける' : '効果音を消す'" @click="toggleSfx">{{ sfxMuted ? '🔇' : '🔊' }}</button>
                             <button class="header-tool" aria-label="地形・レベルの説明を見る" @click="isShowingTuorial = true">?</button>
                             <button
@@ -99,6 +105,9 @@
                                 class="animate-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] rounded-full aspect-square bg-yellow-200"
                             ></div>
 
+                            <!-- ■置いたあとも、その下が何の地形だったか分かるように、すみに小さな絵文字を出す -->
+                            <span v-if="tile.ownerTeam && tile.area && !tile.eatenByTileId && !(gameState === 'finished' && showTerritory)" class="tile-terrain" aria-hidden="true">{{ areaIcon(tile.area) }}</span>
+
                             <!-- ■置いたカードの形（Lv1=三角／Lv2=四角／Lv3=丸／Lv4=★）。
                                  SVGで作って、マスの大きさ（虫眼鏡・スマホ・PC）に合わせて拡大・縮小し、黒縁はどの大きさでも同じ太さで付ける -->
                             <div v-if="tile.ownerTeam && !(gameState === 'finished' && showTerritory)" class="flex justify-center items-center w-full h-full">
@@ -122,7 +131,7 @@
                 <div class="w-full lg:w-[340px] flex-none flex flex-col gap-3">
 
                     <!-- current player hand -->
-                    <div v-if="gameState === 'playing' && currentPlayer" class="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div v-if="gameState === 'playing' && currentPlayer && !spectator" class="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200 p-4">
                         <template v-if="currentPlayer.isAI">
                             <div class="flex items-center gap-2 text-slate-500 text-sm py-6 justify-center">
                                 <span class="text-2xl">🤖</span>
@@ -133,6 +142,7 @@
                             <div class="flex items-center gap-2 mb-3">
                                 <div class="w-5 h-5 rounded-md flex-none" :style="{ background: currentPlayer?.color }"></div>
                                 <span class="font-bold text-sm">{{ currentPlayer?.name }}</span>
+                                <button v-if="testMode" class="test-card-button" @click="showTestCards = true">🧪 カードを えらぶ</button>
                                 <span class="text-sm text-slate-500 ml-auto">{{ currentPlayer?.score }}点</span>
                             </div>
 
@@ -176,6 +186,7 @@
                     <!-- actions -->
                     <div class="hidden lg:grid bg-white rounded-xl shadow-sm border border-slate-200 p-3 grid-cols-2 gap-2">
                         <button
+                            v-if="!spectator"
                             @click="selectedCard = null"
                             :disabled="!selectedCard"
                             class="px-2 py-2.5 rounded-lg border text-sm font-medium transition"
@@ -184,6 +195,7 @@
                             キャンセル
                         </button>
                         <button
+                            v-if="!spectator"
                             class="px-2 py-2.5 rounded-lg border text-sm font-medium transition"
                             :class="[currentPlayer?.isAI ? 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-sky-100 hover:bg-sky-200 border-sky-300', { 'skip-glow': mustSkip }]"
                             :disabled="currentPlayer?.isAI"
@@ -192,7 +204,7 @@
                             スキップ
                         </button>
                         <button
-                            v-if="gameState === 'playing'"
+                            v-if="gameState === 'playing' && !spectator"
                             class="px-2 py-2.5 rounded-lg border border-red-400 bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition"
                             @click="showResignConfirm = true"
                         >
@@ -214,9 +226,10 @@
             <!-- ■スマホ・タブレット：手札とボタンを、画面の下にまとめて固定する（盤面をスクロールしても、いつでも使える） -->
             <div class="game-dock lg:hidden" :style="{ '--turn-color': currentPlayer ? currentPlayer.color : '#64748b' }">
                 <!-- ■あなたの手札（ほかの部分と見分けがつくよう、枠・タイトルつきの別のエリア） -->
-                <div class="dock-panel dock-hand-panel">
+                <div v-if="!spectator" class="dock-panel dock-hand-panel">
                     <div class="dock-panel-title">
                         <span>🃏 あなたのカード</span>
+                        <button v-if="testMode && !spectator" class="test-card-button" @click="showTestCards = true">🧪 カードを えらぶ</button>
                         <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</span>
                         <span v-else-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」→ きいろい マスに おけるよ</span>
                         <span v-else-if="mustSkip" class="dock-note dock-note-skip">おけるカードが ないよ → スキップ</span>
@@ -241,7 +254,7 @@
                 <div class="dock-panel dock-actions-panel">
                     <div class="dock-actions">
                         <button
-                            v-if="gameState === 'playing'"
+                            v-if="gameState === 'playing' && !spectator"
                             class="dock-button"
                             :class="{ 'skip-glow': mustSkip }"
                             :disabled="currentPlayer?.isAI"
@@ -250,7 +263,7 @@
                             ⏭ スキップ
                         </button>
                         <button
-                            v-if="gameState === 'playing'"
+                            v-if="gameState === 'playing' && !spectator"
                             class="dock-button dock-button-danger"
                             @click="showResignConfirm = true"
                         >
@@ -275,6 +288,8 @@
             <div v-if="gameState === 'finished' && !showTerritory" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
                 <div class="bg-white p-5 rounded-2xl shadow-xl text-center max-w-sm w-full max-h-[92vh] overflow-y-auto">
                     <h2 class="text-2xl font-bold mb-1">ゲーム終了！</h2>
+                    <p v-if="spectator" class="mb-2 inline-block rounded-full bg-violet-100 px-4 py-1 text-sm font-black text-violet-700">👀 観戦：{{ ownerLabel }}の ゲーム</p>
+                    <template v-if="!spectator">
                     <p v-if="finishedResult" class="mb-1 text-lg font-black" :style="{ color: finishedResult.humanWon ? '#059669' : '#dc2626' }">
                         {{ finishedResult.humanWon ? '1位！ かったよ！' : (finishedResult.resigned ? 'まけました…' : `${finishedResult.humanRank}位 だったよ`) }}
                     </p>
@@ -289,8 +304,14 @@
                     </p>
                     <p v-else-if="rewardState === 'pending'" class="mb-2 text-sm font-bold text-amber-600">テラを もらっているよ…</p>
                     <p v-else-if="rewardState === 'error'" class="mb-2 text-sm font-bold text-red-500">テラを もらえなかったよ（ネットを たしかめて、あとで もういちど）</p>
-                    <p v-else-if="isSlotGame() && finishedResult && finishedResult.resigned" class="mb-2 text-xs font-bold text-slate-500">まけましたの ときは、テラは もらえないよ</p>
+                    <p v-else-if="isSlotGame() && !isTestPlace() && finishedResult && finishedResult.resigned" class="mb-2 text-xs font-bold text-slate-500">まけましたの ときは、テラは もらえないよ</p>
+                    <p v-else-if="isTestPlace()" class="mb-2 text-xs font-bold text-violet-600">🧪 AIテスト：テラは もらえないよ。けっかは 地図の 色（勝率）に のこるよ</p>
                     <p v-else-if="isSlotGame() && finishedResult" class="mb-2 text-xs font-bold text-slate-500">てんすうぶんの テラ ＋ {{ rankRewardText }} もらえるよ</p>
+                    <p v-if="isSlotGame() && !isTestPlace() && finishedResult && !finishedResult.humanWon" class="mb-2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">
+                        AIが かったので、この ばしょは 色が つかないよ。ほかの人も、もういちど ちょうせん できるよ
+                    </p>
+
+                    </template>
 
                     <p class="text-sm text-slate-500 mb-2">さいごの てんすう</p>
                     <ul class="text-left mb-4 space-y-2">
@@ -305,49 +326,20 @@
                                 <span class="w-3 h-3 rounded-full" :style="{ background: player.color }"></span>
                                 {{ player.name }}
                                 <span v-if="player.isAI" class="text-xs">🤖</span>
-                                <span v-else class="text-xs text-slate-500">（あなた）</span>
+                                <span v-else class="text-xs text-slate-500">（{{ spectator ? ownerLabel : 'あなた' }}）</span>
                             </span>
                             <span class="font-bold">{{ player.score }}点</span>
                         </li>
                     </ul>
 
-                    <!-- ■じんち：どのチームが、いくつのマスを おさえたか（点数には入らない。生態系の ひろがりを みるもの） -->
-                    <div class="mb-4 rounded-xl bg-slate-50 p-3 text-left">
-                        <p class="mb-2 text-center text-sm font-black text-slate-600">じんち（おさえた マスの かず）</p>
-                        <div v-for="team in territory" :key="team.id" class="mb-1.5 flex items-center gap-2 text-xs font-bold text-slate-600">
-                            <span class="w-14 flex-none whitespace-nowrap">{{ team.name.replace('チーム', '') }}{{ team.isAI ? '' : '（あなた）' }}</span>
-                            <span class="h-3 flex-1 overflow-hidden rounded-full bg-slate-200">
-                                <span class="block h-full rounded-full" :style="{ width: team.percent + '%', background: team.color }"></span>
-                            </span>
-                            <span class="w-12 flex-none text-right">{{ team.count }}マス</span>
-                        </div>
-                        <p class="mt-1 text-center text-[10px] text-slate-400">じんちの ひろさは、てんすうには はいらないよ</p>
-                        <button class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100" @click="showTerritory = true">
-                            🗺 じんちを ばんめんで みる
-                        </button>
-                    </div>
-
-                    <!-- ■生態系ピラミッド：レベルごとの、おかれたカードの数（下の ひろい ところが Lv1） -->
-                    <div class="mb-4 rounded-xl bg-emerald-50 p-3">
-                        <p class="mb-2 text-center text-sm font-black text-emerald-800">🔺 生態系ピラミッド</p>
-                        <div class="flex flex-col items-center gap-1">
-                            <div v-for="row in pyramid" :key="row.tier" class="flex w-full items-center gap-2">
-                                <span class="w-8 flex-none text-right text-[11px] font-black text-slate-600">Lv{{ row.tier }}</span>
-                                <div class="flex flex-1 justify-center">
-                                    <div
-                                        v-if="row.total"
-                                        class="flex h-6 overflow-hidden rounded-md shadow-sm"
-                                        :style="{ width: row.width + '%' }"
-                                    >
-                                        <span v-for="part in row.parts" :key="part.id" class="block h-full" :style="{ flex: part.flex, background: part.color }"></span>
-                                    </div>
-                                    <span v-else class="text-[11px] font-bold text-slate-300">なし</span>
-                                </div>
-                                <span class="w-8 flex-none text-[11px] font-bold text-slate-600">{{ row.total }}</span>
-                            </div>
-                        </div>
-                        <p class="mt-2 text-center text-[10px] leading-relaxed text-emerald-700">したの レベルが たくさん いると、うえの いきものが くらせるよ。ひろい ピラミッドが、げんきな 生態系！</p>
-                    </div>
+                    <!-- ■じんち（おさえた マスの かず）と、生態系ピラミッド -->
+                    <GameResultSummary :players="players" :tier-team="tierTeam" :self-id="spectator ? null : humanPlayerId">
+                        <template #territory-extra>
+                            <button class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100" @click="showTerritory = true">
+                                🗺 じんちを ばんめんで みる
+                            </button>
+                        </template>
+                    </GameResultSummary>
 
                     <!-- ■地図の場所のゲームは、おわった枠はそのまま残る（もう一回はできない）ので、街の画面にもどる -->
                     <button
@@ -552,13 +544,14 @@
 <script>
 import db from '../../firebase.js';
 import GameCardFocus from './GameCardFocus.vue';
+import GameResultSummary from './GameResultSummary.vue';
 import ABGameProposalB from '@/views/ABGame/ABGameProposalB.vue';
 import { getSession } from '@/utils/session.js';
 import { generateSpotBoard } from './habitatBoard.js';
 import { isFresh } from '@/utils/dominationSlots.js';
 import { sfx } from '@/utils/sfx.js';
 import { addPoints } from '@/utils/points.js';
-import { isLocalEnv } from '@/utils/env.js';
+import { isTestMode } from '@/utils/env.js';
 import {
     fetchCardLibrary,
     getCurrentUser,
@@ -589,6 +582,8 @@ const AREA_NAMES = { town: '町', forest: '森', dirt: '土', river: '川', sea:
 // ■地形のうっすらした模様（草・水など）。ゲームの見やすさをじゃましない、うすい線だけ。
 //   SVGを、そのままマスの背景にする（マスの大きさに合わせて拡大・縮小される）
 const svgPattern = body => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'>${body}</svg>`)}")`
+// ■地形のすみの絵文字（置いたマスに出す）
+const AREA_ICONS = { forest: '🌲', town: '🏠', dirt: '🟫', river: '💧', sea: '🌊' }
 const AREA_PATTERNS = {
     // 森：草の葉
     forest: svgPattern("<g stroke='#e8f5d8' stroke-width='1.2' stroke-linecap='round' fill='none' opacity='.4'><path d='M4 16V11M6.5 16V9.5M9 16V11.5'/><path d='M13 12V8M15.5 12V6.5M18 12V8.5'/></g>"),
@@ -656,6 +651,10 @@ export default {
         roomCodeCopied: false,
         slotOwner: null, // 地図のゲーム枠を遊んでいる人 { uid, name, team }
         resigned: false, // 「まけました」で終わったか
+        spectator: false, // 観戦モード（ほかの人の・おわったゲームを、見るだけ）
+        spectateUnsub: null,
+        savedAiWon: false, // 読み込んだ保存が、AIが勝って終わったものか（昔のデータ）
+        slotReleased: false, // AIが勝ったので、ゲーム枠をあけた（もう保存しない）
         showResignConfirm: false,
         showSkipConfirm: false,
         showChallenge: false, // 黒いマスの「かんきょうチャレンジ」（ABゲーム）を開いている
@@ -665,7 +664,7 @@ export default {
         rewardTera: 0, // 1位でもらったテラ（もらえたときだけ）
         rewardState: '', // '' | 'pending' | 'error'
         showTerritory: false, // ゲームのおわりに、じんち（チームごとのマス）を盤面で見る
-        testMode: isLocalEnv() || new URLSearchParams(window.location.search).get('test') === '1', // テストモード（カードを自由にえらべる）
+        testMode: isTestMode(), // テストモード（カードを自由にえらべる）
         showTestCards: false,
         usedTestCards: false, // テストのカードをつかったゲームは、テラをもらえない
         testMessage: '',
@@ -676,7 +675,7 @@ export default {
 
         players: [
             { id: 1, name: '水チーム', color: '#00BFA6', score: 0, isAI: humanPlayerId !== 1 }, // teal (water but not blue)
-            { id: 2, name: '風チーム', color: '#84CC16', score: 0, isAI: humanPlayerId !== 2 }, // green (air)
+            { id: 2, name: '風チーム', color: '#22C55E', score: 0, isAI: humanPlayerId !== 2 }, // green (air)
             { id: 3, name: '土チーム', color: '#FFB97A', score: 0, isAI: humanPlayerId !== 3 }  // sand/orange (earth)
         ],
 
@@ -760,6 +759,14 @@ export default {
             this.$router.push({ name: 'Home' });
         },
         async onTileClick(tile) {
+          // ■観戦モード：置かれたカードを見ることだけできる
+          if (this.spectator) {
+            if (tile.placedCard) {
+              this.tilePreviewTeam = tile.ownerTeam
+              this.tilePreviewCard = tile.placedCard
+            }
+            return
+          }
           if (this.gameState !== 'playing') return // ゲームが終わったあとは、タイルを押しても何も起きない
           if (this.currentPlayer?.isAI) return // AIの手番中は操作不可
           if (this.isPlacingCard) return // カードの保存中は操作不可
@@ -918,6 +925,7 @@ export default {
                 this.savedPlace = data.place || null
                 this.slotOwner = data.ownerUid ? { uid: data.ownerUid, name: data.ownerName || '', team: data.ownerTeam || '', updatedAt: data.updatedAt || '', gameState: data.gameState || 'playing' } : null
                 this.resigned = !!(data.result && data.result.resigned)
+                this.savedAiWon = data.gameState === 'finished' && !!data.result && data.result.humanWon === false // 昔のデータ：AIが勝って終わった枠
                 this.rewardTera = (data.result && data.result.rewardTera) || 0
                 this.tiles = data.tiles
                 // 保存されていた「置ける場所の印」「選択中の印」は、読み込み直したときは消す（カードを選び直すまで出さない）
@@ -1008,6 +1016,7 @@ export default {
 
         // ■現在の進行状況をまるごと保存する
         async saveGame() {
+            if (this.slotReleased || this.spectator) return
             try {
                 await db.collection(SAVE_COLLECTION).doc(this.roomCode).set({
                     tiles: this.tiles,
@@ -1030,8 +1039,81 @@ export default {
             if (this.isSlotGame()) this.saveSlotStatus()
         },
 
+        // ■観戦モード：保存されているゲームを読んで、見るだけにする。進行中のゲームは、動きに合わせて更新する
+        async startSpectating() {
+            const [library, found] = await Promise.all([
+                this.cardLibrary.length ? Promise.resolve(this.cardLibrary) : fetchCardLibrary().catch(() => []),
+                this.loadSavedGame()
+            ])
+            this.cardLibrary = library
+            if (!found) {
+                const place = this.loadPlace()
+                this.$router.replace({ name: 'DominationMap', query: { city: place ? place.city : undefined, notice: 'nogame' } })
+                return
+            }
+            this.spectator = true
+            // 画面の「あなた」は、そのゲームを遊んでいる人のチームにする（ほかの2チームがAI）
+            if (this.slotOwner && TEAM_ID_BY_NAME[this.slotOwner.team]) this.humanPlayerId = TEAM_ID_BY_NAME[this.slotOwner.team]
+            this.players.forEach(player => { player.isAI = player.id !== this.humanPlayerId })
+
+            this.spectateUnsub = db.collection(SAVE_COLLECTION).doc(this.roomCode).onSnapshot(doc => {
+                if (!doc.exists) {
+                    // 遊んでいた人が まけて、枠があいた（AIが勝った）とき
+                    this.showToast('このゲームは おわって、ばしょが あいたよ')
+                    setTimeout(() => this.backFromGame(), 1800)
+                    return
+                }
+                const data = doc.data()
+                if (!data || !Array.isArray(data.tiles)) return
+                data.tiles.forEach(tile => { tile.validForSelection = false; tile.selected = false })
+                this.tiles = data.tiles
+                this.hands = data.hands || this.hands
+                this.skipCount = data.skipCount || 0
+                this.gameState = data.gameState || 'playing'
+                this.currentPlayerId = data.currentPlayerId ?? this.currentPlayerId
+                this.resigned = !!(data.result && data.result.resigned)
+                if (Array.isArray(data.players)) {
+                    data.players.forEach(saved => {
+                        const player = this.players.find(p => p.id === saved.id)
+                        if (player) player.score = saved.score || 0
+                    })
+                }
+            }, error => console.error('観戦の読み込みに失敗しました', error))
+        },
+
+        // ■終わったゲームの記録（盤面そのものではなく、チームごとの点・レベル別の数だけ）。けっか くらべの画面で見る
+        async saveResultSample(result) {
+            try {
+                await db.collection('gameResults').add({
+                    createdAt: new Date().toISOString(),
+                    roomCode: this.roomCode,
+                    humanPlayerId: this.humanPlayerId,
+                    humanRank: result.humanRank,
+                    resigned: !!result.resigned,
+                    players: this.players.map(p => ({ id: p.id, name: p.name, color: p.color, score: p.score, isAI: p.isAI })),
+                    tierTeam: JSON.parse(JSON.stringify(this.tierTeam))
+                })
+            } catch (e) {
+                console.error('ゲームの記録を保存できませんでした', e)
+            }
+        },
+
+        // ■ゲーム枠をあける：この枠の保存（盤面）と、地図に出す枠のようすを消す。AIが勝った枠を、また遊べるようにする
+        async releaseSlot() {
+            this.slotReleased = true
+            try {
+                await Promise.all([
+                    db.collection(SAVE_COLLECTION).doc(this.roomCode).delete(),
+                    db.collection('mapSlots').doc(this.roomCode).delete()
+                ])
+            } catch (e) {
+                console.error('ゲーム枠をあけられませんでした', e)
+            }
+        },
+
         // ■地図に出す「ゲーム枠のようす」（誰が遊び中か・勝ったチーム）を、軽いドキュメントにも書く
         async saveSlotStatus() {
+            if (this.slotReleased || this.spectator) return
             const place = this.loadPlace()
             if (!place || !this.slotOwner) return
             const result = this.computeResult()
@@ -1046,6 +1128,7 @@ export default {
                     ownerTeam: this.slotOwner.team,
                     winnerTeam: result ? result.winnerTeam : null,
                     humanWon: result ? result.humanWon : null,
+                    test: this.isTestPlace(),
                     updatedAt: new Date().toISOString()
                 })
             } catch (e) {
@@ -1100,8 +1183,8 @@ export default {
             // 新しく始める枠：すでにほかの人のものになっていないか（地図に出ている枠のようす）
             const slot = context.slot
             if (slot && slot.ownerUid && slot.ownerUid !== user.uid) {
-                if (slot.state === 'finished') return goBack('done')
-                if (isFresh(slot.updatedAt)) return goBack('busy')
+                if (slot.state === 'finished' && slot.humanWon !== false) return goBack('done')
+                if (slot.state !== 'finished' && isFresh(slot.updatedAt)) return goBack('busy')
             }
 
             // 自分が同じ街のほかの枠であそび中なら、始められない
@@ -1114,6 +1197,12 @@ export default {
         },
 
         // ■地図の「場所」から始めたゲーム（ゲーム枠）かどうか
+        // ■AIテストエリアの枠か（テラなし・いつも最初から・AIが勝っても色がつく）
+        isTestPlace() {
+            const place = this.loadPlace()
+            return !!(place && place.test)
+        },
+
         isSlotGame() {
             const place = this.loadPlace()
             return !!(place && place.spotId && place.gameNo)
@@ -1144,6 +1233,8 @@ export default {
         async loadOrInitGame() {
             this.savedPlace = null
             this.slotOwner = null
+            this.savedAiWon = false
+            this.slotReleased = false
             this.resigned = false
             this.rewardTera = 0
             this.rewardState = ''
@@ -1154,6 +1245,14 @@ export default {
 
             const slot = this.isSlotGame()
             const team = TEAM_NAME_BY_ID[this.humanPlayerId]
+
+            // ■ほかの人のゲーム・おわったゲームは、観戦モード（見るだけ）で入る
+            const spectate = slot && localStorage.getItem('dominationSpectate') === '1'
+            localStorage.removeItem('dominationSpectate')
+            if (spectate) {
+                await this.startSpectating()
+                return
+            }
 
             // ■読み込みは、1つずつ順番に待たず、いっぺんに始める。
             //   （順番に待つと、通信が遅いスマホでは、待ち時間がそのまま積み上がって、読み込み中が長くなる）
@@ -1175,8 +1274,18 @@ export default {
 
             let loaded = savedLoaded
 
+            // ■AIテストの枠は、前のゲームが残っていても、だれが遊んでいても、いつも最初から始める（DBを手でリセットしなくていい）
+            if (slot && this.isTestPlace()) {
+                const user = slotContext && slotContext.user
+                this.slotOwner = { uid: user ? user.uid : 'guest', name: user ? (user.name || '') : '', team }
+                loaded = false
+            }
+
+            // ■AIが勝って終わった枠は、決着にしない。ほかの人（もちろん自分も）が、最初から再戦できる
+            if (slot && loaded && this.savedAiWon) loaded = false
+
             // ■地図のゲーム枠：ほかの人が遊んでいる・遊び終えた枠には入れない。自分はどこか1つのゲームでしか遊べない
-            if (slot) {
+            if (slot && !this.isTestPlace()) {
                 const access = this.checkSlotAccess(loaded, slotContext)
                 if (access.blocked) return
                 loaded = access.loaded
@@ -1253,11 +1362,12 @@ export default {
                     base.backgroundSize = 'auto'
                 }
             } else if (tile.ownerTeam !== null) {
-                // ■使われた（カードが置かれた）マス：黒っぽい色にして、そのチームの色のふちをつける。
+                // ■使われた（カードが置かれた）マス：そのチームの色を、こく暗くした色にして、チームの色の太いふちをつける。
+                //   したの地形の模様は残す（何の上に置いたか、うっすら見える。すみには絵文字の札も出る）。
                 //   形がくっきり見えて、食べられたマス・チームの色のマスと見分けがつく
-                base.background = '#262c38'
-                base.backgroundImage = 'none'
-                base.boxShadow = `inset 0 0 0 2px ${this.teamColor(tile.ownerTeam)}`
+                const teamColor = this.teamColor(tile.ownerTeam)
+                base.background = `color-mix(in srgb, ${teamColor} 42%, #0a0f1c)`
+                base.boxShadow = `inset 0 0 0 3px ${teamColor}`
             }
 
             if (tile.selected) {
@@ -1791,7 +1901,7 @@ export default {
 
         // ■順位のごほうび：テラを加算する（ce-n.org の updatePoints。地図のゲームで1位になったときだけ、1ゲームにつき1回）
         async awardTera() {
-            if (this.rewardState === 'pending' || this.rewardTera) return
+            if (this.spectator || this.rewardState === 'pending' || this.rewardTera) return
             // ■ゲームの てんすう（カードを おくたびに ふえた点）を、おわったときに テラに かえる。順位のボーナスも、いっしょに
             const me = this.players.find(player => player.id === this.humanPlayerId)
             const amount = (RANK_REWARD_TERA[this.humanRank()] || 0) + (me ? me.score : 0)
@@ -1810,6 +1920,9 @@ export default {
         },
 
         // ■置いたカードの形の色：自分のチームの色。食べられたカードは、うすい灰色
+        areaIcon(area) {
+            return AREA_ICONS[area] || ''
+        },
         shapeFill(tile) {
             return tile.eatenByPlayerId ? '#666666' : this.teamColor(tile.ownerTeam)
         },
@@ -1946,7 +2059,14 @@ export default {
           this.recentMoves = []
           const result = this.computeResult()
           if (result) setTimeout(() => (result.humanWon ? sfx.win() : sfx.lose()), 300)
-          if (result && !result.resigned && this.isSlotGame() && !this.usedTestCards && !this.rewardTera && RANK_REWARD_TERA[result.humanRank]) this.awardTera()
+          if (result && !result.resigned && this.isSlotGame() && !this.isTestPlace() && !this.usedTestCards && !this.rewardTera && RANK_REWARD_TERA[result.humanRank]) this.awardTera()
+          // ■AIが勝ったら、この枠は決着にしない（色もつけない）。保存を消して、ほかの人が再戦できるようにする
+          if (result && !result.humanWon && this.isSlotGame() && !this.isTestPlace()) {
+              this.releaseSlot()
+              return
+          }
+          // ■テストモードで、地図の枠ではないゲーム（AIテストエリア）を最後まで遊んだら、終わったときの記録を残す（けっか くらべ用）
+          if (result && this.testMode && !this.spectator && (!this.isSlotGame() || this.isTestPlace())) this.saveResultSample(result)
           this.saveGame()
         },
 
@@ -2112,8 +2232,12 @@ export default {
         // （先に切り替えるとhands[currentPlayerId]が未定義の状態でテンプレートが描画され例外になる）
         this.dominationMode = 'standard';
     },
+    beforeUnmount() {
+        if (this.spectateUnsub) this.spectateUnsub()
+    },
     components: {
         GameCardFocus,
+        GameResultSummary,
         ABGameProposalB
     },
     computed: {
@@ -2165,6 +2289,11 @@ export default {
               .sort((a, b) => b.count - a.count)
       },
 
+      ownerLabel() {
+          const owner = this.slotOwner
+          return owner && owner.name ? `${owner.name}さん` : 'ほかの人'
+      },
+
       testCardGroups() {
           const groups = {}
           this.cardLibrary.forEach(card => {
@@ -2174,29 +2303,17 @@ export default {
           return Object.keys(groups).sort((a, b) => a - b).map(level => ({ level, cards: groups[level] }))
       },
 
-      // ■生態系ピラミッド：盤面に置かれたカードを、レベルごとに数える（下がLv1。チームの色で分けて見せる）
-      pyramid() {
-          const rows = {}
+      // ■レベルごと・チームごとの、盤面のカードの数（終了画面の生態系ピラミッド・じんちのもと）
+      tierTeam() {
+          const result = {}
           this.tiles.forEach(tile => {
               if (!tile.placedCard) return
               const tier = tile.placedCard.tier || 1
               const team = this.controllingTeam(tile)
-              rows[tier] = rows[tier] || { tier, total: 0, teams: {} }
-              rows[tier].total++
-              rows[tier].teams[team] = (rows[tier].teams[team] || 0) + 1
+              result[tier] = result[tier] || {}
+              result[tier][team] = (result[tier][team] || 0) + 1
           })
-          const maxTotal = Math.max(1, ...Object.values(rows).map(row => row.total))
-          return [4, 3, 2, 1].map(tier => {
-              const row = rows[tier] || { total: 0, teams: {} }
-              return {
-                  tier,
-                  total: row.total,
-                  width: row.total ? Math.max(14, Math.round((row.total / maxTotal) * 100)) : 0,
-                  parts: this.players
-                      .filter(player => row.teams[player.id])
-                      .map(player => ({ id: player.id, color: player.color, count: row.teams[player.id], flex: row.teams[player.id] }))
-              }
-          })
+          return result
       },
 
       // ■もらったテラの内わけ（てんすう ぶん ＋ 順位ボーナス）
@@ -2525,6 +2642,68 @@ export default {
   }
 
   /* ■置いたカードの形（SVG）。マスの大きさの約78%。黒縁は、拡大・縮小しても同じ太さ（2px）にする */
+  /* ■観戦モード：見るだけ。バナーと、ゲーム全体のむらさきのふちで、観戦中だと分かるようにする */
+  .spectator-banner{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: #6d28d9;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.4;
+  }
+  .spectator-badge{
+      flex: none;
+      padding: 2px 10px;
+      border-radius: 9999px;
+      background: #fff;
+      color: #6d28d9;
+      font-weight: 900;
+      white-space: nowrap;
+  }
+  .spectator-text{ flex: 1; min-width: 0; }
+  .spectator-back{
+      flex: none;
+      padding: 3px 12px;
+      border: 1px solid rgba(255,255,255,.7);
+      border-radius: 9999px;
+      font-weight: 900;
+  }
+  .domination-app.spectating{
+      box-shadow: inset 0 0 0 4px #7c3aed;
+  }
+  .spectating .board-tile{
+      cursor: default;
+  }
+
+  /* ■テストモードの「カードを えらぶ」ボタン（「あなたのカード」の すぐとなり） */
+  .test-card-button{
+      flex: none;
+      margin-right: auto;
+      padding: 1px 8px;
+      border: 1.5px dashed #a78bfa;
+      border-radius: 9999px;
+      background: #f5f3ff;
+      color: #6d28d9;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.5;
+      white-space: nowrap;
+  }
+  .test-card-button:active{ transform: scale(0.95); }
+
+  .tile-terrain{
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      z-index: 2;
+      font-size: 8px;
+      line-height: 1;
+      pointer-events: none;
+      filter: drop-shadow(0 0 1px rgba(0,0,0,.8));
+  }
   .tile-shape{
       width: 78%;
       height: 78%;

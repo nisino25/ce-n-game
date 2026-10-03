@@ -6,7 +6,7 @@
 // 遊び中のまま、これだけ動きが無かったら「やめた」とみなして、ほかの人が使えるようにする
 export const SLOT_STALE_MS = 3 * 60 * 60 * 1000;
 
-export const TEAM_COLORS = { water: "#00BFA6", air: "#84CC16", earth: "#FFB97A" };
+export const TEAM_COLORS = { water: "#00BFA6", air: "#22C55E", earth: "#FFB97A" };
 export const TEAM_NAMES = { water: "水", air: "風", earth: "土" };
 export const AI_COLOR = "#ef4444";
 
