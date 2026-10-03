@@ -493,7 +493,9 @@
                 <button class="replay-play" @click="toggleReplayPlay()">{{ replay.playing ? '⏸' : '▶' }}</button>
                 <button aria-label="ひとつ すすむ" @click="stepReplay(1)">▶</button>
                 <button aria-label="さいごへ" @click="stepReplay(moveLog.length)">⏭</button>
-                <button class="replay-speed" @click="cycleReplaySpeed()">×{{ replay.speed }}</button>
+                <select class="replay-speed" aria-label="1手ごとの はやさ" :value="replay.interval" @change="setReplayInterval(Number($event.target.value))">
+                    <option v-for="seconds in replayIntervals" :key="seconds" :value="seconds">{{ seconds }}秒 / 手</option>
+                </select>
                 <button class="replay-close" @click="closeReplay()">✕ とじる</button>
             </div>
         </div>
@@ -685,6 +687,7 @@ export default {
         resigned: false, // 「まけました」で終わったか
         moveLog: [], // 置いた手の記録（ふりかえり用）：{ t:マスID, p:チームID, tier, l:カード名, e:食べたマスID[] }
         replay: null, // ふりかえり中の状態
+        replayIntervals: [0.25, 0.5, 1, 2, 3, 5], // 1手ごとの間（秒）の えらびかた
         spectator: false, // 観戦モード（ほかの人の・おわったゲームを、見るだけ）
         spectateUnsub: null,
         savedAiWon: false, // 読み込んだ保存が、AIが勝って終わったものか（昔のデータ）
@@ -1027,11 +1030,14 @@ export default {
         // ■虫眼鏡：盤面ぜんたい（縦長の15列×30行）が、上の見出しと下のバーのあいだに収まる幅にする
         toggleOverview() {
             this.boardOverview = !this.boardOverview
-            if (this.boardOverview) {
-                const area = this.$refs.mainArea
-                const room = (area ? area.clientHeight : window.innerHeight - 300) - 34
-                this.overviewWidth = Math.max(180, Math.min(window.innerWidth - 12, Math.floor(room * this.rows / this.cols)))
-            }
+            if (this.boardOverview) this.fitOverview(0)
+        },
+
+        // ■虫眼鏡の盤面の大きさを、画面に合わせる。extra＝盤面の下にかぶさるものの高さ（ふりかえりのバーなど）
+        fitOverview(extra) {
+            const area = this.$refs.mainArea
+            const room = (area ? area.clientHeight : window.innerHeight - 300) - 34 - extra
+            this.overviewWidth = Math.max(180, Math.min(window.innerWidth - 12, Math.floor(room * this.rows / this.cols)))
         },
 
         // ■場所とゲーム番号から、盤面の元になる数（同じ場所・同じ番号なら必ず同じ数）
@@ -1135,9 +1141,20 @@ export default {
         startReplay() {
             if (!this.moveLog.length || this.replay) return
             const base = this.tiles.map(tile => ({ ...tile, ownerTeam: null, placedCard: null, eatenByTileId: null, eatenByPlayerId: null, selected: false, validForSelection: false }))
-            this.replay = { index: 0, playing: false, speed: 1, final: this.tiles, base, scores: this.players.map(player => player.score), timer: null }
+            let interval = 1
+            try { interval = Number(localStorage.getItem('replayInterval')) || 1 } catch (e) { interval = 1 }
+            this.replay = { index: 0, playing: false, interval, final: this.tiles, base, scores: this.players.map(player => player.score), timer: null, prevOverview: this.boardOverview }
+            // ■ふりかえりは、いつも「虫眼鏡」（盤面ぜんたいを1画面に収める）で見る
+            if (!this.boardOverview) this.toggleOverview()
             this.showTerritory = false
             this.goReplay(0)
+            // バーが出てから、バーにかくれる分を引いて、盤面ぜんたいが見えるようにする
+            this.$nextTick(() => {
+                const bar = document.querySelector('.replay-bar')
+                const dock = document.querySelector('.game-dock')
+                const hidden = bar ? bar.offsetHeight - (dock && dock.offsetParent ? dock.offsetHeight : 0) : 0
+                this.fitOverview(Math.max(0, hidden))
+            })
         },
 
         goReplay(index) {
@@ -1168,7 +1185,7 @@ export default {
             const last = n > 0 ? this.moveLog[n - 1] : null
             this.recentMoves = last ? [{ tileId: last.t, teamId: last.p, eatenIds: last.e || [] }] : []
             replay.index = n
-            if (last) this.scrollToTile(last.t)
+            if (last && !this.boardOverview) this.scrollToTile(last.t)
         },
 
         toggleReplayPlay() {
@@ -1187,7 +1204,7 @@ export default {
                     return
                 }
                 this.goReplay(this.replay.index + 1)
-                this.replay.timer = setTimeout(tick, 900 / this.replay.speed)
+                this.replay.timer = setTimeout(tick, this.replay.interval * 1000)
             }
             replay.timer = setTimeout(tick, 300)
         },
@@ -1199,10 +1216,11 @@ export default {
             this.replay.playing = false
         },
 
-        cycleReplaySpeed() {
-            const replay = this.replay
-            if (!replay) return
-            replay.speed = replay.speed === 1 ? 2 : replay.speed === 2 ? 4 : 1
+        // ■1手ごとの間（秒）。再生中でも、すぐ変えられる
+        setReplayInterval(seconds) {
+            if (!this.replay) return
+            this.replay.interval = seconds
+            try { localStorage.setItem('replayInterval', String(seconds)) } catch (e) { /* 保存できなくても、このあいだは有効 */ }
         },
 
         stepReplay(delta) {
@@ -1218,6 +1236,8 @@ export default {
             this.tiles = replay.final
             this.players.forEach((player, index) => { player.score = replay.scores[index] })
             this.recentMoves = []
+            // 虫眼鏡は、ふりかえりを始める前の状態にもどす
+            if (!replay.prevOverview && this.boardOverview) this.toggleOverview()
             this.replay = null
         },
 
@@ -2830,7 +2850,16 @@ export default {
       color: #f1f5f9;
   }
   .replay-buttons .replay-play{ min-width: 52px; border-color: #a78bfa; background: #6d28d9; }
-  .replay-buttons .replay-speed{ font-size: 12px; }
+  .replay-buttons .replay-speed{
+      min-width: 0;
+      padding: 6px 4px;
+      border: 1.5px solid rgba(255,255,255,.3);
+      border-radius: 10px;
+      background: #1e293b;
+      font-size: 12px;
+      font-weight: 900;
+      color: #f1f5f9;
+  }
   .replay-buttons .replay-close{ margin-left: auto; font-size: 12px; border-color: rgba(248,113,113,.7); }
 
   /* ■観戦モード：見るだけ。バナーと、ゲーム全体のむらさきのふちで、観戦中だと分かるようにする */
