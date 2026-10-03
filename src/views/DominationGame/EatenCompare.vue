@@ -88,6 +88,54 @@
                                             <polygon points="-6,-4.5 3,0 -6,4.5 -3.5,0" :fill="color(cell.eaterTeam)" stroke="#000" stroke-width="1" stroke-linejoin="round" />
                                         </g>
                                     </template>
+
+                                    <!-- 案G：案Cを もっと くらく -->
+                                    <template v-else-if="style.id === 'darkc'">
+                                        <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.2" :opacity="0.28" />
+                                        <path d="M3 21L21 3" fill="none" :stroke="color(cell.eaterTeam)" stroke-width="3" stroke-linecap="round" />
+                                    </template>
+
+                                    <!-- 案H：赤い斜線 -->
+                                    <template v-else-if="style.id === 'redslash'">
+                                        <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.2" :opacity="0.7" />
+                                        <path d="M2.5 21.5L21.5 2.5" fill="none" stroke="#000" stroke-width="5" stroke-linecap="round" />
+                                        <path d="M2.5 21.5L21.5 2.5" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round" />
+                                    </template>
+
+                                    <!-- 案I：きんしマーク -->
+                                    <template v-else-if="style.id === 'prohibit'">
+                                        <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.2" :opacity="0.55" />
+                                        <circle cx="12" cy="12" r="10" fill="none" stroke="#ef4444" stroke-width="2.6" />
+                                        <path d="M5 19L19 5" fill="none" stroke="#ef4444" stroke-width="2.6" stroke-linecap="round" />
+                                    </template>
+
+                                    <!-- 案J：モノクロ＋かどの 三角 -->
+                                    <template v-else-if="style.id === 'gray'">
+                                        <TierShape :tier="cell.tier" fill="#9ca3af" stroke="#000" :stroke-width="1.2" :opacity="0.8" />
+                                        <polygon points="24,0 24,11 13,0" :fill="color(cell.eaterTeam)" stroke="#000" stroke-width="0.8" />
+                                    </template>
+
+                                    <!-- 案K：はんぶんこ -->
+                                    <template v-else-if="style.id === 'split'">
+                                        <g transform="translate(0.5 0.5) scale(0.6)">
+                                            <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.8" />
+                                        </g>
+                                        <g transform="translate(11.5 11.5) scale(0.45)">
+                                            <TierShape :tier="cell.eaterTier" fill="#fff" stroke="#000" :stroke-width="2" />
+                                        </g>
+                                    </template>
+
+                                    <!-- 案L：ひび われ -->
+                                    <template v-else-if="style.id === 'crack'">
+                                        <TierShape :tier="cell.tier" :fill="color(cell.owner)" stroke="#000" :stroke-width="1.2" :opacity="0.7" />
+                                        <path d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" fill="none" stroke="#000" stroke-width="3.2" stroke-linejoin="round" />
+                                        <path d="M13 1.5L10 8.5L14.5 12L9 16.5L12.5 22.5" fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round" />
+                                    </template>
+
+                                    <!-- 案M：シルエット -->
+                                    <template v-else-if="style.id === 'silhouette'">
+                                        <TierShape :tier="cell.tier" fill="#000" :stroke="color(cell.owner)" :stroke-width="1.8" :opacity="0.9" />
+                                    </template>
                                 </template>
                             </svg>
                         </div>
@@ -151,7 +199,14 @@ export default {
                 { id: "slash", label: "案C", title: "うすく＋すじ", note: "もとの カードを うすく のこして、食べた チームの色の 1本の すじ" },
                 { id: "bite", label: "案D", title: "かじられた あと", note: "もとの カードに、食べられた ほうから かじった あと（食べた色の てんせん）" },
                 { id: "badge", label: "案E", title: "バッジつき", note: "もとの カードを うすく のこして、すみに「だれの どのレベルに 食べられたか」の バッジ" },
-                { id: "arrow", label: "案F", title: "やじるし", note: "もとの カードを うすく のこして、食べた ほうを さす やじるし" }
+                { id: "arrow", label: "案F", title: "やじるし", note: "もとの カードを うすく のこして、食べた ほうを さす やじるし" },
+                { id: "darkc", label: "案G", title: "案Cを もっと くらく", note: "案Cの、もとの カードを、さらに くらくして、背景も まっ黒に。すじは 食べた チームの色" },
+                { id: "redslash", label: "案H", title: "赤い 斜線", note: "もとの カードの 上に、赤い 斜線。ふちの 色で、食べた チームが 分かる" },
+                { id: "prohibit", label: "案I", title: "きんしマーク", note: "赤い まる＋斜線（きんしの マーク）。「もう つかえない」が いちばん つたわりやすい" },
+                { id: "gray", label: "案J", title: "モノクロ＋かど", note: "もとの カードを 灰色に して、かどに 食べた チームの 色の 三角。色が うるさくならない" },
+                { id: "split", label: "案K", title: "はんぶんこ", note: "マスを ななめに 2つに わけて、ひだりうえに「もとの カード」、みぎしたに「食べた カード」" },
+                { id: "crack", label: "案L", title: "ひび われ", note: "もとの カードに、白い ひびを 入れる。こわれた かんじが 出る" },
+                { id: "silhouette", label: "案M", title: "シルエット", note: "もとの カードを 黒い かげに して、ふちだけ もとの チームの 色。形が 読みやすい" }
             ]
         };
     },
@@ -300,6 +355,15 @@ export default {
             } else if (variant === "x") {
                 style.background = "#05060a";
                 style.boxShadow = `inset 0 0 0 3px ${eaterColor}`;
+            } else if (variant === "darkc") {
+                style.background = "#020305";
+                style.boxShadow = `inset 0 0 0 2px ${eaterColor}`;
+            } else if (variant === "split") {
+                style.background = `linear-gradient(135deg, #05060a 50%, ${eaterColor} 50%)`;
+                style.boxShadow = "none";
+            } else if (variant === "silhouette") {
+                style.background = `color-mix(in srgb, ${eaterColor} 35%, #05060a)`;
+                style.boxShadow = `inset 0 0 0 2px ${eaterColor}`;
             } else if (variant === "bite") {
                 style.background = `color-mix(in srgb, ${this.color(cell.owner)} 22%, #0a0f1c)`;
                 style.boxShadow = `inset 0 0 0 2px ${eaterColor}`;
