@@ -338,7 +338,7 @@
                                 <span class="w-3 h-3 rounded-full" :style="{ background: player.color }"></span>
                                 {{ player.name }}
                                 <span v-if="player.isAI" class="text-xs">🤖</span>
-                                <span v-else class="text-xs text-slate-500">（{{ spectator ? ownerLabel : 'あなた' }}）</span>
+                                <span v-else-if="!resultView" class="text-xs text-slate-500">（{{ spectator ? ownerLabel : 'あなた' }}）</span>
                             </span>
                             <span class="font-bold">{{ player.score }}点</span>
                         </li>
