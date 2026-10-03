@@ -18,7 +18,8 @@
                         :class="{ active: doc.path === currentPath }"
                         @click="openDoc(doc.path)"
                     >
-                        {{ doc.title }}
+                        <span class="docs-nav-icon">{{ doc.icon }}</span>
+                        <span>{{ doc.label }}</span>
                     </button>
                 </template>
             </nav>
@@ -100,7 +101,27 @@ const orderOf = path => {
     return index === -1 ? ORDER.length : index;
 };
 // ■「本番への反映」タブに入れるもの
-const PRODUCTION = ["deploy-log.md"];
+const PRODUCTION = ["deploy-log.md", "release-notes.md"];
+// ■左の一覧に出す、短い名前とアイコン（無いものはmdの見出しをそのまま）
+const NAV = {
+    "deploy-log.md": ["📜", "反映の履歴"],
+    "release-notes.md": ["🆕", "更新内容（画面ごと）"],
+    "currency.md": ["🪙", "テラ（ポイント）"],
+    "TODO.md": ["✅", "やること"],
+    "data-access.md": ["🗄️", "データの取得・更新"],
+    "device-stats.md": ["📱", "端末の統計"],
+    "requirements/00_overview.md": ["🧭", "全体"],
+    "requirements/01_login.md": ["🔑", "ログイン"],
+    "requirements/02_domination_game.md": ["🗺️", "陣取りゲーム"],
+    "requirements/03_creature_scan.md": ["📷", "生き物スキャン"],
+    "requirements/04_cards.md": ["🃏", "カード"],
+    "requirements/05_map_habitat.md": ["📍", "地図と場所（試作）"]
+};
+docs.forEach(doc => {
+    const nav = NAV[doc.path];
+    doc.icon = nav ? nav[0] : "📄";
+    doc.label = nav ? nav[1] : doc.title;
+});
 docs.sort((a, b) => orderOf(a.path) - orderOf(b.path) || a.path.localeCompare(b.path));
 
 // ■反映履歴：「## 日付 PR #n：タイトル」ごとに、1枚のカードにする（見出しの下の最初の段落が、カードの説明）
@@ -142,7 +163,7 @@ export default {
             const others = docs.filter(doc => !doc.path.startsWith("requirements/") && !PRODUCTION.includes(doc.path));
             return [
                 { label: "本番への反映", docs: production },
-                { label: "通貨・やること・データ", docs: others },
+                { label: "しくみ・やること", docs: others },
                 { label: "要件定義", docs: requirements }
             ].filter(group => group.docs.length);
         },
@@ -234,15 +255,20 @@ export default {
 
 .docs-body{display:flex;gap:24px;max-width:1100px;margin:0 auto;padding:16px}
 .docs-nav{
-    flex:none;width:230px;align-self:flex-start;position:sticky;top:64px;
-    display:flex;flex-direction:column;gap:2px;
+    flex:none;width:236px;align-self:flex-start;position:sticky;top:64px;
+    max-height:calc(100vh - 80px);overflow-y:auto;
+    display:flex;flex-direction:column;gap:2px;padding-right:4px;
 }
-.docs-group{margin:12px 0 4px;font-size:11px;font-weight:bold;color:#64748b;letter-spacing:1px}
+.docs-group{
+    margin:18px 0 6px;padding:0 4px 4px;border-bottom:1px solid #334155;
+    font-size:12px;font-weight:900;color:#67e8f9;letter-spacing:1px;
+}
 .docs-group:first-child{margin-top:0}
 .docs-nav-item{
-    text-align:left;border-radius:8px;padding:7px 10px;
-    font-size:13px;line-height:1.4;color:#cbd5e1;
+    display:flex;align-items:center;gap:8px;text-align:left;border-radius:8px;padding:8px 10px;
+    font-size:14px;line-height:1.4;color:#cbd5e1;
 }
+.docs-nav-icon{flex:none;width:20px;text-align:center;font-size:15px}
 .docs-nav-item:hover{background:rgba(255,255,255,.06)}
 .docs-nav-item.active{background:#0e7490;color:#fff;font-weight:bold}
 
