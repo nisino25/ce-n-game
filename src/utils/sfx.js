@@ -282,6 +282,14 @@ export const sfx = {
         });
     },
 
+    // レベル4（頭の生きもの）が あらわれたとき：ふかい、うつわの鈴を2つ（ゆっくり、おごそかに）
+    lord() {
+        if (sample("lord", { volume: 0.9 })) return
+        bell(130.81, 0, 0.12, 3.0)
+        bell(196, 0.12, 0.08, 3.2)
+        bell(PENTA[0], 0.4, 0.05, 2.2)
+    },
+
     // 負けたとき：低い鈴をひとつ、ゆっくり消える
     lose() {
         if (sample("lose", { volume: 0.9 })) return;
@@ -293,7 +301,7 @@ export const sfx = {
     // 「音くらべ」の画面（/sound-test）用
     // ----------------------------------------
     // 場面の一覧（ゲームが鳴らしている名前）
-    slotNames: ["select", "place_sea", "place_river", "place_forest", "place_town", "place_dirt", "eat", "turn", "skip", "error", "win", "lose"],
+    slotNames: ["select", "place_sea", "place_river", "place_forest", "place_town", "place_dirt", "eat", "turn", "lord", "skip", "error", "win", "lose"],
 
     // 場面ごとに、いま決めている録音
     getSlots() {

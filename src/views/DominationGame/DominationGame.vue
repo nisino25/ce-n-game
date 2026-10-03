@@ -96,7 +96,7 @@
                             :key="tile.id"
                             class="board-tile relative rounded-[2px] cursor-pointer transition-transform duration-150"
                             :data-tile-id="tile.id"
-                            :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected, 'ai-last': aiMoveTileIds.has(tile.id), 'ai-eaten': aiEatenIds.has(tile.id) }"
+                            :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected, 'ai-last': aiMoveTileIds.has(tile.id), 'ai-eaten': aiEatenIds.has(tile.id), 'tile-lord': isLord(tile) }"
                             @click="onTileClick(tile)"
                             :style="[tileStyle(tile), { '--tr': tile.row + 1, '--tc': tile.col + 1, '--ring': moveRing(tile) }]"
                         >
@@ -104,6 +104,9 @@
                                 v-if="tile.validForSelection"
                                 class="animate-pulse absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] rounded-full aspect-square bg-yellow-200"
                             ></div>
+
+                            <!-- ■レベル4（★）の「支配エリア」：まわり8マスを、そのチームの色で、ゆっくり光らせる -->
+                            <span v-if="domainColor(tile)" class="tile-domain" :style="{ '--c': domainColor(tile) }"></span>
 
                             <!-- ■置いたあとも、その下が何の地形だったか分かるように、すみに小さな絵文字を出す -->
                             <span v-if="tile.ownerTeam && tile.area && !tile.eatenByTileId && !(gameState === 'finished' && showTerritory)" class="tile-terrain" aria-hidden="true">{{ areaIcon(tile.area) }}</span>
@@ -563,6 +566,17 @@
         <!-- ■操作の結果を知らせるメッセージ -->
         <div v-if="toastMessage" class="game-toast">{{ toastMessage }}</div>
 
+        <!-- ■レベル4（★）が おかれたとき：生態系の「頭の生きもの」が あらわれた、のおしらせ -->
+        <transition name="lord-fade">
+            <div v-if="lordBanner" class="lord-banner" :style="{ '--c': lordBanner.color }">
+                <span class="lord-crown">👑</span>
+                <span class="lord-text">
+                    <b>{{ lordBanner.team }}チームの「{{ lordBanner.name }}」</b> が あらわれた！
+                    <small>生態系の いちばん うえの いきもの。まわりを したがえているよ</small>
+                </span>
+            </div>
+        </transition>
+
         <!-- ■手札のカードをタップ：同じ共通のカード表示で、「選択する」ボタンつき -->
         <GameCardFocus
             v-if="modalCard && isPreviewing"
@@ -714,6 +728,8 @@ export default {
         sfxMuted: sfx.isMuted(), // 効果音のミュート
         recentMoves: [], // 自分の番が終わってから、AIが置いた手（{ tileId, teamId, label, eatenIds }）。自分が動くまで、地図でわかるようにする
         toastMessage: '',
+        lordBanner: null, // レベル4（★）が おかれたときの おしらせ
+        lordTimer: null,
         savedPlace: null, // ルームに保存されていた場所（地図から入り直さなかったときに引き継ぐ）
 
         players: [
@@ -916,6 +932,9 @@ export default {
             markCardInstancesEaten(eatenList).catch(e => {
                 console.error('食べられたカードの保存に失敗しました', e)
             })
+
+            // ■レベル4（★）が おかれたら、「頭の生きもの」のおしらせ
+            if (placedTile.placedCard && placedTile.placedCard.tier === 4) this.announceLord(placedTile)
 
             // ■ふりかえり用に、置いた手を記録する（置いた人・レベル・食べたマス）
             if (placedTile.placedCard) {
@@ -1167,6 +1186,7 @@ export default {
             const replay = this.replay
             if (!replay) return
             const n = Math.max(0, Math.min(index, this.moveLog.length))
+            const previous = replay.index
             const tiles = replay.base.map(tile => ({ ...tile }))
             const byId = new Map(tiles.map(tile => [tile.id, tile]))
             const scores = {}
@@ -1190,7 +1210,12 @@ export default {
             this.players.forEach(player => { player.score = scores[player.id] || 0 })
             const last = n > 0 ? this.moveLog[n - 1] : null
             this.recentMoves = last ? [{ tileId: last.t, teamId: last.p, eatenIds: last.e || [] }] : []
+            const stepped = n === previous + 1
             replay.index = n
+            if (last && last.tier === 4 && stepped) {
+                const lord = byId.get(last.t)
+                if (lord) this.announceLord(lord)
+            }
             if (last && !this.boardOverview) this.scrollToTile(last.t)
         },
 
@@ -2082,6 +2107,27 @@ export default {
             return current
         },
 
+        domainColor(tile) {
+            return this.domainByTile[tile.id] || ''
+        },
+
+        isLord(tile) {
+            return !!(tile.placedCard && tile.placedCard.tier === 4 && !tile.eatenByTileId)
+        },
+
+        // ■レベル4（★）が おかれたとき：「頭の生きものが あらわれた」の おしらせと、音
+        announceLord(tile) {
+            const player = this.players.find(p => p.id === tile.ownerTeam)
+            this.lordBanner = {
+                name: (tile.placedCard && tile.placedCard.label) || 'いきもの',
+                team: player ? player.name.replace('チーム', '') : '',
+                color: this.teamColor(tile.ownerTeam)
+            }
+            sfx.lord()
+            clearTimeout(this.lordTimer)
+            this.lordTimer = setTimeout(() => { this.lordBanner = null }, 4200)
+        },
+
         areaIcon(area) {
             return AREA_ICONS[area] || ''
         },
@@ -2493,6 +2539,19 @@ export default {
                   percent: Math.round(((counts[player.id] || 0) / max) * 100)
               }))
               .sort((a, b) => b.count - a.count)
+      },
+
+      // ■レベル4（★）の支配エリア：食べられていない ★ の、まわり8マス → ★の もちぬしの色（ほかの ★ と かさなるときは、さきの ★）
+      domainByTile() {
+          const map = {}
+          this.tiles.forEach(tile => {
+              if (!tile.placedCard || tile.placedCard.tier !== 4 || tile.eatenByTileId) return
+              const color = this.teamColor(tile.ownerTeam)
+              this.getNeighbors(tile).forEach(neighbor => {
+                  if (!map[neighbor.id]) map[neighbor.id] = color
+              })
+          })
+          return map
       },
 
       // ■ふりかえり中の、いまの手の説明
@@ -2954,6 +3013,59 @@ export default {
       white-space: nowrap;
   }
   .test-card-button:active{ transform: scale(0.95); }
+
+  /* ■レベル4（★）の支配エリア：まわり8マスが、そのチームの色で、ゆっくり光る。★は、ゆっくり脈うつ */
+  .tile-domain{
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      border-radius: 2px;
+      background: radial-gradient(circle at center, color-mix(in srgb, var(--c) 62%, transparent), color-mix(in srgb, var(--c) 34%, transparent));
+      box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 90%, transparent), 0 0 8px color-mix(in srgb, var(--c) 70%, transparent);
+      animation: domain-glow 2.6s ease-in-out infinite;
+  }
+  @keyframes domain-glow{
+      0%, 100% { opacity: .7; }
+      50% { opacity: 1; }
+  }
+  .board-tile.tile-lord{
+      position: relative;
+      z-index: 6;
+  }
+  .board-tile.tile-lord .tile-shape{
+      animation: lord-pulse 2.2s ease-in-out infinite;
+      filter: drop-shadow(0 0 3px #fff) drop-shadow(0 0 6px rgba(250, 204, 21, .9));
+  }
+  @keyframes lord-pulse{
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.22); }
+  }
+  .lord-banner{
+      position: fixed;
+      top: 30vh;
+      left: 50%;
+      z-index: 58;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: max-content;
+      max-width: 92vw;
+      transform: translateX(-50%);
+      padding: 10px 18px 10px 14px;
+      border: 2px solid var(--c);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, .96), rgba(8, 12, 24, .96));
+      box-shadow: 0 0 22px color-mix(in srgb, var(--c) 70%, transparent), 0 6px 20px rgba(0, 0, 0, .5);
+      color: #f8fafc;
+      pointer-events: none;
+  }
+  .lord-crown{ font-size: 28px; filter: drop-shadow(0 0 6px rgba(250, 204, 21, .9)); }
+  .lord-text{ display: flex; flex-direction: column; font-size: 13px; font-weight: 700; line-height: 1.5; }
+  .lord-text b{ font-size: 15px; font-weight: 900; color: var(--c); }
+  .lord-text small{ font-size: 10px; font-weight: 700; color: #cbd5e1; }
+  .lord-fade-enter-active, .lord-fade-leave-active{ transition: opacity .5s ease, transform .5s ease; }
+  .lord-fade-enter-from, .lord-fade-leave-to{ opacity: 0; transform: translate(-50%, -12px); }
 
   .tile-eaten{
       position: absolute;

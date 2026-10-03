@@ -95,6 +95,7 @@ export default {
                 { id: "place_dirt", icon: "🟫", label: "置く：土" },
                 { id: "eat", icon: "😋", label: "食べた" },
                 { id: "turn", icon: "🔔", label: "自分の番" },
+                { id: "lord", icon: "👑", label: "レベル4が あらわれた" },
                 { id: "skip", icon: "⏭", label: "スキップ" },
                 { id: "error", icon: "🚫", label: "置けない" },
                 { id: "win", icon: "🏆", label: "勝った" },
