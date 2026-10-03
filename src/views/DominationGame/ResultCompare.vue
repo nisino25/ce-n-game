@@ -1,32 +1,60 @@
 <template>
-    <!-- ■試作：ゲーム終了時の「じんち」と「生態系ピラミッド」を、いくつものゲームの結果で見くらべる画面（開発用の仮画面） -->
+    <!-- ■試作：ゲーム終了時の「じんち」と「生態系ピラミッド」を、ゲームを選んで、いろいろな見せ方で見る画面（開発用の仮画面） -->
     <div class="rc">
         <header class="rc-header">
             <button class="rc-back" @click="$router.push({ name: 'Home' })"><span>◀</span> もどる</button>
             <h1 class="rc-heading">けっか くらべ<small>RESULT COMPARE</small></h1>
         </header>
 
-        <nav class="rc-tabs" aria-label="くらべかた">
-            <button class="rc-tab" :class="{ active: mode === 'styles' }" @click="mode = 'styles'">🎨 見せ方くらべ</button>
-            <button class="rc-tab" :class="{ active: mode === 'games' }" @click="mode = 'games'">🆚 ゲームくらべ</button>
-        </nav>
+        <p class="rc-lead">
+            上の スライドから ゲームを えらぶと、したの メインに、その ゲームの けっかが、いろいろな 見せ方で 出るよ。
+            「見本」は 決まった かず、「プレイ」は AIテストで 最後まで あそんだ ゲーム（おわると じどうで ふえるよ）。
+        </p>
 
-        <!-- ■見せ方くらべ：同じデータを、ちがう見せ方で ならべる -->
-        <template v-if="mode === 'styles'">
-            <p class="rc-lead">
-                おなじ ゲームの けっか（じんち・レベルごとの カードの かず）を、ちがう 見せ方で ならべたよ。
-                下の ゲームを えらぶと、すべての 見せ方が その ゲームに かわるよ。
-            </p>
+        <!-- ■上のスライド：ゲームを えらぶ（ピラミッドの かたちが、ひと目で わかる） -->
+        <section ref="strip" class="rc-strip" aria-label="ゲームを えらぶ">
+            <button
+                v-for="game in games"
+                :key="game.key"
+                :ref="el => setMiniRef(game.key, el)"
+                class="rc-mini"
+                :class="{ active: game.key === selected.key }"
+                @click="selectedKey = game.key"
+            >
+                <span class="rc-mini-kind" :class="game.sample ? 'rc-kind-sample' : 'rc-kind-play'">{{ game.sample ? '見本' : 'プレイ' }}</span>
+                <GameResultSummary :players="game.players" :tier-team="game.tierTeam" dark compact />
+                <span class="rc-mini-title">{{ game.shortTitle }}</span>
+                <span class="rc-mini-winner" :style="{ '--c': game.winner.color }">🏆 {{ game.winner.name.replace('チーム', '') }}</span>
+                <span class="rc-badge" :class="game.shape.good ? 'rc-badge-good' : 'rc-badge-warn'">{{ game.shape.label }}</span>
+            </button>
+        </section>
 
-            <div class="rc-pick">
-                <button
-                    v-for="game in games"
-                    :key="game.key"
-                    class="rc-chip"
-                    :class="{ active: game.key === selected.key }"
-                    @click="selectedKey = game.key"
-                >{{ game.sample ? '見本' : 'プレイ' }}：{{ game.shortTitle }}</button>
-            </div>
+        <!-- ■下のメイン：えらんだ ゲーム -->
+        <main class="rc-main">
+            <section class="rc-selected">
+                <div class="rc-card-head">
+                    <span class="rc-kind" :class="selected.sample ? 'rc-kind-sample' : 'rc-kind-play'">{{ selected.sample ? '見本' : 'プレイ' }}</span>
+                    <p class="rc-card-title">{{ selected.title }}</p>
+                    <button v-if="selected.gameLink" class="rc-open" @click="openGame(selected)">🎮 ゲームの画面で 見る</button>
+                </div>
+                <p v-if="selected.note" class="rc-card-note">{{ selected.note }}</p>
+                <p v-if="selected.gameLink" class="rc-card-note">ゲームの画面では、盤面・「ふりかえる」も 見られるよ（その 枠の いちばん あたらしい ゲームが ひらくよ）</p>
+
+                <div class="rc-selected-body">
+                    <div class="rc-winner" :style="{ '--c': selected.winner.color }">
+                        <span class="rc-trophy">🏆</span>
+                        <span><b>{{ selected.winner.name }}</b> が 1位<small>{{ selected.winner.score }}点</small></span>
+                    </div>
+                    <ul class="rc-ranks">
+                        <li v-for="player in ranked(selected)" :key="player.id">
+                            <span class="rc-rank">{{ player.rank }}</span>
+                            <span class="rc-dot" :style="{ background: player.color }"></span>
+                            <span class="rc-name">{{ player.name }}<em v-if="player.id === selected.selfId">あなた</em></span>
+                            <span class="rc-score">{{ player.score }}<small>点</small></span>
+                        </li>
+                    </ul>
+                </div>
+            </section>
 
             <div class="rc-grid rc-grid-styles">
                 <section class="rc-card">
@@ -40,54 +68,10 @@
                     <ResultVariants :players="selected.players" :tier-team="selected.tierTeam" :scores="selected.scores" :variant="style.id" />
                 </section>
             </div>
-        </template>
-
-        <template v-else>
-        <p class="rc-lead">
-            ゲームが おわったときの 画面（じんち・生態系ピラミッド）を、ならべて くらべられるよ。
-            「見本」は 決まった かず、「プレイ」は テストモードで 最後まで あそんだ ゲームが、じどうで ふえていくよ
-            （AIテストエリアで あそぶ → 終了で 保存）。
-        </p>
-
-        <!-- ■ピラミッドを、ぜんぶ ならべて見る（かたちの ちがいが、ひと目で わかる） -->
-        <section class="rc-strip" aria-label="ピラミッドの 一覧">
-            <div v-for="game in games" :key="game.key" class="rc-mini">
-                <GameResultSummary :players="game.players" :tier-team="game.tierTeam" dark compact />
-                <p class="rc-mini-title">{{ game.shortTitle }}</p>
-                <span class="rc-badge" :class="game.shape.good ? 'rc-badge-good' : 'rc-badge-warn'">{{ game.shape.label }}</span>
-            </div>
-        </section>
-
-        <div class="rc-grid">
-            <section v-for="game in games" :key="game.key" class="rc-card">
-                <div class="rc-card-head">
-                    <span class="rc-kind" :class="game.sample ? 'rc-kind-sample' : 'rc-kind-play'">{{ game.sample ? '見本' : 'プレイ' }}</span>
-                    <p class="rc-card-title">{{ game.title }}</p>
-                </div>
-                <p v-if="game.note" class="rc-card-note">{{ game.note }}</p>
-
-                <div class="rc-winner" :style="{ '--c': game.winner.color }">
-                    <span class="rc-trophy">🏆</span>
-                    <span><b>{{ game.winner.name }}</b> が 1位<small>{{ game.winner.score }}点</small></span>
-                </div>
-
-                <ul class="rc-ranks">
-                    <li v-for="player in ranked(game)" :key="player.id">
-                        <span class="rc-rank">{{ player.rank }}</span>
-                        <span class="rc-dot" :style="{ background: player.color }"></span>
-                        <span class="rc-name">{{ player.name }}<em v-if="player.id === game.selfId">あなた</em></span>
-                        <span class="rc-score">{{ player.score }}<small>点</small></span>
-                    </li>
-                </ul>
-
-                <GameResultSummary :players="game.players" :tier-team="game.tierTeam" :self-id="game.selfId" dark />
-            </section>
-        </div>
-
-        </template>
+        </main>
 
         <p v-if="loading" class="rc-foot">プレイの けっかを よみこみ中…</p>
-        <p v-else-if="!played.length" class="rc-foot">まだ「プレイ」は ないよ。AIテストエリアで 1ゲーム あそんでみてね</p>
+        <p v-else-if="!played.length" class="rc-foot">まだ「プレイ」は ないよ。AIテストで 1ゲーム あそんでみてね</p>
     </div>
 </template>
 
@@ -96,8 +80,9 @@ import db from "@/firebase.js";
 import { TEAM_COLORS } from "@/utils/dominationSlots.js";
 import GameResultSummary from "./GameResultSummary.vue";
 import ResultVariants from "./ResultVariants.vue";
+import mapSpotsSeed from "./mapSpots.json";
 
-const TIER_POINTS = { 1: 1, 2: 3, 3: 5, 4: 8 };
+const TIER_POINTS = { 1: 1, 2: 3, 3: 5, 4: 10 };
 const PLAYERS = [
     { id: 1, name: "水チーム", color: TEAM_COLORS.water },
     { id: 2, name: "風チーム", color: TEAM_COLORS.air },
@@ -142,9 +127,9 @@ export default {
 
     data() {
         return {
+            miniRefs: {},
             played: [],
             loading: true,
-            mode: "styles",
             selectedKey: "",
             // ■ちがう見せ方の案（同じデータを、これらで見くらべる）
             styles: [
@@ -177,6 +162,16 @@ export default {
         }
     },
 
+    watch: {
+        // えらんだゲームが、スライドの真ん中あたりに見えるようにする
+        selectedKey() {
+            this.$nextTick(() => {
+                const el = this.miniRefs[this.selected.key];
+                if (el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+            });
+        }
+    },
+
     async mounted() {
         try {
             const snap = await db.collection("gameResults").orderBy("createdAt", "desc").limit(60).get();
@@ -191,17 +186,47 @@ export default {
                     sample: false,
                     players: data.players || [],
                     tierTeam: data.tierTeam || {},
-                    selfId: data.humanPlayerId || null
+                    selfId: data.humanPlayerId || null,
+                    roomCode: data.roomCode || "",
+                    gameLink: /^aitest-\d+-\d$/.test(data.roomCode || "")
                 };
             });
         } catch (e) {
             console.error("けっかの読み込みに失敗しました", e);
         } finally {
             this.loading = false;
+            // スライドは、いつも いちばん左（いちばん新しいゲーム）から
+            this.$nextTick(() => {
+                if (this.$refs.strip) this.$refs.strip.scrollLeft = 0;
+            });
         }
     },
 
     methods: {
+        setMiniRef(key, el) {
+            if (el) this.miniRefs[key] = el;
+        },
+
+        // ■結果のゲームの画面へ（AIテストの枠の、いちばん新しいゲームを、観戦モードで開く）
+        openGame(game) {
+            const match = /^(aitest-\d+)-(\d)$/.exec(game.roomCode || "");
+            if (!match) return;
+            const spot = mapSpotsSeed.spots.find(item => item.id === match[1]);
+            if (!spot) return;
+            localStorage.setItem("dominationRoomCode", game.roomCode);
+            localStorage.setItem("dominationPlace", JSON.stringify({
+                city: spot.city,
+                cityName: mapSpotsSeed.cities[spot.city].name,
+                spotId: spot.id,
+                spotName: spot.name,
+                habitat: spot.habitat,
+                gameNo: Number(match[2]),
+                test: true
+            }));
+            localStorage.setItem("dominationSpectate", "1");
+            this.$router.push("/dominationGame");
+        },
+
         ranked(game) {
             const sorted = [...game.players].sort((a, b) => b.score - a.score);
             return sorted.map(player => ({ ...player, rank: 1 + sorted.filter(other => other.score > player.score).length }));
@@ -251,42 +276,7 @@ export default {
     text-shadow: 0 0 12px rgba(34,211,238,.7);
 }
 .rc-heading small{ display: block; font-size: 9px; letter-spacing: .3em; color: #64748b; text-shadow: none; }
-.rc-tabs{
-    display: flex;
-    gap: 8px;
-    max-width: 960px;
-    margin: 14px auto 0;
-    padding: 0 16px;
-}
-.rc-tab{
-    padding: 7px 16px;
-    border: 1.5px solid rgba(103,232,249,.35);
-    border-radius: 9999px;
-    font-size: 13px;
-    font-weight: 900;
-    color: #94a3b8;
-}
-.rc-tab.active{ background: rgba(34,211,238,.18); border-color: #67e8f9; color: #e0f7ff; box-shadow: 0 0 12px rgba(34,211,238,.35); }
-.rc-pick{
-    display: flex;
-    gap: 8px;
-    max-width: 960px;
-    margin: 12px auto 0;
-    padding: 0 16px 6px;
-    overflow-x: auto;
-}
-.rc-chip{
-    flex: none;
-    padding: 5px 12px;
-    border: 1px solid rgba(255,255,255,.2);
-    border-radius: 9999px;
-    font-size: 11px;
-    font-weight: 800;
-    color: #cbd5e1;
-    white-space: nowrap;
-}
-.rc-chip.active{ background: #0e7490; border-color: #67e8f9; color: #fff; }
-.rc-grid-styles{ margin-top: 12px; }
+.rc-grid-styles{ margin-top: 14px; }
 
 .rc-lead{
     max-width: 960px;
@@ -299,6 +289,8 @@ export default {
 }
 
 .rc-strip{
+    overflow-anchor: none; /* プレイの けっかが あとから ふえても、スライドの位置が、ずれないように */
+    scroll-snap-type: x proximity;
     display: flex;
     gap: 12px;
     max-width: 960px;
@@ -308,6 +300,8 @@ export default {
 }
 .rc-mini{
     flex: none;
+    scroll-snap-align: center;
+    cursor: pointer;
     width: 128px;
     padding: 10px 8px 10px;
     border: 1px solid rgba(255,255,255,.1);
@@ -315,6 +309,18 @@ export default {
     background: rgba(255,255,255,.04);
     text-align: center;
 }
+.rc-mini{ display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; transition: transform .15s, border-color .15s, box-shadow .15s; }
+.rc-mini:hover{ transform: translateY(-2px); }
+.rc-mini.active{ border-color: #67e8f9; box-shadow: 0 0 16px rgba(34,211,238,.55); background: rgba(34,211,238,.1); }
+.rc-mini > *{ width: 100%; }
+.rc-mini-kind{ align-self: flex-start; width: auto !important; padding: 0 8px; border-radius: 9999px; font-size: 9px; font-weight: 900; color: #fff; }
+.rc-mini-winner{ font-size: 10px; font-weight: 900; color: var(--c); }
+.rc-main{ max-width: 960px; margin: 6px auto 0; }
+.rc-selected{ margin: 0 16px; padding: 14px 16px; border: 1px solid rgba(103,232,249,.4); border-radius: 18px; background: linear-gradient(180deg, rgba(34,211,238,.1), rgba(255,255,255,.03)); box-shadow: 0 0 22px rgba(34,211,238,.15); }
+.rc-selected-body{ display: grid; grid-template-columns: 1fr; gap: 0 18px; }
+@media (min-width: 640px){ .rc-selected-body{ grid-template-columns: 1fr 1fr; align-items: start; } }
+.rc-open{ margin-left: auto; padding: 6px 14px; border: 1.5px solid #a78bfa; border-radius: 9999px; background: rgba(109,40,217,.35); font-size: 12px; font-weight: 900; color: #ede9fe; white-space: nowrap; }
+.rc-open:active{ transform: scale(.96); }
 .rc-mini-title{ margin: 6px 0 4px; font-size: 11px; font-weight: 900; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rc-badge{
     display: inline-block;

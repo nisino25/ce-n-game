@@ -941,7 +941,7 @@ export default {
             if (tier === 1) return 1
             if (tier === 2) return 3
             if (tier === 3) return 5
-            if (tier === 4) return 8
+            if (tier === 4) return 10
 
             return tier * 2
         },
