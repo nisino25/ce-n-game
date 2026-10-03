@@ -23,8 +23,45 @@
                 </template>
             </nav>
 
+            <!-- 本番への反映履歴：カード一覧（タップでモーダル） -->
+            <div v-if="cardDoc" class="docs-content">
+                <!-- eslint-disable-next-line vue/no-v-html -->
+                <div class="deploy-intro" @click="onContentClick" v-html="cardDoc.introHtml"></div>
+                <div class="deploy-cards">
+                    <button
+                        v-for="card in cardDoc.cards"
+                        :key="card.title"
+                        class="deploy-card"
+                        :class="{ pending: card.pending }"
+                        @click="openCard(card)"
+                    >
+                        <span class="deploy-meta">
+                            <span class="deploy-date">{{ card.pending ? "これから" : card.date }}</span>
+                            <span v-if="card.pr" class="deploy-pr">{{ card.pr }}</span>
+                        </span>
+                        <span class="deploy-title">{{ card.title }}</span>
+                        <span class="deploy-summary">{{ card.summary }}</span>
+                        <span class="deploy-more">くわしく見る ›</span>
+                    </button>
+                </div>
+            </div>
+
             <!-- eslint-disable-next-line vue/no-v-html -->
-            <article ref="content" class="docs-content" @click="onContentClick" v-html="html"></article>
+            <article v-else ref="content" class="docs-content" @click="onContentClick" v-html="html"></article>
+        </div>
+
+        <!-- 反映カードのモーダル -->
+        <div v-if="openedCard" class="deploy-modal-back" @click.self="openedCard = null">
+            <div class="deploy-modal" role="dialog" aria-modal="true">
+                <button class="deploy-modal-close" aria-label="閉じる" @click="openedCard = null">✕</button>
+                <div class="deploy-modal-meta">
+                    <span class="deploy-date">{{ openedCard.pending ? "これから" : openedCard.date }}</span>
+                    <span v-if="openedCard.pr" class="deploy-pr">{{ openedCard.pr }}</span>
+                </div>
+                <h2 class="deploy-modal-title">{{ openedCard.title }}</h2>
+                <!-- eslint-disable-next-line vue/no-v-html -->
+                <div class="docs-content deploy-modal-body" @click="onContentClick" v-html="openedCard.html"></div>
+            </div>
         </div>
     </div>
 </template>
@@ -66,12 +103,34 @@ const orderOf = path => {
 const PRODUCTION = ["deploy-log.md"];
 docs.sort((a, b) => orderOf(a.path) - orderOf(b.path) || a.path.localeCompare(b.path));
 
+// ■反映履歴：「## 日付 PR #n：タイトル」ごとに、1枚のカードにする（見出しの下の最初の段落が、カードの説明）
+const parseCards = source => {
+    const [intro, ...chunks] = source.split(/^## /m);
+    const cards = chunks.map(chunk => {
+        const [headLine, ...rest] = chunk.split("\n");
+        const body = rest.join("\n").replace(/\n---\s*$/, "").trim();
+        const head = headLine.trim().match(/^(\d{4}-\d{2}-\d{2})\s+(PR\s*#[^：:\s]+)\s*[：:]\s*(.+)$/);
+        const summary = (body.split(/\n\s*\n/)[0] || "").replace(/^[-*]\s*/, "").replace(/[`*]/g, "").trim();
+        return {
+            date: head ? head[1] : "",
+            pr: head ? head[2].replace(/\s+/g, "") : "",
+            title: head ? head[3] : headLine.trim(),
+            pending: !head,
+            summary,
+            html: marked.parse(body)
+        };
+    });
+    return { introHtml: marked.parse(intro.replace(/\n---\s*$/, "")), cards };
+};
+const CARD_DOCS = { "deploy-log.md": true };
+
 export default {
     name: "DocsView",
 
     data() {
         return {
             menuOpen: false,
+            openedCard: null,
             currentPath: this.initialPath()
         };
     },
@@ -88,19 +147,42 @@ export default {
             ].filter(group => group.docs.length);
         },
 
+        cardDoc() {
+            if (!CARD_DOCS[this.currentPath]) return null;
+            const doc = docs.find(item => item.path === this.currentPath);
+            return doc ? parseCards(doc.source) : null;
+        },
+
         html() {
             const doc = docs.find(item => item.path === this.currentPath);
             return doc ? marked.parse(doc.source) : "<p>ドキュメントが見つかりません</p>";
         }
     },
 
+    mounted() {
+        window.addEventListener("keydown", this.onKeydown);
+    },
+
+    beforeUnmount() {
+        window.removeEventListener("keydown", this.onKeydown);
+    },
+
     methods: {
+        onKeydown(event) {
+            if (event.key === "Escape") this.openedCard = null;
+        },
+
         initialPath() {
             const wanted = this.$route.query.doc;
             return docs.some(doc => doc.path === wanted) ? wanted : docs.length ? docs[0].path : "";
         },
 
+        openCard(card) {
+            this.openedCard = card;
+        },
+
         openDoc(path) {
+            this.openedCard = null;
             this.currentPath = path;
             this.menuOpen = false;
             this.$router.replace({ query: { doc: path } });
@@ -183,6 +265,43 @@ export default {
 .docs-content :deep(th),.docs-content :deep(td){border:1px solid #334155;padding:6px 10px;text-align:left;vertical-align:top}
 .docs-content :deep(th){background:#1b2330;font-weight:bold;color:#e2e8f0;white-space:nowrap}
 .docs-content :deep(input[type=checkbox]){margin-right:6px}
+
+/* ■読みやすさ：見出しごとにカードにする */
+.docs-content :deep(h2){margin:28px 0 12px;padding:10px 14px;border:0;border-left:5px solid #22d3ee;border-radius:8px;background:rgba(34,211,238,.1)}
+.docs-content :deep(h2 + ul),.docs-content :deep(h2 + p),.docs-content :deep(h2 + ol){margin-top:0}
+.docs-content :deep(ul){padding-left:1.3em}
+.docs-content :deep(li){margin:6px 0}
+.docs-content :deep(li::marker){color:#22d3ee}
+.docs-content :deep(li > ul){margin:4px 0}
+
+/* ■本番への反映履歴：カード */
+.deploy-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:16px}
+.deploy-card{
+    display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;
+    border:1px solid #334155;border-radius:14px;padding:14px;background:#1b2330;
+    transition:transform .15s,border-color .15s,background .15s;
+}
+.deploy-card:hover{transform:translateY(-2px);border-color:#22d3ee;background:#202b3a}
+.deploy-card.pending{border-style:dashed;border-color:#64748b;background:rgba(255,255,255,.03)}
+.deploy-date,.deploy-pr{display:inline-block;border-radius:999px;padding:2px 10px;font-size:11px;font-weight:bold}
+.deploy-date{background:#0e7490;color:#fff}
+.deploy-pr{background:#f59e0b;color:#1f2937}
+.deploy-meta{display:flex;flex-wrap:wrap;gap:6px}
+.deploy-title{font-size:15px;font-weight:900;line-height:1.5;color:#e2e8f0}
+.deploy-summary{font-size:13px;line-height:1.6;color:#94a3b8}
+.deploy-more{margin-top:auto;padding-top:4px;font-size:12px;font-weight:bold;color:#67e8f9}
+
+.deploy-modal-back{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,12,.7)}
+.deploy-modal{
+    position:relative;width:100%;max-width:640px;max-height:85vh;overflow-y:auto;
+    border:1px solid #334155;border-radius:16px;padding:22px 22px 26px;background:#10151c;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+}
+.deploy-modal-close{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:999px;font-size:16px;color:#e2e8f0;background:rgba(255,255,255,.08)}
+.deploy-modal-close:hover{background:rgba(255,255,255,.18)}
+.deploy-modal-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding-right:40px}
+.deploy-modal-title{margin:0 0 10px;font-size:19px;font-weight:900;line-height:1.5;color:#a5f3fc}
+.deploy-modal-body{font-size:14px}
 
 @media (max-width:760px){
     .docs-menu-toggle{display:block}
