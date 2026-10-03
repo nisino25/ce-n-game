@@ -285,7 +285,7 @@
             />
 
             <!-- ■ゲーム終了：結果（順位・1位のごほうび・じんち） -->
-            <div v-if="gameState === 'finished' && !showTerritory" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+            <div v-if="gameState === 'finished' && !showTerritory && !replay" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
                 <div class="bg-white p-5 rounded-2xl shadow-xl text-center max-w-sm w-full max-h-[92vh] overflow-y-auto">
                     <h2 class="text-2xl font-bold mb-1">ゲーム終了！</h2>
                     <p v-if="spectator" class="mb-1 inline-block rounded-full bg-violet-100 px-4 py-1 text-sm font-black text-violet-700">👀 観戦：{{ ownerLabel }}の ゲーム</p>
@@ -341,6 +341,15 @@
                             </button>
                         </template>
                     </GameResultSummary>
+
+                    <!-- ■ふりかえり：おわったゲームを、1手ずつ、はじめから見なおす -->
+                    <button
+                        v-if="moveLog.length"
+                        class="mb-3 w-full rounded-xl border-2 border-violet-300 bg-violet-50 px-4 py-2.5 text-sm font-black text-violet-700 hover:bg-violet-100"
+                        @click="startReplay()"
+                    >
+                        ▶ ふりかえる（{{ moveLog.length }}手を 1手ずつ 見る）
+                    </button>
 
                     <!-- ■地図の場所のゲームは、おわった枠はそのまま残る（もう一回はできない）ので、街の画面にもどる -->
                     <button
@@ -464,6 +473,28 @@
                     </div>
                 </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- ■ふりかえりのバー：1手ずつ進める・戻す・自動で再生 -->
+        <div v-if="replay" class="replay-bar">
+            <p class="replay-label">🎞 ふりかえり {{ replayLabel }}</p>
+            <input
+                class="replay-slider"
+                type="range"
+                min="0"
+                :max="moveLog.length"
+                :value="replay.index"
+                @input="stepReplay(Number($event.target.value) - replay.index)"
+            >
+            <div class="replay-buttons">
+                <button aria-label="はじめへ" @click="stepReplay(-moveLog.length)">⏮</button>
+                <button aria-label="ひとつ もどる" @click="stepReplay(-1)">◀</button>
+                <button class="replay-play" @click="toggleReplayPlay()">{{ replay.playing ? '⏸' : '▶' }}</button>
+                <button aria-label="ひとつ すすむ" @click="stepReplay(1)">▶</button>
+                <button aria-label="さいごへ" @click="stepReplay(moveLog.length)">⏭</button>
+                <button class="replay-speed" @click="cycleReplaySpeed()">×{{ replay.speed }}</button>
+                <button class="replay-close" @click="closeReplay()">✕ とじる</button>
             </div>
         </div>
 
@@ -652,6 +683,8 @@ export default {
         roomCodeCopied: false,
         slotOwner: null, // 地図のゲーム枠を遊んでいる人 { uid, name, team }
         resigned: false, // 「まけました」で終わったか
+        moveLog: [], // 置いた手の記録（ふりかえり用）：{ t:マスID, p:チームID, tier, l:カード名, e:食べたマスID[] }
+        replay: null, // ふりかえり中の状態
         spectator: false, // 観戦モード（ほかの人の・おわったゲームを、見るだけ）
         spectateUnsub: null,
         savedAiWon: false, // 読み込んだ保存が、AIが勝って終わったものか（昔のデータ）
@@ -760,6 +793,7 @@ export default {
             this.$router.push({ name: 'Home' });
         },
         async onTileClick(tile) {
+          if (this.replay) return // ふりかえり中は、さわれない
           // ■観戦モード：置かれたカードを見ることだけできる
           if (this.spectator) {
             if (tile.placedCard) {
@@ -874,6 +908,17 @@ export default {
                 console.error('食べられたカードの保存に失敗しました', e)
             })
 
+            // ■ふりかえり用に、置いた手を記録する（置いた人・レベル・食べたマス）
+            if (placedTile.placedCard) {
+                this.moveLog.push({
+                    t: placedTile.id,
+                    p: this.currentPlayerId,
+                    tier: placedTile.placedCard.tier,
+                    l: placedTile.placedCard.label || '',
+                    e: eatenIds
+                })
+            }
+
             return eatenIds
         },
 
@@ -894,6 +939,7 @@ export default {
         },
         async resetTiles() {
 
+            this.moveLog = []
             this.resigned = false
             this.rewardTera = 0
             this.rewardState = ''
@@ -928,6 +974,7 @@ export default {
                 this.resigned = !!(data.result && data.result.resigned)
                 this.savedAiWon = data.gameState === 'finished' && !!data.result && data.result.humanWon === false // 昔のデータ：AIが勝って終わった枠
                 this.rewardTera = (data.result && data.result.rewardTera) || 0
+                this.moveLog = Array.isArray(data.moves) ? data.moves : []
                 this.tiles = data.tiles
                 // 保存されていた「置ける場所の印」「選択中の印」は、読み込み直したときは消す（カードを選び直すまで出さない）
                 this.tiles.forEach(tile => { tile.validForSelection = false; tile.selected = false })
@@ -1021,6 +1068,7 @@ export default {
             try {
                 await db.collection(SAVE_COLLECTION).doc(this.roomCode).set({
                     tiles: this.tiles,
+                    moves: this.moveLog,
                     hands: this.hands,
                     players: this.players.map(p => ({ id: p.id, score: p.score })),
                     currentPlayerId: this.currentPlayerId,
@@ -1067,6 +1115,7 @@ export default {
                 const data = doc.data()
                 if (!data || !Array.isArray(data.tiles)) return
                 data.tiles.forEach(tile => { tile.validForSelection = false; tile.selected = false })
+                this.moveLog = Array.isArray(data.moves) ? data.moves : []
                 this.tiles = data.tiles
                 this.hands = data.hands || this.hands
                 this.skipCount = data.skipCount || 0
@@ -1080,6 +1129,96 @@ export default {
                     })
                 }
             }, error => console.error('観戦の読み込みに失敗しました', error))
+        },
+
+        // ■ふりかえり：終わったゲームを、1手ずつ、はじめから見なおす
+        startReplay() {
+            if (!this.moveLog.length || this.replay) return
+            const base = this.tiles.map(tile => ({ ...tile, ownerTeam: null, placedCard: null, eatenByTileId: null, eatenByPlayerId: null, selected: false, validForSelection: false }))
+            this.replay = { index: 0, playing: false, speed: 1, final: this.tiles, base, scores: this.players.map(player => player.score), timer: null }
+            this.showTerritory = false
+            this.goReplay(0)
+        },
+
+        goReplay(index) {
+            const replay = this.replay
+            if (!replay) return
+            const n = Math.max(0, Math.min(index, this.moveLog.length))
+            const tiles = replay.base.map(tile => ({ ...tile }))
+            const byId = new Map(tiles.map(tile => [tile.id, tile]))
+            const scores = {}
+            this.players.forEach(player => { scores[player.id] = 0 })
+            for (let i = 0; i < n; i++) {
+                const move = this.moveLog[i]
+                const tile = byId.get(move.t)
+                if (!tile) continue
+                tile.ownerTeam = move.p
+                tile.placedCard = { tier: move.tier, label: move.l }
+                scores[move.p] = (scores[move.p] || 0) + this.getScoreForTile(move.tier)
+                ;(move.e || []).forEach(id => {
+                    const eaten = byId.get(id)
+                    if (eaten) {
+                        eaten.eatenByTileId = move.t
+                        eaten.eatenByPlayerId = move.p
+                    }
+                })
+            }
+            this.tiles = tiles
+            this.players.forEach(player => { player.score = scores[player.id] || 0 })
+            const last = n > 0 ? this.moveLog[n - 1] : null
+            this.recentMoves = last ? [{ tileId: last.t, teamId: last.p, eatenIds: last.e || [] }] : []
+            replay.index = n
+            if (last) this.scrollToTile(last.t)
+        },
+
+        toggleReplayPlay() {
+            const replay = this.replay
+            if (!replay) return
+            if (replay.playing) {
+                this.stopReplayTimer()
+                return
+            }
+            if (replay.index >= this.moveLog.length) this.goReplay(0)
+            replay.playing = true
+            const tick = () => {
+                if (!this.replay || !this.replay.playing) return
+                if (this.replay.index >= this.moveLog.length) {
+                    this.stopReplayTimer()
+                    return
+                }
+                this.goReplay(this.replay.index + 1)
+                this.replay.timer = setTimeout(tick, 900 / this.replay.speed)
+            }
+            replay.timer = setTimeout(tick, 300)
+        },
+
+        stopReplayTimer() {
+            if (!this.replay) return
+            clearTimeout(this.replay.timer)
+            this.replay.timer = null
+            this.replay.playing = false
+        },
+
+        cycleReplaySpeed() {
+            const replay = this.replay
+            if (!replay) return
+            replay.speed = replay.speed === 1 ? 2 : replay.speed === 2 ? 4 : 1
+        },
+
+        stepReplay(delta) {
+            if (!this.replay) return
+            this.stopReplayTimer()
+            this.goReplay(this.replay.index + delta)
+        },
+
+        closeReplay() {
+            const replay = this.replay
+            if (!replay) return
+            this.stopReplayTimer()
+            this.tiles = replay.final
+            this.players.forEach((player, index) => { player.score = replay.scores[index] })
+            this.recentMoves = []
+            this.replay = null
         },
 
         // ■終わったゲームの記録（盤面そのものではなく、チームごとの点・レベル別の数だけ）。けっか くらべの画面で見る
@@ -1297,6 +1436,7 @@ export default {
                 // 人間チームの手札はDBの所持カードから作り直す
                 this.hands[this.humanPlayerId] = this.shuffleArray(this.handFromInstances(instances))
             } else {
+                this.moveLog = []
                 await this.initializeHands(instances)
                 this.generateTiles()
                 this.gameState = 'playing'
@@ -2238,6 +2378,7 @@ export default {
     },
     beforeUnmount() {
         if (this.spectateUnsub) this.spectateUnsub()
+        if (this.replay) clearTimeout(this.replay.timer)
     },
     components: {
         GameCardFocus,
@@ -2291,6 +2432,17 @@ export default {
                   percent: Math.round(((counts[player.id] || 0) / max) * 100)
               }))
               .sort((a, b) => b.count - a.count)
+      },
+
+      // ■ふりかえり中の、いまの手の説明
+      replayLabel() {
+          const replay = this.replay
+          if (!replay) return ''
+          if (!replay.index) return 'はじまり'
+          const move = this.moveLog[replay.index - 1]
+          const player = this.players.find(item => item.id === move.p)
+          const eaten = move.e && move.e.length ? `（${move.e.length}こ 食べた）` : ''
+          return `${replay.index}手め：${player ? player.name : ''} が Lv${move.tier}${move.l ? `「${move.l}」` : ''}を おいた${eaten}`
       },
 
       // ■観戦モードの結果の画面に出す、勝ったチーム
@@ -2652,6 +2804,35 @@ export default {
   }
 
   /* ■置いたカードの形（SVG）。マスの大きさの約78%。黒縁は、拡大・縮小しても同じ太さ（2px）にする */
+  /* ■ふりかえりのバー（画面の下に出す。ほかの画面より前） */
+  .replay-bar{
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 60;
+      padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+      background: rgba(15, 23, 42, .96);
+      border-top: 2px solid #a78bfa;
+      color: #e2e8f0;
+  }
+  .replay-label{ margin: 0 0 6px; font-size: 12px; font-weight: 800; line-height: 1.4; }
+  .replay-slider{ width: 100%; accent-color: #a78bfa; }
+  .replay-buttons{ display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 6px; }
+  .replay-buttons button{
+      min-width: 38px;
+      padding: 6px 8px;
+      border: 1.5px solid rgba(255,255,255,.3);
+      border-radius: 10px;
+      background: rgba(255,255,255,.08);
+      font-size: 14px;
+      font-weight: 900;
+      color: #f1f5f9;
+  }
+  .replay-buttons .replay-play{ min-width: 52px; border-color: #a78bfa; background: #6d28d9; }
+  .replay-buttons .replay-speed{ font-size: 12px; }
+  .replay-buttons .replay-close{ margin-left: auto; font-size: 12px; border-color: rgba(248,113,113,.7); }
+
   /* ■観戦モード：見るだけ。バナーと、ゲーム全体のむらさきのふちで、観戦中だと分かるようにする */
   .spectator-banner{
       display: flex;
