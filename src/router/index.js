@@ -31,6 +31,7 @@ import NoticeBoard from "@/views/NoticeBoard/NoticeBoard.vue";
 import CommentsAdmin from "@/views/Admin/CommentsAdmin.vue";
 import HabitatCompare from "@/views/HabitatCompare/HabitatCompare.vue";
 import DeviceStats from "@/views/Admin/DeviceStats.vue";
+import CardAdminOld from "@/views/Admin/CardAdminOld.vue";
 
 
 const routes = [
@@ -128,6 +129,11 @@ const routes = [
         path: "/card-admin", 
         name: "CardAdmin", 
         component: CardAdmin 
+    },
+    { 
+        path: "/card-admin-old", 
+        name: "CardAdminOld", 
+        component: CardAdminOld 
     },
     
     // ■かんばん：これからのアップデートのお知らせと、みんなの声（コメント）を送る場所

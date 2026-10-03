@@ -1,5 +1,9 @@
 <template>
-    <div class="relative w-screen h-screen overflow-hidden bg-slate-950 padding-4" :style="themeVars">
+    <div
+    class="monitor-room relative w-screen h-screen overflow-hidden bg-slate-950 padding-4"
+    :style="themeVars"
+    >
+    <!-- ■div class="relative w-screen h-screen overflow-hidden bg-slate-950 padding-4" :style="themeVars" -->
 
         <!-- Background -->
         <div class="absolute inset-0 room-bg"></div>
@@ -11,12 +15,12 @@
             <span v-if="isLocalEnv" class="demo-badge">(DEMO)</span>
         </h1>
 
-        <!-- Floor -->
-        <!-- <div
+        <!-- ■復活Floor -->
+        <div
             id="roomFloor"
-            class="absolute left-1/2 -translate-x-1/2 -bottom-52 w-[1400px] h-[900px]"
+            class="room-floor-3d"
             :class="floorClass"
-        ></div> -->
+        ></div>
 
         <!-- Top Monitors -->
         <div class="top-monitors-row flex justify-evenly items-center flex-wrap gap-2">
@@ -245,17 +249,26 @@
             <RoomIconButton kind="board" label="かんばん" @click="$router.push({ name: 'NoticeBoard' })" />
         </div>
 
-        <!-- Console -->
-        <!-- ■「◯◯の部屋」のテーブルは、1つだけ -->
-        <div class="consoles realtive flex justify-center items-center w-[400px] max-w-full mx-auto">
-            <div
-                class="relative w-44 h-16 bg-gray-700 border-2 border-gray-500 room-console flex justify-center items-center"
-                >
-                <div class="text-center room-accent-text text-sm">
-                    <div class="desk-monitor">{{ teamEmoji }} {{ teamName }}</div>
+        <!-- ■3Dの机（「◯◯の部屋」のテーブル）。テーブルは1つだけ -->
+        <div class="console-area">
+            <div class="desk-3d">
+                <!-- 天板 -->
+                <div class="desk-top">
+                    <div class="desk-monitor">
+                        {{ teamEmoji }} {{ teamName }}
+                    </div>
+                </div>
+                <!-- 机本体 -->
+                <div class="desk-body">
+                    <div class="desk-front"></div>
+                    <div class="desk-left"></div>
+                    <div class="desk-right"></div>
+                    <!-- 脚 -->
+                    <div class="desk-leg desk-leg-left"></div>
+                    <div class="desk-leg desk-leg-right"></div>
                 </div>
             </div>
-
+        </div>
 						<div
 							ref="avatarEl"
 							class="w-[80px] aspect-square mx-auto fixed left-[15%] bottom-[10%] z-[500] transform -translate-x-1/2
@@ -297,8 +310,9 @@
 									>
 											閉じる
 									</button>
-							</div>
-						</div>
+                            
+                            </div>
+                        </div>
 
             <!-- Workers -->
             <div class="absolute inset-x-[4%] top-[34%] bottom-[6%] pointer-events-none">
@@ -312,7 +326,7 @@
 								</div>
               </template>
             </div>
-        </div>
+        <!-- /div -->
 
     </div>
 </template>
@@ -1109,5 +1123,146 @@ export default {
       text-align: center;
       color: var(--team-accent, #0ff);
       opacity: 0.55;
+  }
+
+  /* =========================
+     3D Floor
+     ========================= */
+  .room-floor-3d {
+      position: absolute;
+      left: 50%;
+      bottom: -180px;
+      width: 1100px;
+      height: 750px;
+      /* 遠近感 */
+      transform:
+          translateX(-50%)
+          perspective(700px)
+          rotateX(60deg);
+      transform-origin: center bottom;
+      /* 奥から手前に向かう床 */
+      background:
+          linear-gradient(
+              to bottom,
+              #263b43 0%,
+              #182a31 35%,
+              #0d1b21 70%,
+              #050b0e 100%
+          );
+      /* 床のグリッド */
+      background-image:
+          linear-gradient(
+              rgba(0,255,255,0.16) 2px,
+              transparent 2px
+          ),
+          linear-gradient(
+              90deg,
+              rgba(0,255,255,0.16) 2px,
+              transparent 2px
+          );
+      background-size:
+          70px 70px,
+          70px 70px;
+      border: 3px solid var(--team-accent, #00ffff);
+      box-shadow:
+          0 0 30px var(--team-accent, #00ffff),
+          inset 0 0 100px rgba(0,0,0,0.85);
+      z-index: 0;
+      pointer-events: none;
+  }
+  /* =========================
+     ■3D Console Area
+     ========================= */
+  .console-area {
+      position: relative;
+      z-index: 20;
+      width: 520px;
+      max-width: 100%;
+      margin: 20px auto 0;
+      display: flex;
+      justify-content: center; /* 机は1つだけなので、まん中に */
+      align-items: flex-end;
+      perspective: 800px;
+  }
+    /* 机本体 */
+  .desk-3d {
+      position: relative;
+      width: 210px;
+      height: 120px;
+      transform:
+          rotateX(12deg)
+          rotateY(0deg);
+      transform-style: preserve-3d;
+  }
+    /* 天板 */
+  .desk-top {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 210px;
+      height: 65px;
+      background:
+          linear-gradient(
+              135deg,
+              #465b66,
+              #1b2930
+          );
+      border: 2px solid var(--team-accent, #00ffff);
+      box-shadow:
+          0 0 15px var(--team-accent, #00ffff),
+          inset 0 0 20px rgba(0,0,0,0.6);
+      transform:
+          translateZ(25px)
+          rotateX(30deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+  }
+    /* 机の前面 */
+  .desk-front {
+      position: absolute;
+      left: 0;
+      top: 50px;
+      width: 210px;
+      height: 55px;
+      background:
+          linear-gradient(
+              to bottom,
+              #263941,
+              #0c151a
+          );
+      border-left: 2px solid var(--team-accent, #00ffff);
+      border-right: 2px solid var(--team-accent, #00ffff);
+      border-bottom: 2px solid var(--team-accent, #00ffff);
+      box-shadow:
+          inset 0 0 25px rgba(0,0,0,0.7);
+  }
+    /* 机の側面 */
+  .desk-side {
+      position: absolute;
+      right: -18px;
+      top: 12px;
+      width: 18px;
+      height: 105px;
+      background: #101c21;
+      border-right: 2px solid var(--team-accent, #00ffff);
+      transform:
+          skewY(-35deg);
+      box-shadow:
+          0 0 10px rgba(0,255,255,0.3);
+  }
+    /* モニター文字 */
+  .desk-monitor {
+      color: var(--team-accent, #00ffff);
+      font-size: 16px;
+      font-weight: bold;
+      text-shadow:
+          0 0 5px var(--team-accent, #00ffff),
+          0 0 12px var(--team-accent, #00ffff);
+      text-align: center;
+  }
+  .monitor-room {
+    perspective: 700px;
+    perspective-origin: 50% 40%;
   }
 </style>
