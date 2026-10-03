@@ -42,6 +42,10 @@
                         </span>
                         <span class="deploy-title">{{ card.title }}</span>
                         <span class="deploy-summary">{{ card.summary }}</span>
+                        <span v-if="card.meta.branch || card.meta.work" class="deploy-people">
+                            <span v-if="card.meta.branch">🌱 {{ card.meta.branch.who }}</span>
+                            <span v-if="card.meta.work">🛠 {{ card.meta.work.who }}</span>
+                        </span>
                         <span class="deploy-more">くわしく見る ›</span>
                     </button>
                 </div>
@@ -60,6 +64,8 @@
                     <span v-if="openedCard.pr" class="deploy-pr">{{ openedCard.pr }}</span>
                 </div>
                 <h2 class="deploy-modal-title">{{ openedCard.title }}</h2>
+                <!-- eslint-disable-next-line vue/no-v-html -->
+                <div v-if="openedCard.detailHtml" class="deploy-modal-people" v-html="openedCard.detailHtml"></div>
                 <!-- eslint-disable-next-line vue/no-v-html -->
                 <div class="docs-content deploy-modal-body" @click="onContentClick" v-html="openedCard.html"></div>
             </div>
@@ -84,7 +90,7 @@ const docs = context.keys().map(key => {
 // ■上から並べる順番（ここに無いものは最後にファイル名順）
 const ORDER = [
     "deploy-log.md",
-    "release-notes.md",
+    "image-storage.md",
     "currency.md",
     "TODO.md",
     "data-access.md",
@@ -101,11 +107,13 @@ const orderOf = path => {
     return index === -1 ? ORDER.length : index;
 };
 // ■「本番への反映」タブに入れるもの
-const PRODUCTION = ["deploy-log.md", "release-notes.md"];
+const PRODUCTION = ["deploy-log.md"];
+// ■「共有用」タブに入れるもの（人に見せるための資料）
+const SHARED = ["image-storage.md"];
 // ■左の一覧に出す、短い名前とアイコン（無いものはmdの見出しをそのまま）
 const NAV = {
     "deploy-log.md": ["📜", "反映の履歴"],
-    "release-notes.md": ["🆕", "更新内容（画面ごと）"],
+    "image-storage.md": ["💰", "画像の保存先と料金"],
     "currency.md": ["🪙", "テラ（ポイント）"],
     "TODO.md": ["✅", "やること"],
     "data-access.md": ["🗄️", "データの取得・更新"],
@@ -129,7 +137,15 @@ const parseCards = source => {
     const [intro, ...chunks] = source.split(/^## /m);
     const cards = chunks.map(chunk => {
         const [headLine, ...rest] = chunk.split("\n");
-        const body = rest.join("\n").replace(/\n---\s*$/, "").trim();
+        const meta = {};
+        const lines = rest.filter(line => {
+            const found = line.match(/^@(branch|work):\s*(.+)$/);
+            if (!found) return true;
+            const [who, detail = ""] = found[2].split("|").map(text => text.trim());
+            meta[found[1]] = { who, detail };
+            return false;
+        });
+        const body = lines.join("\n").replace(/\n---\s*$/, "").trim();
         const head = headLine.trim().match(/^(\d{4}-\d{2}-\d{2})\s+(PR\s*#[^：:\s]+)\s*[：:]\s*(.+)$/);
         const summary = (body.split(/\n\s*\n/)[0] || "").replace(/^[-*]\s*/, "").replace(/[`*]/g, "").trim();
         return {
@@ -138,6 +154,8 @@ const parseCards = source => {
             title: head ? head[3] : headLine.trim(),
             pending: !head,
             summary,
+            meta,
+            detailHtml: meta.branch || meta.work ? marked.parse(["- 🌱 ブランチ：" + (meta.branch ? meta.branch.who + (meta.branch.detail ? "（" + meta.branch.detail + "）" : "") : "—"), "- 🛠 おもな作業：" + (meta.work ? meta.work.who + (meta.work.detail ? "（" + meta.work.detail + "）" : "") : "—")].join("\n")) : "",
             html: marked.parse(body)
         };
     });
@@ -160,9 +178,11 @@ export default {
         groups() {
             const production = docs.filter(doc => PRODUCTION.includes(doc.path));
             const requirements = docs.filter(doc => doc.path.startsWith("requirements/"));
-            const others = docs.filter(doc => !doc.path.startsWith("requirements/") && !PRODUCTION.includes(doc.path));
+            const shared = docs.filter(doc => SHARED.includes(doc.path));
+            const others = docs.filter(doc => !doc.path.startsWith("requirements/") && !PRODUCTION.includes(doc.path) && !SHARED.includes(doc.path));
             return [
                 { label: "本番への反映", docs: production },
+                { label: "共有用", docs: shared },
                 { label: "しくみ・やること", docs: others },
                 { label: "要件定義", docs: requirements }
             ].filter(group => group.docs.length);
@@ -315,6 +335,9 @@ export default {
 .deploy-meta{display:flex;flex-wrap:wrap;gap:6px}
 .deploy-title{font-size:15px;font-weight:900;line-height:1.5;color:#e2e8f0}
 .deploy-summary{font-size:13px;line-height:1.6;color:#94a3b8}
+.deploy-people{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;font-weight:bold;color:#cbd5e1}
+.deploy-modal-people{margin:0 0 12px;padding:8px 14px;border-radius:10px;background:rgba(255,255,255,.05);font-size:13px}
+.deploy-modal-people :deep(ul){margin:0;padding-left:0;list-style:none}
 .deploy-more{margin-top:auto;padding-top:4px;font-size:12px;font-weight:bold;color:#67e8f9}
 
 .deploy-modal-back{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,12,.7)}
