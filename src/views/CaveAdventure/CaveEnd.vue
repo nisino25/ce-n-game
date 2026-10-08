@@ -726,11 +726,11 @@ export default {
     .eco-level span {
         position: absolute !important; /* 親要素のFlex配置に従わせる */
         transform: none !important;
-        top: 75px !important;
+        top: 65px !important;
         padding: 0 !important;
         display: block !important;
         text-align: center !important;
-        font-size: 10px !important;
+        font-size: 13px !important;
         line-height: 1.2 !important;
         white-space: nowrap !important;
         color: #000000 !important;
