@@ -45,10 +45,10 @@
                     :class="collectionTotal >= minCards ? 'bg-emerald-900/60 text-emerald-200' : 'bg-amber-900/50 text-amber-200'"
                 >
                     <template v-if="collectionTotal >= minCards">
-                        ✅ 手元のカードが{{ minCards }}枚以上あるので「野生にもどそう！」で遊べます
+                        ✅ 手元のカードが{{ minCards }}枚以上あるので「すみかにもどそう！」で遊べます
                     </template>
                     <template v-else>
-                        🔒 「野生にもどそう！」は手元のカードが{{ minCards }}枚以上で遊べます（あと{{ minCards - collectionTotal }}枚）
+                        🔒 「すみかにもどそう！」は手元のカードが{{ minCards }}枚以上で遊べます（あと{{ minCards - collectionTotal }}枚）
                     </template>
                 </p>
 
