@@ -92,6 +92,7 @@
                         @click="focusCard(index)"
                     >
                         <CollectionCard :card="displayCard(card)" />
+                        <span v-if="isMine(card)" class="mine-badge">📷 じぶん</span>
                         <span v-if="card.collectionCount" class="count-badge">×{{ card.collectionCount }}</span>
                         <span v-else-if="card.placedCount" class="count-badge placed">盤面 ×{{ card.placedCount }}</span>
                         <span v-else class="lock-badge">もっていない</span>
@@ -114,6 +115,7 @@
             <p class="focus-count">
                 {{ focusedIndex + 1 }} / {{ filteredCards.length }}
                 <span class="focus-owned">
+                    <template v-if="isMine(focusedCard)">&emsp;📷 じぶんがとった</template>
                     <template v-if="focusedCard.collectionCount">&emsp;もっている ×{{ focusedCard.collectionCount }}</template>
                     <template v-if="focusedCard.placedCount">&emsp;盤面 ×{{ focusedCard.placedCount }}</template>
                     <template v-if="!focusedCard.owned">&emsp;もっていない</template>
@@ -152,13 +154,15 @@ export default {
             ownedOptions: [
                 { value: "all", label: "すべて" },
                 { value: "owned", label: "もっている" },
-                { value: "unowned", label: "もっていない" }
+                { value: "unowned", label: "もっていない" },
+                { value: "mine", label: "📷 じぶんがとった" }
             ],
             regionOptions: [
                 { value: "all", label: "すべての場所" },
                 ...Object.entries(REGION_LABELS).map(([value, label]) => ({ value, label }))
             ],
             playerName: "",
+            myUid: "",
             focusedIndex: null,
             focusScale: 2,
             minCards: MIN_CARDS_FOR_DOMINATION,
@@ -190,7 +194,7 @@ export default {
 
         filteredCards() {
             return this.cards.filter(card =>
-                (this.ownedFilter === "all" || (this.ownedFilter === "owned") === card.owned)
+                this.matchesOwnedFilter(card)
                 && (this.regionFilter === "all" || card.region === this.regionFilter)
             );
         },
@@ -215,10 +219,25 @@ export default {
     methods: {
         // ■宝箱と同じ表示用データに変換（所持カードにはチームカラーと自分の名前を付ける）
         displayCard(card) {
-            const instance = card.owned
-                ? { team: getSession("myTeam"), ownerName: this.playerName }
-                : null;
+            // 持っていないカードでも、スキャンで登録されたものは「発見者」を出す
+            let instance = null;
+            if (card.owned) {
+                instance = { team: getSession("myTeam"), ownerName: this.playerName };
+            } else if (card.ownerName) {
+                instance = { team: "", ownerName: card.ownerName };
+            }
             return toDisplayCard(card, instance);
+        },
+
+        // 自分がスキャンでとって登録したカードか
+        isMine(card) {
+            return Boolean(card.ownerUid) && card.ownerUid === this.myUid;
+        },
+
+        matchesOwnedFilter(card) {
+            if (this.ownedFilter === "all") return true;
+            if (this.ownedFilter === "mine") return this.isMine(card);
+            return (this.ownedFilter === "owned") === card.owned;
         },
 
         // ■画面に収まる最大2.2倍まで拡大して表示
@@ -248,6 +267,7 @@ export default {
             ]);
             this.library = library;
             this.playerName = (user && user.name) || "";
+            this.myUid = (user && user.uid) || "";
             this.instances = user ? await fetchMyCardInstances(user.uid) : [];
         } catch (error) {
             console.error("カードライブラリの読み込みに失敗しました:", error);
@@ -294,6 +314,12 @@ export default {
     box-shadow:0 2px 6px rgba(0,0,0,.5);
 }
 .count-badge.placed{background:#fbbf24}
+.mine-badge{
+    position:absolute;left:-6px;top:-8px;z-index:20;
+    border-radius:999px;background:#f472b6;color:#0f172a;
+    padding:2px 8px;font-size:11px;font-weight:900;
+    box-shadow:0 2px 6px rgba(0,0,0,.5);white-space:nowrap;
+}
 .lock-badge{
     position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);z-index:20;
     border-radius:999px;background:#334155;color:#cbd5e1;

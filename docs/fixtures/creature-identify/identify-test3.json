@@ -1,0 +1,95 @@
+{
+  "request_id": "60342d5c-4d20-409c-84af-5336d0182d2e",
+  "status": "identified",
+  "candidates": [
+    {
+      "rank": 1,
+      "confidence": 0.7,
+      "name_ja": "クルマバッタモドキ",
+      "name_kana": "くるまばったもどき",
+      "name_scientific": "Oedaleus infernalis",
+      "name_en": "Band-winged grasshopper",
+      "category": "insect",
+      "trophic_level": 2,
+      "diet": "herbivore",
+      "habitat": "日当たりのよい草地や日陰の少ない空き地、河川敷",
+      "description_for_kids": "背中に白い「X」の形のもようがあるのが特徴のバッタです。地面に似た茶色い体で、イネ科の草の葉っぱを食べます。",
+      "is_dangerous": false,
+      "danger_note": null,
+      "rarity": {
+        "value": 18,
+        "tier": "common",
+        "tier_label_ja": "よく見かける",
+        "reason": "秋の空き地や河川敷でとてもよく見られるバッタです。地面と同じような色をしているので、動かないと見つけにくいことがあります。",
+        "factors": {
+          "encounter_frequency": 20,
+          "detectability": 40,
+          "conservation_status": 0,
+          "seasonality": 10
+        },
+        "context": "日本・京都市の街なかにある庭で、10月上旬に探す場合"
+      }
+    },
+    {
+      "rank": 2,
+      "confidence": 0.2,
+      "name_ja": "イボバッタ",
+      "name_kana": "いぼばった",
+      "name_scientific": "Trilophidia japonica",
+      "name_en": "Tuberculate grasshopper",
+      "category": "insect",
+      "trophic_level": 2,
+      "diet": "herbivore",
+      "habitat": "日当たりのよい裸地や畑、空き地の地面",
+      "description_for_kids": "胸の背中に小さないぼ状の突起があるバッタです。土や石と同じような模様をしていて、草の葉っぱを食べます。",
+      "is_dangerous": false,
+      "danger_note": null,
+      "rarity": {
+        "value": 23,
+        "tier": "uncommon",
+        "tier_label_ja": "ちょっとめずらしい",
+        "reason": "身近な公園や空き地の地面で普通に見られます。土の色の模様が保護色になっているため、飛ばないと気づきにくいです。",
+        "factors": {
+          "encounter_frequency": 25,
+          "detectability": 50,
+          "conservation_status": 0,
+          "seasonality": 10
+        },
+        "context": "日本・京都市の街なかにある庭で、10月上旬に探す場合"
+      }
+    },
+    {
+      "rank": 3,
+      "confidence": 0.1,
+      "name_ja": "トノサマバッタ",
+      "name_kana": "とのさまばった",
+      "name_scientific": "Locusta migratoria",
+      "name_en": "Migratory locust",
+      "category": "insect",
+      "trophic_level": 2,
+      "diet": "herbivore",
+      "habitat": "背の低い草が生えた広い原っぱや河川敷",
+      "description_for_kids": "体が大きくて飛ぶ力が強いバッタのなかまです。イネやススキなどの草の葉っぱをたくさん食べます。",
+      "is_dangerous": false,
+      "danger_note": null,
+      "rarity": {
+        "value": 19,
+        "tier": "common",
+        "tier_label_ja": "よく見かける",
+        "reason": "秋の草むらでよく見られるおなじみの大きなバッタです。足音に驚くと勢いよく飛び立ちます。",
+        "factors": {
+          "encounter_frequency": 30,
+          "detectability": 20,
+          "conservation_status": 0,
+          "seasonality": 10
+        },
+        "context": "日本・京都市の街なかにある庭で、10月上旬に探す場合"
+      }
+    }
+  ],
+  "meta": {
+    "engine": "gemini",
+    "model": "gemini-3.6-flash",
+    "elapsed_ms": 9789
+  }
+}

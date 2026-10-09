@@ -156,6 +156,13 @@
                         <p class="text-[11px] text-slate-400 border-t pt-2">
                             レア度の理由: {{ candidate.rarity.reason }}
                         </p>
+
+                        <button
+                            class="mt-4 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl shadow-sm transition"
+                            @click="openDraft(candidate)"
+                        >
+                            🃏 これをカードにする
+                        </button>
                     </div>
                 </div>
 
@@ -168,10 +175,150 @@
             </div>
 
         </div>
+
+        <!-- カードのプレビュー・登録（「これをカードにする」を押したとき） -->
+        <div v-if="draftCard" class="fixed inset-0 z-50 bg-black/60 overflow-y-auto p-4">
+            <div class="mx-auto my-4 w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
+
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-emerald-900">🃏 カードのプレビュー</h2>
+                    <button
+                        class="text-slate-400 hover:text-slate-600 text-xl leading-none px-2 disabled:opacity-30"
+                        :disabled="draftStatus === 'saving'"
+                        aria-label="閉じる"
+                        @click="closeDraft"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <!-- 登録できたあと -->
+                <div v-if="draftStatus === 'done'" class="text-center py-4">
+                    <div class="text-5xl mb-3">🎉</div>
+                    <p class="text-emerald-800 font-bold mb-1">図鑑にとうろくしました！</p>
+                    <p class="text-slate-500 text-sm mb-5">図鑑の「じぶんがとった」で見られるよ</p>
+                    <div class="flex flex-col gap-2">
+                        <button
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition"
+                            @click="goLibrary"
+                        >
+                            図鑑を見る
+                        </button>
+                        <button
+                            class="bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold py-2.5 rounded-xl transition"
+                            @click="finishAndReset"
+                        >
+                            もう一つスキャンする
+                        </button>
+                    </div>
+                </div>
+
+                <template v-else>
+                    <!-- プレビュー（写真の準備が終わると、絵柄が入る） -->
+                    <div class="flex flex-col items-center mb-4">
+                        <div class="w-[225px] h-[330px]">
+                            <div style="transform: scale(1.5); transform-origin: top left; width: 150px;">
+                                <CollectionCard :card="previewCard" />
+                            </div>
+                        </div>
+                        <p v-if="draftStatus === 'preparing'" class="text-emerald-600 text-sm font-bold mt-1">📸 しゃしんを じゅんびちゅう…</p>
+                    </div>
+
+                    <!-- 直せる項目（直すと、上のプレビューがすぐ変わる） -->
+                    <div class="grid gap-3 text-sm">
+                        <label class="block">
+                            <span class="text-xs text-emerald-700 font-bold">なまえ</span>
+                            <input
+                                v-model="draftCard.name"
+                                type="text"
+                                :maxlength="nameMaxLength"
+                                class="mt-1 w-full border border-emerald-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                            >
+                        </label>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="block">
+                                <span class="text-xs text-emerald-700 font-bold">レア度</span>
+                                <select v-model="draftCard.rarity" class="mt-1 w-full border border-emerald-200 rounded-lg px-2 py-2 bg-white">
+                                    <option v-for="option in rarityOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="text-xs text-emerald-700 font-bold">生態系レベル</span>
+                                <select v-model.number="draftCard.level" class="mt-1 w-full border border-emerald-200 rounded-lg px-2 py-2 bg-white">
+                                    <option v-for="option in levelOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="text-xs text-emerald-700 font-bold">すみか</span>
+                                <select v-model="draftCard.habitat" class="mt-1 w-full border border-emerald-200 rounded-lg px-2 py-2 bg-white">
+                                    <option v-for="option in habitatOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="text-xs text-emerald-700 font-bold">ちいき</span>
+                                <select v-model="draftCard.region" class="mt-1 w-full border border-emerald-200 rounded-lg px-2 py-2 bg-white">
+                                    <option v-for="option in regionOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- お知らせ -->
+                    <p v-if="draftCard.isDangerous" class="mt-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg px-3 py-2">
+                        ⚠️ {{ draftCard.dangerNote }}
+                    </p>
+                    <p v-if="duplicateCount > 0" class="mt-3 bg-sky-50 border border-sky-200 text-sky-800 text-xs rounded-lg px-3 py-2">
+                        📚 同じ種類のカードは、もう {{ duplicateCount }} 枚あります。このまま登録もできます。
+                    </p>
+                    <p v-if="faceFound === true" class="mt-3 bg-rose-50 border border-rose-300 text-rose-700 text-sm font-bold rounded-lg px-3 py-2">
+                        🙅 人の顔が写っている写真は、カードにできません。とりなおしてね。
+                    </p>
+                    <label
+                        v-else-if="faceFound === null && draftStatus !== 'preparing'"
+                        class="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg px-3 py-2"
+                    >
+                        <input v-model="faceChecked" type="checkbox" class="mt-0.5">
+                        <span>この端末では顔のチェックができません。<b>人の顔が写っていないこと</b>を、おとなが確かめました。</span>
+                    </label>
+                    <p v-if="draftMessage" class="mt-3 text-rose-700 text-sm font-bold">{{ draftMessage }}</p>
+                    <p v-if="draftImage" class="mt-2 text-[11px] text-slate-400">がぞうのおおきさ: {{ imageKb }}KB</p>
+
+                    <div class="mt-5 flex flex-col gap-2">
+                        <button
+                            class="bg-amber-500 hover:bg-amber-600 disabled:bg-amber-200 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl shadow-sm transition"
+                            :disabled="!canRegister"
+                            @click="registerCard"
+                        >
+                            {{ draftStatus === 'saving' ? 'とうろく中…' : 'このカードで とうろくする' }}
+                        </button>
+                        <button
+                            class="text-sm text-emerald-700 hover:text-emerald-900 underline disabled:opacity-30"
+                            :disabled="draftStatus === 'saving'"
+                            @click="closeDraft"
+                        >
+                            やめる
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
     </div>
 </template>
 
 <script>
+import CollectionCard from "@/views/CaveAdventure/CollectionCard.vue";
+import { getCurrentUser, toDisplayCard, REGION_LABELS } from "@/utils/cards.js";
+import {
+    candidateToCardDraft,
+    validateCardDraft,
+    CARD_NAME_MAX_LENGTH,
+    RARITY_OPTIONS,
+    LEVEL_OPTIONS,
+    HABITAT_OPTIONS
+} from "@/utils/creatureCardMapping.js";
+import { compressCardImage, detectFace, countSameSpecies, registerScannedCard } from "@/utils/creatureCard.js";
+
 // ■生き物判定API連携（2026-09-20導入）
 // 参照: /Users/nozomuando/Downloads/生き物判定API_連携ガイド.pdf
 // このAPIキーはドキュメント上「フロントのJSに含まれる前提のゆるい鍵」と明記されており、
@@ -209,6 +356,8 @@ const DIET_LABELS = {
 export default {
     name: "CreatureScan",
 
+    components: { CollectionCard },
+
     data() {
         return {
             phase: "idle", // idle | preview | loading | identified | uncertain | no_creature | error
@@ -216,8 +365,63 @@ export default {
             previewUrl: null,
             hint: "",
             candidates: [],
-            errorMessage: ""
+            errorMessage: "",
+
+            // ■カード登録（プレビュー）用
+            draftCard: null, // 候補から作った、カードの下書き（プレビューで直せる）
+            draftImage: null, // 縮小した写真 { dataUrl, bytes, withinLimit }
+            draftStatus: "", // preparing | ready | saving | done | error
+            draftMessage: "",
+            faceFound: null, // true: 顔あり / false: 顔なし / null: この端末では調べられない
+            faceChecked: false, // faceFound が null のとき、おとなが確認したか
+            duplicateCount: 0, // 同じ学名のカードの枚数（登録は止めない）
+            currentUser: null,
+            nameMaxLength: CARD_NAME_MAX_LENGTH,
+            rarityOptions: RARITY_OPTIONS,
+            levelOptions: LEVEL_OPTIONS,
+            habitatOptions: HABITAT_OPTIONS
         };
+    },
+
+    computed: {
+        regionOptions() {
+            return [
+                { value: "", label: "ちいき なし" },
+                ...Object.entries(REGION_LABELS).map(([value, label]) => ({ value, label }))
+            ];
+        },
+
+        // プレビュー用の表示データ（図鑑・宝箱と同じ見た目）
+        previewCard() {
+            if (!this.draftCard) return null;
+            return toDisplayCard(
+                {
+                    cardId: "preview",
+                    name: this.draftCard.name || "なまえ未定",
+                    image: this.draftImage ? this.draftImage.dataUrl : "",
+                    level: this.draftCard.level,
+                    rarity: this.draftCard.rarity,
+                    habitat: this.draftCard.habitat,
+                    frame: this.draftCard.frame
+                },
+                {
+                    team: (this.currentUser && this.currentUser.team) || "",
+                    ownerName: (this.currentUser && this.currentUser.name) || ""
+                }
+            );
+        },
+
+        imageKb() {
+            return this.draftImage ? Math.round(this.draftImage.bytes / 1024) : 0;
+        },
+
+        // 登録ボタンを押せる条件：準備ができていて、名前が正しく、顔の確認が済んでいる
+        canRegister() {
+            if (this.draftStatus !== "ready" || !this.draftCard || !this.draftImage) return false;
+            if (!this.draftImage.withinLimit) return false;
+            if (validateCardDraft(this.draftCard)) return false;
+            return this.faceFound === false || (this.faceFound === null && this.faceChecked);
+        }
     },
 
     beforeUnmount() {
@@ -302,6 +506,89 @@ export default {
                 this.errorMessage = "つうしんに失敗しました。電波状況を確認してもう一度ためしてね。";
                 this.phase = "error";
             }
+        },
+
+        // ■候補からカードの下書きを作り、写真の縮小・顔チェック・同じ種類の枚数を調べる
+        async openDraft(candidate) {
+            this.draftCard = candidateToCardDraft(candidate, this.hint);
+            this.draftImage = null;
+            this.faceFound = null;
+            this.faceChecked = false;
+            this.duplicateCount = 0;
+            this.draftStatus = "preparing";
+            this.draftMessage = "";
+
+            try {
+                this.currentUser = await getCurrentUser();
+                if (!this.currentUser) {
+                    this.draftMessage = "ログインしてから、もういちどためしてね";
+                    this.draftStatus = "error";
+                    return;
+                }
+
+                const [image, faceFound, duplicateCount] = await Promise.all([
+                    compressCardImage(this.selectedFile),
+                    detectFace(this.selectedFile),
+                    countSameSpecies(this.draftCard.scientificName)
+                ]);
+
+                this.draftImage = image;
+                this.faceFound = faceFound;
+                this.duplicateCount = duplicateCount;
+
+                if (!image.withinLimit) {
+                    this.draftMessage = "写真が大きすぎます。別の写真でためしてね";
+                    this.draftStatus = "error";
+                    return;
+                }
+                this.draftStatus = "ready";
+            } catch (error) {
+                console.error("カードの準備に失敗しました:", error);
+                this.draftMessage = "じゅんびに失敗しました。もう一度ためしてね。";
+                this.draftStatus = "error";
+            }
+        },
+
+        async registerCard() {
+            if (!this.canRegister) return;
+
+            const nameError = validateCardDraft(this.draftCard);
+            if (nameError) {
+                this.draftMessage = nameError;
+                return;
+            }
+
+            this.draftStatus = "saving";
+            this.draftMessage = "";
+            try {
+                await registerScannedCard({
+                    draft: this.draftCard,
+                    imageDataUrl: this.draftImage.dataUrl,
+                    user: this.currentUser
+                });
+                this.draftStatus = "done";
+            } catch (error) {
+                console.error("カードの登録に失敗しました:", error);
+                this.draftMessage = "とうろくできませんでした。つうしんを確かめて、もういちどためしてね。";
+                this.draftStatus = "ready";
+            }
+        },
+
+        closeDraft() {
+            if (this.draftStatus === "saving") return;
+            this.draftCard = null;
+            this.draftImage = null;
+            this.draftStatus = "";
+            this.draftMessage = "";
+        },
+
+        finishAndReset() {
+            this.closeDraft();
+            this.resetPhoto();
+        },
+
+        goLibrary() {
+            this.$router.push({ name: "CardLibrary" });
         },
 
         rarityColor(tier) {
