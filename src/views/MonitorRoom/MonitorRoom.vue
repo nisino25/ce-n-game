@@ -57,7 +57,7 @@
                 :class="{ offline: cardCountsLoaded && personalCards < minCardsForWild }"
                 @click="goWild"
             >
-                {{ wildChecking ? "確認中…" : "野生にもどそう！" }}
+                {{ wildChecking ? "確認中…" : "すみかにもどそう！" }}
             </button>
 
             <!-- ■生き物スキャン：要件定義済み・実装済みだが、今回のデプロイでは一旦非表示
@@ -174,7 +174,7 @@
             {{ notice }}
         </div>
 
-        <!-- ■野生にもどそう！：前回の陣取りゲームが進行中なら、「つづきから」か「あたらしく」かを選ぶ
+        <!-- ■すみかにもどそう！：前回の陣取りゲームが進行中なら、「つづきから」か「あたらしく」かを選ぶ
              ■子どもが読めるよう、ひらがな中心・短い言葉・大きなボタンにしている -->
         <div
             v-if="showWildChoice"
@@ -217,7 +217,7 @@
             </div>
         </div>
 
-        <!-- ■野生にもどそう！はカードが足りないと遊べない -->
+        <!-- ■すみかにもどそう！はカードが足りないと遊べない -->
         <div
             v-if="showCardShortage"
             class="fixed inset-0 z-[2000] flex items-center justify-center bg-black/70 p-4"
@@ -225,7 +225,7 @@
         >
             <div class="w-full max-w-sm rounded-2xl border-2 border-cyan-300 bg-[#10151c] p-6 text-center text-white shadow-[0_0_24px_rgba(0,255,255,.35)]">
                 <p class="mb-2 text-xl font-black text-cyan-300">カードが足りません</p>
-                <p class="mb-1 text-sm">「野生にもどそう！」は、手元の生きものカードが<br><strong>{{ minCardsForWild }}枚以上</strong>ないと遊べません。</p>
+                <p class="mb-1 text-sm">「すみかにもどそう！」は、手元の生きものカードが<br><strong>{{ minCardsForWild }}枚以上</strong>ないと遊べません。</p>
                 <p class="mb-5 text-sm text-slate-300">いま {{ personalCards }}枚（あと{{ minCardsForWild - personalCards }}枚）</p>
                 <div class="flex flex-col gap-2">
                     <button
@@ -622,7 +622,7 @@ export default {
         },
 
         // ■最後に遊んだ陣取りゲーム：この端末のルームコード（DominationGameが最後に参加・作成したもの）が、
-        //   進行中（終了していない）なら、野生にもどそう！で「前回の場所へもどる」を選べるようにする。入室時に1回だけ確認する
+        //   進行中（終了していない）なら、すみかにもどそう！で「前回の場所へもどる」を選べるようにする。入室時に1回だけ確認する
         async loadResumeRoom() {
             try {
                 const roomCode = localStorage.getItem("dominationRoomCode");
@@ -688,8 +688,8 @@ export default {
             }
         },
 
-        // ■野生にもどそう！：手元のカードが一定枚数以上ないと遊べない
-        // ■野生にもどそう！
+        // ■すみかにもどそう！：手元のカードが一定枚数以上ないと遊べない
+        // ■すみかにもどそう！
         //   前回の陣取りゲームが進行中なら、まず選択モーダル（前回の場所へもどる／地図をひらく）を出す。
         //   進行中の続きはカードが盤面に出ていて手元の枚数が減っているので、枚数が足りなくてももどれるようにしている。
         //   枚数・進行中のゲームはどちらも入室時に確認済みの値を使い、押したときに通信しない（読み込み前だけ待つ）
@@ -1101,7 +1101,7 @@ export default {
   }
 
   /* ■スマホ幅：上部モニター群が横に収まりきらず見切れていたので2列に折り返す
-       1段目＝地球・ようこそ（チーム情報）、2段目＝洞窟探検・野生にもどそう、の順に並べ替える */
+       1段目＝地球・ようこそ（チーム情報）、2段目＝洞窟探検・すみかにもどそう、の順に並べ替える */
   @media (max-width: 640px){
       .top-monitors-row{
           gap:8px 6px;

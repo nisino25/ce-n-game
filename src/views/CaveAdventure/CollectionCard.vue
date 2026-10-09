@@ -64,7 +64,7 @@ export default {
     width:36px;height:36px;object-fit:contain;z-index:1;
 }
 .eco img:not(.team-bg){width:28px;height:28px;object-fit:contain;z-index:2}
-.eco span{font-size:8px;line-height:1;color:#000;margin-top:2px;white-space:nowrap}
+.eco span{font-size:8px;line-height:1;color:#000;margin-top:12px;white-space:nowrap}
 
 .top-right{
     position:absolute;top:6px;right:8px;

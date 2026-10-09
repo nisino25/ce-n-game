@@ -5,7 +5,7 @@
 import db, { firebase } from "@/firebase.js";
 import { getSession } from "@/utils/session.js";
 
-// ■野生にもどそう！（陣取りゲーム）を遊ぶのに必要な手元のカード枚数
+// ■すみかにもどそう！（陣取りゲーム）を遊ぶのに必要な手元のカード枚数
 export const MIN_CARDS_FOR_DOMINATION = 10;
 
 export const TEAM_LABELS = { earth: "土", water: "水", air: "風" };
@@ -145,7 +145,7 @@ export function toDisplayCard(card, instance = null) {
 }
 
 // ------------------------------------------------------------
-// ■陣取りゲーム（野生にもどそう！）で使う所持カード
+// ■陣取りゲーム（すみかにもどそう！）で使う所持カード
 // ------------------------------------------------------------
 
 // チームのメンバー全員の、手元にある（まだ盤面に置いていない）カード
