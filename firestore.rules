@@ -1,0 +1,88 @@
+rules_version = '2';
+
+// ■Firestore のルール（2026-10-09 作成）
+// 注意: このアプリは Firebase Auth を使っていない（ログインは cenId のセッション）。
+// そのため「本人だけが書ける」はルールでは保証できない。ここでは次を確かめる:
+//   - スキャンで登録されたカード（source == "scan"）は、形と大きさが決まりどおりか
+//   - 持ち主の uid（ownerUid）が、users に実在するか
+//   - 既存のカードの持ち主（ownerUid）を、あとから書き換えられないか
+// 根本対策は Firebase Auth への移行（別途検討）。
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // スキャンで登録されたカードの形チェック
+    function isScanCard(d) {
+      return d.get('source', '') == 'scan'
+        && d.published == true
+        && d.name is string
+        && d.name.size() > 0
+        && d.name.size() <= 20
+        && d.image is string
+        && d.image.size() <= 900000
+        && d.image.matches('^data:image/(webp|jpeg);base64,')
+        && d.level is int
+        && d.level >= 1
+        && d.level <= 4
+        && d.rarity in ['A', 'B', 'C', 'D']
+        && d.ownerUid is string
+        && d.ownerUid.size() > 0
+        && exists(/databases/$(database)/documents/users/$(d.ownerUid));
+    }
+
+    // ■カードライブラリ（cards）
+    match /cards/{cardId} {
+      allow read: if true;
+
+      // スキャン以外（管理画面からの登録）は、画像の大きさだけ確かめる
+      allow create: if (request.resource.data.get('source', '') == 'scan' && isScanCard(request.resource.data))
+        || (request.resource.data.get('source', '') != 'scan' && request.resource.data.get('image', '').size() <= 900000);
+
+      // 持ち主（ownerUid）は、あとから書き換えられない
+      allow update: if request.resource.data.get('image', '').size() <= 900000
+        && request.resource.data.get('ownerUid', '') == resource.data.get('ownerUid', '');
+
+      // スキャンで登録されたカードは、アプリからは消せない（必要なら Firebase コンソールで消す）
+      allow delete: if resource.data.get('source', '') != 'scan';
+    }
+
+    // ■所持カード（cardInstances）
+    match /cardInstances/{instanceId} {
+      allow read: if true;
+      allow create: if request.resource.data.get('status', '') == 'collection'
+        && request.resource.data.get('ownerUid', '') is string
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.ownerUid));
+      // 陣取り・宝箱の処理が、状態（status）や盤面を更新・削除するため、今は開けたまま
+      allow update, delete: if true;
+    }
+
+    // ■そのほかのコレクション（既存の動きを壊さないため、今は開けたまま。認証の導入と合わせて整理する）
+    match /users/{docId} {
+      allow read, write: if true;
+    }
+    match /teams/{docId} {
+      allow read, write: if true;
+    }
+    match /abGameQuestions/{docId} {
+      allow read, write: if true;
+    }
+    match /userComments/{docId} {
+      allow read, write: if true;
+    }
+    match /deviceStats/{docId} {
+      allow read, write: if true;
+    }
+    match /gameResults/{docId} {
+      allow read, write: if true;
+    }
+    match /dominationGames/{docId} {
+      allow read, write: if true;
+    }
+    match /mapSlots/{docId} {
+      allow read, write: if true;
+    }
+    match /mapSpots/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

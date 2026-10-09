@@ -1,0 +1,67 @@
+{
+  "request_id": "4ab563c2-1082-44dc-81f5-508438813231",
+  "status": "identified",
+  "candidates": [
+    {
+      "rank": 1,
+      "confidence": 0.85,
+      "name_ja": "ニホンカナヘビ",
+      "name_kana": "にほんかなへび",
+      "name_scientific": "Takydromus tachydromoides",
+      "name_en": "Japanese grass lizard",
+      "category": "reptile",
+      "trophic_level": 3,
+      "diet": "carnivore",
+      "habitat": "草むらや庭、公園など",
+      "description_for_kids": "ザラザラしたうろこをもつ、トカゲのなかまです。すばやくうごいて、クモや小さなムシを捕まえてたべます。",
+      "is_dangerous": false,
+      "danger_note": null,
+      "rarity": {
+        "value": 26,
+        "tier": "uncommon",
+        "tier_label_ja": "ちょっとめずらしい",
+        "reason": "お庭や公園の草むらでよく見かける、とても身近なトカゲのなかまです。",
+        "factors": {
+          "encounter_frequency": 30,
+          "detectability": 40,
+          "conservation_status": 10,
+          "seasonality": 20
+        },
+        "context": "日本・京都市の街なかにある庭で、10月上旬に探す場合"
+      }
+    },
+    {
+      "rank": 2,
+      "confidence": 0.15,
+      "name_ja": "ニヒノニホントカゲ",
+      "name_kana": "にしのにほんとかげ",
+      "name_scientific": "Plestiodon japonica",
+      "name_en": "Japanese skink",
+      "category": "reptile",
+      "trophic_level": 3,
+      "diet": "carnivore",
+      "habitat": "日当たりのよい草むらや石垣",
+      "description_for_kids": "ツルツルしたからだをしたトカゲのなかまです。小さな昆虫やダンゴムシなどをたべます。",
+      "is_dangerous": false,
+      "danger_note": null,
+      "rarity": {
+        "value": 31,
+        "tier": "uncommon",
+        "tier_label_ja": "ちょっとめずらしい",
+        "reason": "日当たりのいい石垣や庭のすみなどで見つけることができるトカゲです。",
+        "factors": {
+          "encounter_frequency": 40,
+          "detectability": 40,
+          "conservation_status": 10,
+          "seasonality": 20
+        },
+        "context": "日本・京都市の街なかにある庭で、10月上旬に探す場合"
+      }
+    }
+  ],
+  "meta": {
+    "engine": "gemini",
+    "model": "gemini-3.6-flash",
+    "elapsed_ms": 5213
+  }
+}

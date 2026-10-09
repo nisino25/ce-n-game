@@ -1,0 +1,95 @@
+{
+  "request_id": "5e831fbd-9130-4bb1-a9ab-b87d9b234abb",
+  "status": "identified",
+  "candidates": [
+    {
+      "rank": 1,
+      "confidence": 0.6,
+      "name_ja": "オオカマキリ",
+      "name_kana": "おおかまきり",
+      "name_scientific": "Tenodera aridifolia",
+      "name_en": "Japanese mantis",
+      "category": "insect",
+      "trophic_level": 3,
+      "diet": "carnivore",
+      "habitat": "草むらや庭の木の中など",
+      "description_for_kids": "日本でいちばん大きなカマキリの仲間です。大きくて鋭い前あし（カマ）を使って、バッタやハチなどの虫をつかまえて食べます。",
+      "is_dangerous": false,
+      "danger_note": null,
+      "rarity": {
+        "value": 16,
+        "tier": "common",
+        "tier_label_ja": "よく見かける",
+        "reason": "秋の季節には、草むらや庭などでとてもよく見かける昆虫です。",
+        "factors": {
+          "encounter_frequency": 20,
+          "detectability": 30,
+          "conservation_status": 0,
+          "seasonality": 10
+        },
+        "context": "日本・京都市の街なかにある庭で、10月上旬に探す場合"
+      }
+    },
+    {
+      "rank": 2,
+      "confidence": 0.3,
+      "name_ja": "チョウセンカマキリ",
+      "name_kana": "ちょうせんかまきり",
+      "name_scientific": "Tenodera angustipennis",
+      "name_en": "Narrow-winged mantis",
+      "category": "insect",
+      "trophic_level": 3,
+      "diet": "carnivore",
+      "habitat": "背の低い草むらや庭など",
+      "description_for_kids": "オオカマキリによく似たカマキリです。前あしのあいだがオレンジ色をしているのが特徴で、ほかの虫をつかまえて食べます。",
+      "is_dangerous": false,
+      "danger_note": null,
+      "rarity": {
+        "value": 21,
+        "tier": "uncommon",
+        "tier_label_ja": "ちょっとめずらしい",
+        "reason": "オオカマキリと同じように、秋の草むらでよく見つけることができます。",
+        "factors": {
+          "encounter_frequency": 30,
+          "detectability": 30,
+          "conservation_status": 0,
+          "seasonality": 10
+        },
+        "context": "日本・京都市の街なかにある庭で、10月上旬に探す場合"
+      }
+    },
+    {
+      "rank": 3,
+      "confidence": 0.1,
+      "name_ja": "ハラビロカマキリ",
+      "name_kana": "はらびろかまきり",
+      "name_scientific": "Hierodula patellifera",
+      "name_en": "Giant Asian mantis",
+      "category": "insect",
+      "trophic_level": 3,
+      "diet": "carnivore",
+      "habitat": "庭木や樹木の上など",
+      "description_for_kids": "お腹がふっくらと太いカマキリです。木の上でじっとして、ちかくにきた虫をすばやく捕まえて食べます。",
+      "is_dangerous": false,
+      "danger_note": null,
+      "rarity": {
+        "value": 23,
+        "tier": "uncommon",
+        "tier_label_ja": "ちょっとめずらしい",
+        "reason": "木の上にいることが多いため少し見つけにくいですが、庭や公園でよくみられます。",
+        "factors": {
+          "encounter_frequency": 30,
+          "detectability": 40,
+          "conservation_status": 0,
+          "seasonality": 10
+        },
+        "context": "日本・京都市の街なかにある庭で、10月上旬に探す場合"
+      }
+    }
+  ],
+  "meta": {
+    "engine": "gemini",
+    "model": "gemini-3.6-flash",
+    "elapsed_ms": 7693
+  }
+}
