@@ -699,6 +699,7 @@ L.tileLayer(
             const state = info ? info.state : "none";
             if (state === "mine") return { fillColor: "#facc15", fillOpacity: 0.95 };
             if (state === "other") return { fillColor: "#94a3b8", fillOpacity: 0.9 };
+            if (state === "aiwon") return { fillColor: "#ef4444", fillOpacity: 0.92 };
             if (state === "won") return { fillColor: TEAM_COLORS[info.winnerTeam] || "#34d399", fillOpacity: 0.92 };
             return { fillColor: "#0b1220", fillOpacity: 0.62 };
         },
@@ -724,11 +725,13 @@ L.tileLayer(
                     const data = doc.data();
                     const key = `${data.spotId}-${data.gameNo}`;
                     if (data.state === "finished") {
-                        // ■AIが勝った枠（昔のデータ）は、決着にしない（色をつけず、ほかの人が再戦できる）
+                        // ■AIが勝った枠は、赤くして、もういちど遊べる（観戦にはしない）
                         // AIテストは、AIが勝ったときも、勝ったチームの色をぬる
                         if (data.humanWon !== false || data.test) {
                             slots[key] = { state: "won", ownerName: data.ownerName, winnerTeam: data.winnerTeam };
                             if (tally[data.winnerTeam] !== undefined) tally[data.winnerTeam]++;
+                        } else {
+                            slots[key] = { state: "aiwon", ownerName: data.ownerName, winnerTeam: data.winnerTeam };
                         }
                     } else if (data.state === "playing" && isFresh(data.updatedAt) && !data.test) {
                         slots[key] = { state: data.ownerUid === this.uid ? "mine" : "other", ownerName: data.ownerName };
@@ -811,6 +814,7 @@ L.tileLayer(
         // ■ゲーム選択ボタンの色：ひし形の色と同じ
         gameButtonStyle(info, disabled) {
             const dim = disabled && info.state === "none" ? { opacity: 0.4 } : {};
+            if (info.state === "aiwon") return { background: "#ef4444", borderColor: "#fff", color: "#fff" };
             if (info.state === "won") return { background: TEAM_COLORS[info.winnerTeam] || "#34d399", borderColor: "#fff", color: "#10151c" };
             if (info.state === "mine") return { background: "rgba(250,204,21,.22)", borderColor: "#facc15", color: "#fef9c3" };
             if (info.state === "other") return { background: "#94a3b8", borderColor: "#fff", color: "#10151c" };
@@ -822,6 +826,7 @@ L.tileLayer(
             if (this.isAiTest) return info.state === "won" ? `${TEAM_NAMES[info.winnerTeam] || ""}チームが かった（もういちど あそべる）` : "あそべるよ";
             if (info.state === "mine") return "つづきから あそぶ";
             if (info.state === "other") return `${info.ownerName ? info.ownerName + "さんが " : "ほかの人が "}あそび中 👀 観戦できるよ`;
+            if (info.state === "aiwon") return "AIが かったよ（もういちど あそべる）";
             if (info.state === "won") return `${TEAM_NAMES[info.winnerTeam] || ""}チームが かったよ 👀 観戦できるよ`;
             return "あそべるよ";
         },

@@ -998,9 +998,9 @@ export default {
       height: auto;
       min-height:70px;
 
-      border:4px solid var(--team-accent, #0ff);
+      border:4px solid #cbd5e1;
       background:#001d24;
-      box-shadow:0 0 20px var(--team-accent, #0ff);
+      box-shadow:0 0 20px rgba(203,213,225,.45);
       cursor:pointer;
       overflow:hidden;
 

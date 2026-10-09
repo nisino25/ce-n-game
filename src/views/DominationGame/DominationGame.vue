@@ -96,7 +96,7 @@
                             :key="tile.id"
                             class="board-tile relative rounded-[2px] cursor-pointer transition-transform duration-150"
                             :data-tile-id="tile.id"
-                            :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected, 'ai-last': aiMoveTileIds.has(tile.id), 'ai-eaten': aiEatenIds.has(tile.id), 'tile-lord': isLord(tile) }"
+                            :class="{ 'scale-[1.05] ring-2 ring-offset-1 z-10': tile.selected, 'ai-last': aiMoveTileIds.has(tile.id), 'ai-eaten': aiEatenIds.has(tile.id), 'tile-lord': isLord(tile), 'fixed-tile-pulse': tile.id === fixedTileId }"
                             @click="onTileClick(tile)"
                             :style="[tileStyle(tile), { '--tr': tile.row + 1, '--tc': tile.col + 1, '--ring': moveRing(tile) }]"
                         >
@@ -244,7 +244,6 @@
                         <button v-if="testMode && !spectator" class="test-card-button" @click="showTestCards = true">🧪 カードを えらぶ</button>
                         <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI && !aiOnlyMode" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</span>
                         <span v-else-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」→ きいろい マスに おけるよ</span>
-                        <span v-else-if="mustSkip" class="dock-note dock-note-skip">おけるカードが ないよ → スキップ</span>
                     </div>
                     <div v-if="gameState === 'playing' && currentPlayer && !currentPlayer.isAI" class="dock-hand">
                         <template v-for="group in groupHandByTier(hands[currentPlayerId])" :key="group.tier">
@@ -306,6 +305,18 @@
                     <p v-if="finishedResult" class="mb-1 text-lg font-black" :style="{ color: finishedResult.humanWon ? '#059669' : '#dc2626' }">
                         {{ finishedResult.humanWon ? '1位！ かったよ！' : (finishedResult.resigned ? 'まけました…' : `${finishedResult.humanRank}位 だったよ`) }}
                     </p>
+
+                    <!-- ■ゲームの得点と、順位のテラ（おわったときに、ぜんぶ見えるように） -->
+                    <div v-if="finishedResult" class="mb-3 grid grid-cols-2 gap-2 text-sm font-bold">
+                        <div class="rounded-xl bg-slate-100 px-3 py-2">
+                            <div class="text-xs text-slate-500">じぶんの てんすう</div>
+                            <div class="text-xl">{{ players.find(p => p.id === humanPlayerId)?.score ?? 0 }}点</div>
+                        </div>
+                        <div class="rounded-xl bg-amber-50 px-3 py-2">
+                            <div class="text-xs text-slate-500">順位の テラ</div>
+                            <div class="text-xl text-amber-700">+{{ rankBonusFor(finishedResult.humanRank) }}テラ</div>
+                        </div>
+                    </div>
 
                     <!-- ■1位のごほうび（テラ） -->
                     <p v-if="rewardTera" class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-4 py-1 text-base font-black text-amber-700">
@@ -646,7 +657,7 @@ const RANK_REWARD_TERA = { 1: 10, 2: 5, 3: 2 }
 const AI_SMART_RATE = 0.75
 
 // ■黒いマス（未開発地）の「かんきょうチャレンジ」（ABゲーム2問）に成功したときの、ゲーム内の点数（仮の数）
-const AB_CHALLENGE_POINTS = 3
+const AB_CHALLENGE_POINTS = 2
 
 // ■地形の名前（チャレンジ成功でなおる地形の案内に使う）
 const AREA_NAMES = { town: '町', forest: '森', dirt: '土', river: '川', sea: '海' }
@@ -738,7 +749,6 @@ export default {
         showChallenge: false, // 黒いマスの「かんきょうチャレンジ」（ABゲーム）を開いている
         challengeTile: null,
         challengeStarted: false,
-        blockedTileId: null, // チャレンジでなおしたマス。その自分の番のあいだは、カードを置けない
         rewardTera: 0, // 1位でもらったテラ（もらえたときだけ）
         rewardState: '', // '' | 'pending' | 'error'
         showTerritory: false, // ゲームのおわりに、じんち（チームごとのマス）を盤面で見る
@@ -819,7 +829,8 @@ export default {
         isAiThinking: false,
         // テストモード：入ったときの「じぶんで あそぶ／AIに まかせる」の選択
         showModeChoice: false,
-        aiOnlyMode: false
+        aiOnlyMode: false,
+        fixedTileId: null, // 黒いマスをなおしたばかりのマス（ピコンと光らせる。番がうつったら消す）
       }
     },
     methods: {
@@ -877,10 +888,6 @@ export default {
 
           if(tile.ownerTeam !== null) return; // already owned
 
-          if (tile.id === this.blockedTileId) {
-            this.showToast("このマスは、いま なおしたばかり。つぎの ばんから おけるよ")
-            return
-          }
           if (!tile.validForSelection) {
             this.showToast("このタイルにはこのカードは置けないよ")
             return // not valid for selection
@@ -1593,7 +1600,7 @@ export default {
             this.saveGame()
 
             // ■テストモードは、選んでからAIを動かす（選ぶまでは何も打たない）
-            if (this.testMode && !this.spectator && this.gameState === 'playing') {
+            if (this.testMode && this.isTestPlace() && !this.spectator && this.gameState === 'playing') {
                 this.showModeChoice = true
                 return
             }
@@ -1655,7 +1662,7 @@ export default {
             if (!this.players.length) return
             this.currentType = null
             this.selectedCard = null
-            this.blockedTileId = null // 番がうつったら、なおしたマスにも置ける
+            this.fixedTileId = null
 
             const currentIndex = this.players.findIndex(
                 (p) => p.id === this.currentPlayerId
@@ -1683,7 +1690,6 @@ export default {
 
         // ■1マスが、あるカードを置けるかどうかの判定（人間の手札選択・AIの候補探索どちらからも使う）
         isTileValidForCard(t, card) {
-            if (t.id === this.blockedTileId) return false // チャレンジでなおしたばかりのマス（この番は置けない）
             if (t.area === "undeveloped") return false
             if (t.ownerTeam !== null) return false
 
@@ -2169,6 +2175,11 @@ export default {
             return 1 + this.players.filter(other => other.score > player.score).length
         },
 
+        // ■順位のテラ（1位+10／2位+5／3位+2）。もらえない順位は0
+        rankBonusFor(rank) {
+            return RANK_REWARD_TERA[rank] || 0
+        },
+
         humanRank() {
             const me = this.players.find(player => player.id === this.humanPlayerId)
             return me ? this.rankOf(me) : 0
@@ -2334,12 +2345,12 @@ export default {
             if (result && result.success && tile && tile.area === 'undeveloped') {
                 const area = this.developedAreaFor(tile) // となりあうマスの、適当な1つと同じ地形
                 tile.area = area
-                this.blockedTileId = tile.id // この番は、なおしたマスには、カードを置けない（つぎの番から置ける）
                 this.currentPlayer.score += AB_CHALLENGE_POINTS
+                this.fixedTileId = tile.id
                 this.selectedCard = null
                 this.updateValidTiles()
                 sfx.win()
-                this.showToast(`かんきょうを なおせた！ +${AB_CHALLENGE_POINTS}てん。「${AREA_NAMES[area]}」に なったよ。このマスには、つぎの ばんから おけるよ`, true)
+                this.showToast(`かんきょうを なおせた！ +${AB_CHALLENGE_POINTS}てん。「${AREA_NAMES[area]}」に なったよ。このマスに、すぐ おけるよ`, true)
                 this.saveGame()
                 return
             }
@@ -2738,6 +2749,12 @@ export default {
 </script>
 
 <style scoped>
+/* ■黒いマスをなおしたばかりのマス：ピコンと光らせる（番がうつったら消える） */
+.fixed-tile-pulse{ animation: fixed-tile-pulse 1.2s ease-in-out infinite; }
+@keyframes fixed-tile-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 2px rgba(250, 204, 21, 0.25); }
+  50% { box-shadow: inset 0 0 0 5px rgba(250, 204, 21, 1); }
+}
   /* ■盤面：スマホ（640px未満）では、縦長（15列×30行）に置き直して、マスを大きくする。枠もなくして画面いっぱいにする */
   .board-grid{
       grid-template-columns: repeat(var(--cols), minmax(14px, 1fr));
