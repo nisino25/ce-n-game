@@ -13,7 +13,7 @@
             <header class="app-header bg-white">
                 <div class="max-w-[1500px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
                     <div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                        <h1 class="whitespace-nowrap text-base sm:text-lg font-bold text-slate-700">陣取りゲーム</h1>
+                        <h1 class="text-base sm:text-lg font-bold leading-tight text-slate-700">陣取り<br>ゲーム</h1>
 
                         <button
                             class="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-full pl-3 pr-2.5 py-1 font-mono font-bold tracking-wider text-slate-600 transition"
@@ -74,7 +74,7 @@
             <!-- AI thinking banner -->
             <transition name="fade">
                 <div
-                    v-if="isAiThinking"
+                    v-if="isAiThinking && !aiOnlyMode"
                     class="bg-amber-50 border-b border-amber-200 text-amber-800 text-center text-sm py-2 font-medium"
                 >
                     🤖 {{ currentPlayer?.name }}が考え中…
@@ -146,7 +146,8 @@
                         <template v-if="currentPlayer.isAI">
                             <div class="flex items-center gap-2 text-slate-500 text-sm py-6 justify-center">
                                 <span class="text-2xl">🤖</span>
-                                <span>{{ currentPlayer?.name }}が手を考えています…</span>
+                                <span v-if="aiOnlyMode">AIが あそんでいます（見るだけ）</span>
+                                <span v-else>{{ currentPlayer?.name }}が手を考えています…</span>
                             </div>
                         </template>
                         <template v-else>
@@ -241,7 +242,7 @@
                     <div class="dock-panel-title">
                         <span>🃏 あなたのカード</span>
                         <button v-if="testMode && !spectator" class="test-card-button" @click="showTestCards = true">🧪 カードを えらぶ</button>
-                        <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</span>
+                        <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI && !aiOnlyMode" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</span>
                         <span v-else-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」→ きいろい マスに おけるよ</span>
                         <span v-else-if="mustSkip" class="dock-note dock-note-skip">おけるカードが ないよ → スキップ</span>
                     </div>
@@ -401,6 +402,21 @@
                 <div class="flex flex-col gap-2">
                     <button class="rounded-xl bg-red-500 px-4 py-3 font-bold text-white hover:bg-red-600" @click="resign()">まけました</button>
                     <button class="rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showResignConfirm = false">やめる</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ■テストモード：入ったら、じぶんであそぶか、AIにぜんぶまかせるかを選ぶ -->
+        <div
+            v-if="showModeChoice"
+            class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+        >
+            <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
+                <p class="mb-1 text-xl font-black">どっちで あそぶ？</p>
+                <p class="mb-5 text-sm text-slate-600">AIに まかせると、どんどん すすむよ（ぜんぶ見るだけ）</p>
+                <div class="flex flex-col gap-2">
+                    <button class="rounded-xl bg-emerald-500 px-4 py-3 font-bold text-white hover:bg-emerald-600" @click="chooseMode(false)">🧑 じぶんで あそぶ</button>
+                    <button class="rounded-xl bg-violet-500 px-4 py-3 font-bold text-white hover:bg-violet-600" @click="chooseMode(true)">🤖 AIに ぜんぶまかせる</button>
                 </div>
             </div>
         </div>
@@ -675,6 +691,8 @@ const TEAM_NAME_BY_ID = { 1: 'water', 2: 'air', 3: 'earth' };
 // カードライブラリから、人間チームの手札と同じ枚数（最低10枚）をレベルの重みで引いて作る
 // （docs/requirements/04_cards.md 6章 #1 の仮対応）
 const AI_MIN_HAND_SIZE = 10;
+// テストモードで「AIにぜんぶまかせる」ときの、1手あたりの待ち時間（ミリ秒）
+const AI_ONLY_TURN_MS = 400;
 const AI_LEVEL_WEIGHTS = { 1: 4, 2: 3, 3: 2, 4: 1 };
 
 // ■プレイヤーの所持カード（DBの cardInstances）かどうか。
@@ -798,7 +816,10 @@ export default {
         boardOverview: false, // 虫眼鏡：盤面ぜんたいを1画面に収める（スマホ）
         overviewWidth: 300,
 
-        isAiThinking: false
+        isAiThinking: false,
+        // テストモード：入ったときの「じぶんで あそぶ／AIに まかせる」の選択
+        showModeChoice: false,
+        aiOnlyMode: false
       }
     },
     methods: {
@@ -1571,6 +1592,11 @@ export default {
             // ■保存の完了は待たない（画面を先に出す。保存の失敗は saveGame の中で記録する）
             this.saveGame()
 
+            // ■テストモードは、選んでからAIを動かす（選ぶまでは何も打たない）
+            if (this.testMode && !this.spectator && this.gameState === 'playing') {
+                this.showModeChoice = true
+                return
+            }
             this.maybeTriggerAI()
         },
         teamColor(teamId) {
@@ -2356,6 +2382,18 @@ export default {
         // AIプレイヤー関連
         // ------------------------
 
+        // ■テストモード：入ったあと、じぶんで あそぶか、AIに ぜんぶまかせるかを決める
+        chooseMode(allAI) {
+            this.showModeChoice = false
+            this.aiOnlyMode = allAI
+            if (allAI) {
+                // AIにまかせるときは、人間チームもAIにする（実際のカードは使わず、仮のカードで打つ）
+                this.players.forEach(p => { p.isAI = true })
+                this.hands[this.humanPlayerId] = this.buildAIHand(this.humanPlayerId, (this.hands[this.humanPlayerId] || []).length)
+            }
+            this.maybeTriggerAI()
+        },
+
         // ■手番がAIなら自動で打たせる。人間の手番なら何もしない
         maybeTriggerAI() {
             if (this.gameState !== 'playing') return
@@ -2468,8 +2506,8 @@ export default {
 
             this.isAiThinking = true
 
-            // 「考えている」感を出すための、少しだけのウェイト
-            await this.delay(900 + Math.random() * 500)
+            // 「考えている」感を出すための、少しだけのウェイト（AIにまかせるときは、AI_ONLY_TURN_MS）
+            await this.delay(this.aiOnlyMode ? AI_ONLY_TURN_MS : 900 + Math.random() * 500)
 
             // ウェイト中に状況が変わっていたら中断（保存の再読込・リセット等）
             if (this.gameState !== 'playing' || this.currentPlayerId !== player.id) {
