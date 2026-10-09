@@ -112,58 +112,46 @@
 
         <!-- ■仮リンク集約：本来はそれぞれの本来の画面（地図側など）に組み込む予定の暫定導線をまとめておく場所
              ■スマホ幅で画面を覆ってしまわないよう、<details>で普段は折りたたんでおく -->
-        <details class="fixed bottom-4 right-4 z-[450] bg-black/40 border border-dashed border-yellow-400/60 rounded-lg p-2 flex flex-col gap-1.5 backdrop-blur-sm max-w-[85vw]">
-            <summary class="text-yellow-300 text-[10px] font-bold tracking-wider px-1 cursor-pointer select-none">🚧 仮リンク</summary>
-            <button
-                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition disabled:opacity-50"
-                :disabled="tutorialResetting"
-                @click="resetTutorialFlags"
-            >
-                「チュートリアル初回フラグ」を消す
-            </button>
-            <p v-if="tutorialResetMessage" class="text-[11px] text-yellow-200 px-1">{{ tutorialResetMessage }}</p>
-            <button
-                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'DeviceStats' })"
-            >
-                端末の集計を見る（仮）
-            </button>
-            <button
-                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'CommentsAdmin' })"
-            >
-                みんなの声を見る（仮）
-            </button>
-            <button
-                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'Docs' })"
-            >
-                ドキュメント（仮）
-            </button>
-            <button
-                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'ResultCompare' })"
-            >
-                けっか くらべ（仮）
-            </button>
-            <button
-                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'SoundTest' })"
-            >
-                音くらべ（仮）
-            </button>
-            <button
-                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'EatenCompare' })"
-            >
-                食べられ方くらべ（仮）
-            </button>
-            <button
-                class="text-xs text-left px-2 py-1.5 rounded bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
-                @click="$router.push({ name: 'CreatureScan' })"
-            >
-                生き物スキャン（仮）
-            </button>
+        <details class="fixed bottom-4 right-4 z-[450] w-[17rem] max-w-[85vw] max-h-[75vh] overflow-y-auto bg-black/80 border border-dashed border-yellow-400/60 rounded-xl p-3 backdrop-blur-sm">
+            <summary class="text-yellow-300 text-xs font-bold tracking-wider cursor-pointer select-none">🚧 仮リンク</summary>
+
+            <div class="mt-3 flex flex-col gap-5">
+                <!-- ■グループごとに並べる（くらべ・見せる用・管理用） -->
+                <section v-for="group in devLinkGroups" :key="group.title" class="flex flex-col gap-2">
+                    <p class="text-[11px] font-bold text-yellow-300 text-left">{{ group.title }}</p>
+                    <button
+                        v-for="link in group.links"
+                        :key="link.name"
+                        class="text-xs text-left px-3 py-2 rounded-lg bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                        @click="$router.push({ name: link.name })"
+                    >
+                        {{ link.label }}
+                    </button>
+                </section>
+
+                <section class="flex flex-col gap-2">
+                    <p class="text-[11px] font-bold text-yellow-300 text-left">▶ デモ</p>
+                    <button
+                        class="text-xs text-left px-3 py-2 rounded-lg bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition"
+                        @click="openDemoLv4Game"
+                    >
+                        レベル4が出た試合を見る
+                    </button>
+                    <p v-if="demoMessage" class="text-[11px] text-yellow-200">{{ demoMessage }}</p>
+                </section>
+
+                <section class="flex flex-col gap-2">
+                    <p class="text-[11px] font-bold text-yellow-300 text-left">🧹 そうさ</p>
+                    <button
+                        class="text-xs text-left px-3 py-2 rounded-lg bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition disabled:opacity-50"
+                        :disabled="tutorialResetting"
+                        @click="resetTutorialFlags"
+                    >
+                        チュートリアル初回フラグを消す
+                    </button>
+                    <p v-if="tutorialResetMessage" class="text-[11px] text-yellow-200">{{ tutorialResetMessage }}</p>
+                </section>
+            </div>
         </details>
 
         <!-- ■操作の結果を知らせる一時メッセージ -->
@@ -363,6 +351,32 @@ import { sendDeviceStatsOnce } from "@/utils/deviceStats.js";
 import RoomIconButton from "./RoomIconButton.vue";
 import mapSpotsSeed from "@/views/DominationGame/mapSpots.json";
 
+// ■仮リンクの並び：くらべ（開発用）・見せる用・管理用にまとめる
+const DEV_LINK_GROUPS = [
+    {
+        title: "📖 読む・見せる",
+        links: [
+            { label: "ドキュメント", name: "Docs" }
+        ]
+    },
+    {
+        title: "🧪 くらべ（開発用）",
+        links: [
+            { label: "けっか くらべ", name: "ResultCompare" },
+            { label: "音くらべ", name: "SoundTest" },
+            { label: "食べられ方くらべ", name: "EatenCompare" }
+        ]
+    },
+    {
+        title: "🔧 管理・そのほか",
+        links: [
+            { label: "みんなの声", name: "CommentsAdmin" },
+            { label: "端末の集計", name: "DeviceStats" },
+            { label: "生き物スキャン", name: "CreatureScan" }
+        ]
+    }
+];
+
 export default {
     name: "MonitorRoom",
 
@@ -384,6 +398,7 @@ export default {
 				// ■仮リンク：チュートリアル見たフラグのリセット
 				tutorialResetting: false,
 				tutorialResetMessage: "",
+				demoMessage: "",
 
 				myTeam,
 				currentPlayerName,
@@ -415,6 +430,10 @@ export default {
     },
 
     computed: {
+        devLinkGroups() {
+            return DEV_LINK_GROUPS
+        },
+
         // 平塚のゲーム枠の数（場所の数×3つのゲーム）
         hiratsukaSlotTotal() {
             return mapSpotsSeed.spots.filter(spot => spot.city === "hiratsuka").length * 3;
@@ -589,6 +608,30 @@ export default {
     },
 
     methods: {
+        // ■デモ：レベル4のカードが出た、保存されている試合を、けっかの画面で開く（見るだけ）
+        async openDemoLv4Game() {
+            this.demoMessage = "";
+            try {
+                const snapshot = await db.collection("gameResults").orderBy("createdAt", "desc").limit(60).get();
+                const doc = snapshot.docs.find(d => {
+                    const game = d.data();
+                    // 3チームすべてがカードを置いた試合（風だけ置いていない試合は、デモにしない）
+                    const teams = new Set();
+                    Object.values(game.tierTeam || {}).forEach(teamCounts => Object.keys(teamCounts).forEach(team => teams.add(team)));
+                    return game.tierTeam && game.tierTeam[4] && teams.size >= 3 && Array.isArray(game.moves) && game.moves.length && game.slot && game.slot.habitat;
+                });
+                if (!doc) {
+                    this.demoMessage = "レベル4が出て、3チームすべてが置いた試合は、まだないよ";
+                    return;
+                }
+                localStorage.setItem("dominationViewResult", doc.id);
+                this.$router.push("/dominationGame");
+            } catch (e) {
+                console.error("デモの試合を読めませんでした", e);
+                this.demoMessage = "デモの試合を読めませんでした";
+            }
+        },
+
         // ■テスト用：地図のチュートリアル（動画）を見たフラグ（users/{uid}.tutorialCleared）を消して、また見られるようにする
         async resetTutorialFlags() {
             this.tutorialResetting = true;

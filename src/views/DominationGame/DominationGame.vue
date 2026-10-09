@@ -365,6 +365,34 @@
                         </template>
                     </GameResultSummary>
 
+                    <!-- ■チームごとに、おいたカードを、Lv1から順に並べる（カードをタップすると大きく見られる） -->
+                    <section v-if="placedByPlayer.length" class="mb-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm">
+                        <p class="text-center text-sm font-black text-slate-700">おいた カード</p>
+                        <p class="mb-3 text-center text-[10px] text-slate-400">カードを タップすると 大きく見られるよ</p>
+                        <div v-for="pl in placedByPlayer" :key="pl.id" class="mb-6 border-t-2 border-slate-100 pt-5 first:border-t-0 first:pt-0 last:mb-0">
+                            <p class="mb-2 flex items-center gap-2 text-xs font-black text-slate-700">
+                                <span class="h-2.5 w-2.5 rounded-full" :style="{ background: pl.color }"></span>
+                                {{ pl.name.replace('チーム', '') }}
+                                <span class="ml-auto text-[10px] font-bold text-slate-400">{{ pl.total }}まい</span>
+                            </p>
+                            <div v-for="row in pl.rows" :key="row.tier" class="mb-2 last:mb-0">
+                                <span class="mb-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-black" :class="levelBadgeClass(row.tier)">Lv{{ row.tier }}<span class="ml-1 font-bold opacity-70">{{ row.total }}まい</span></span>
+                                <div class="grid grid-cols-2 gap-1.5">
+                                    <button
+                                        v-for="card in row.cards"
+                                        :key="card.name"
+                                        type="button"
+                                        class="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-left transition hover:bg-slate-100 active:scale-[.97]"
+                                        @click="openPlacedCard(card.placed, card.teamId)"
+                                    >
+                                        <span class="min-w-0 truncate text-xs font-bold text-slate-700">{{ card.name }}</span>
+                                        <span class="flex-none text-[10px] font-bold text-slate-400">×{{ card.count }}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
                     <!-- ■ふりかえり：おわったゲームを、1手ずつ、はじめから見なおす -->
                     <button
                         v-if="moveLog.length"
@@ -1080,8 +1108,20 @@ export default {
 
         // ■カードを共通のカード表示（カードライブラリ・宝箱と同じ）で出すためのデータ。
         //   カードライブラリにないカード（古い保存）は null を返し、旧表示にもどる
+        // ■おいたカードの一覧から、タップしたカードを大きく見る（盤面のタップと同じ見た目）
+        openPlacedCard(placed, teamId) {
+            this.tilePreviewTeam = teamId
+            this.tilePreviewCard = placed
+        },
+
+        levelBadgeClass(tier) {
+            return { 1: 'bg-emerald-100 text-emerald-700', 2: 'bg-sky-100 text-sky-700', 3: 'bg-violet-100 text-violet-700', 4: 'bg-amber-100 text-amber-700' }[tier] || 'bg-slate-100 text-slate-700'
+        },
+
         focusDisplay(card, teamId) {
+            // 保存された手（けっかの ゲーム）からのカードは cardId が無いことがあるので、名前でも探す
             const library = this.cardLibrary.find(item => item.cardId === card.cardId)
+                || this.cardLibrary.find(item => item.name === card.label || item.name === card.id)
             if (!library) return null
             const player = this.players.find(item => item.id === teamId)
             const ownerName = player && player.isAI ? 'AI' : ((this.slotOwner && this.slotOwner.name) || 'あなた')
@@ -1168,6 +1208,8 @@ export default {
                 this.$router.replace({ name: 'ResultCompare' })
                 return
             }
+            // ■カードの詳細（大きく見るとき）は、カードライブラリから引くので、先に読んでおく
+            if (!this.cardLibrary.length) this.cardLibrary = await fetchCardLibrary().catch(() => [])
             this.resultView = true
             this.spectator = true
             this.savedPlace = { city: 'aitest', cityName: data.slot.cityName || 'AIテスト', spotId: data.slot.spotId, spotName: data.slot.spotName, habitat: data.slot.habitat, gameNo: data.slot.gameNo, test: true }
@@ -2400,7 +2442,9 @@ export default {
             if (allAI) {
                 // AIにまかせるときは、人間チームもAIにする（実際のカードは使わず、仮のカードで打つ）
                 this.players.forEach(p => { p.isAI = true })
-                this.hands[this.humanPlayerId] = this.buildAIHand(this.humanPlayerId, (this.hands[this.humanPlayerId] || []).length)
+                // 他のAIチームと同じ枚数（人間の所持カードが無いときも、最低10枚）
+                const aiHandSize = Math.max((this.hands[this.humanPlayerId] || []).length, AI_MIN_HAND_SIZE)
+                this.hands[this.humanPlayerId] = this.cardLibrary.length ? this.buildAIHand(this.humanPlayerId, aiHandSize) : []
             }
             this.maybeTriggerAI()
         },
@@ -2718,6 +2762,40 @@ export default {
               result[tier][team] = (result[tier][team] || 0) + 1
           })
           return result
+      },
+
+      // ■チームごとに、おいたカードを、レベルごと（Lv1から）・カードの名前ごとに数える（得点の高いチームから）
+      placedByPlayer() {
+          return this.players
+              .map(player => {
+                  const rows = [1, 2, 3, 4].map(tier => ({ tier, total: 0, byName: {} }))
+                  this.tiles.forEach(tile => {
+                      if (!tile.placedCard || this.controllingTeam(tile) !== player.id) return
+                      const tier = tile.placedCard.tier || 1
+                      const row = rows.find(r => r.tier === tier)
+                      if (!row) return
+                      const name = tile.placedCard.label
+                      row.total++
+                      row.byName[name] = row.byName[name] || { name, count: 0, placed: tile.placedCard, teamId: player.id }
+                      row.byName[name].count++
+                  })
+                  return {
+                      id: player.id,
+                      name: player.name,
+                      color: player.color,
+                      score: player.score,
+                      total: rows.reduce((sum, row) => sum + row.total, 0),
+                      rows: rows
+                          .filter(row => row.total)
+                          .map(row => ({
+                              tier: row.tier,
+                              total: row.total,
+                              cards: Object.values(row.byName).sort((x, y) => y.count - x.count)
+                          }))
+                  }
+              })
+              .filter(player => player.total)
+              .sort((x, y) => y.score - x.score)
       },
 
       // ■もらったテラの内わけ（てんすう ぶん ＋ 順位ボーナス）
