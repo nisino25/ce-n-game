@@ -1,5 +1,5 @@
 <template>
-    <div class="mini-card" :style="{ backgroundImage: `url('/images/card/cardBack.png')` }">
+    <div class="mini-card" :class="{ gold: card.card === 'gold' }" :style="{ backgroundImage: `url('/images/card/cardBack.png')` }">
         <div class="eco">
             <img v-if="card.group === '土'" src="/images/card/チームカラー（土・ブラウン）.png" class="team-bg" alt="土">
             <img v-else-if="card.group === '水'" src="/images/card/チームカラー（水・ブルー）.png" class="team-bg" alt="水">
@@ -52,6 +52,15 @@ export default {
     border-radius:8px;
     text-align:center;
     line-height:1.3;
+}
+/* ■ゴールドカード（スキャンでとったカード）：金色のふちと、うすい金の光沢 */
+.mini-card.gold{
+    box-shadow:0 0 0 3px #e8b730, 0 0 14px rgba(250,204,21,.65);
+}
+.mini-card.gold::after{
+    content:"";position:absolute;inset:0;border-radius:8px;pointer-events:none;
+    background:linear-gradient(160deg,rgba(255,246,207,.55),rgba(240,195,60,.12) 45%,rgba(138,106,16,.45));
+    mix-blend-mode:soft-light;
 }
 .eco{
     position:absolute;top:12px;left:12px;

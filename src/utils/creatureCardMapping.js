@@ -78,7 +78,8 @@ export function candidateToCardDraft(candidate, hint = "") {
         habitat: habitatInfo.habitat,
         terrain: habitatInfo.terrain,
         region: regionFromHint(hint),
-        frame: "silver",
+        // スキャンでとったカードは、ゴールドカード
+        frame: "gold",
         food: [],
 
         // 図鑑で見るための情報（カードの絵柄には使わない）
