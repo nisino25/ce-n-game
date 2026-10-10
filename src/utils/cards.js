@@ -140,7 +140,8 @@ export function toDisplayCard(card, instance = null) {
         area2: HABITAT_ICONS[card.habitat] || "",
         group: instance ? TEAM_LABELS[instance.team] || "" : "",
         owner: instance ? instance.ownerName : "",
-        card: card.frame || "silver"
+        // スキャンでとったカードは、保存された枠に関係なくゴールド
+        card: card.source === "scan" ? "gold" : card.frame || "silver"
     };
 }
 

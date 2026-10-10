@@ -16,15 +16,23 @@
 
             <!-- 撮影・アップロードエリア -->
             <div v-if="phase === 'idle' || phase === 'preview'" class="bg-white rounded-2xl shadow-sm p-5">
-                <label
-                    class="block border-2 border-dashed rounded-2xl cursor-pointer transition"
-                    :class="previewUrl ? 'border-emerald-300 p-2' : 'border-emerald-300 hover:border-emerald-400 p-10 text-center'"
+                <div
+                    class="border-2 border-dashed border-emerald-300 rounded-2xl"
+                    :class="previewUrl ? 'p-2' : 'p-10 text-center'"
                 >
+                    <!-- カメラで撮る用と、アルバムから選ぶ用（capture を付けると、アルバムが開かないため分けている） -->
                     <input
-                        ref="fileInput"
+                        ref="cameraInput"
                         type="file"
                         accept="image/*"
                         capture="environment"
+                        class="hidden"
+                        @change="onFileChange"
+                    >
+                    <input
+                        ref="albumInput"
+                        type="file"
+                        accept="image/*"
                         class="hidden"
                         @change="onFileChange"
                     >
@@ -34,10 +42,25 @@
                     </template>
                     <template v-else>
                         <div class="text-5xl mb-3">📷</div>
-                        <p class="text-emerald-800 font-bold">写真をとる・えらぶ</p>
+                        <p class="text-emerald-800 font-bold">しゃしんを えらぶ</p>
                         <p class="text-emerald-500 text-sm mt-1">虫でも植物でもOK</p>
                     </template>
-                </label>
+                </div>
+
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                        class="bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold py-2.5 rounded-xl transition"
+                        @click="$refs.cameraInput.click()"
+                    >
+                        📷 写真をとる
+                    </button>
+                    <button
+                        class="bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold py-2.5 rounded-xl transition"
+                        @click="$refs.albumInput.click()"
+                    >
+                        🖼️ アルバムからえらぶ
+                    </button>
+                </div>
 
                 <button
                     v-if="previewUrl"
@@ -224,45 +247,14 @@
                         <p v-if="draftStatus === 'preparing'" class="text-emerald-600 text-sm font-bold mt-1">📸 しゃしんを じゅんびちゅう…</p>
                     </div>
 
-                    <!-- 直せる項目（直すと、上のプレビューがすぐ変わる） -->
-                    <div class="grid gap-3 text-sm">
-                        <label class="block">
-                            <span class="text-xs text-emerald-700 font-bold">なまえ</span>
-                            <input
-                                v-model="draftCard.name"
-                                type="text"
-                                :maxlength="nameMaxLength"
-                                class="mt-1 w-full border border-emerald-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                            >
-                        </label>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <label class="block">
-                                <span class="text-xs text-emerald-700 font-bold">レア度</span>
-                                <select v-model="draftCard.rarity" class="mt-1 w-full border border-emerald-200 rounded-lg px-2 py-2 bg-white">
-                                    <option v-for="option in rarityOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                </select>
-                            </label>
-                            <label class="block">
-                                <span class="text-xs text-emerald-700 font-bold">生態系レベル</span>
-                                <select v-model.number="draftCard.level" class="mt-1 w-full border border-emerald-200 rounded-lg px-2 py-2 bg-white">
-                                    <option v-for="option in levelOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                </select>
-                            </label>
-                            <label class="block">
-                                <span class="text-xs text-emerald-700 font-bold">すみか</span>
-                                <select v-model="draftCard.habitat" class="mt-1 w-full border border-emerald-200 rounded-lg px-2 py-2 bg-white">
-                                    <option v-for="option in habitatOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                </select>
-                            </label>
-                            <label class="block">
-                                <span class="text-xs text-emerald-700 font-bold">ちいき</span>
-                                <select v-model="draftCard.region" class="mt-1 w-full border border-emerald-200 rounded-lg px-2 py-2 bg-white">
-                                    <option v-for="option in regionOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                </select>
-                            </label>
+                    <!-- 判定の結果のまま登録する（変更はできない） -->
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div v-for="field in readonlyFields" :key="field.label" class="bg-emerald-50 rounded-lg px-3 py-2">
+                            <span class="block text-xs text-emerald-700 font-bold">{{ field.label }}</span>
+                            <span class="block mt-0.5 text-emerald-900">{{ field.value }}</span>
                         </div>
                     </div>
+                    <p class="mt-2 text-[11px] text-slate-400">判定の結果のまま登録します（ここでは変えられません）</p>
 
                     <!-- お知らせ -->
                     <p v-if="draftCard.isDangerous" class="mt-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg px-3 py-2">
@@ -312,7 +304,6 @@ import { getCurrentUser, toDisplayCard, REGION_LABELS } from "@/utils/cards.js";
 import {
     candidateToCardDraft,
     validateCardDraft,
-    CARD_NAME_MAX_LENGTH,
     RARITY_OPTIONS,
     LEVEL_OPTIONS,
     HABITAT_OPTIONS
@@ -368,26 +359,31 @@ export default {
             errorMessage: "",
 
             // ■カード登録（プレビュー）用
-            draftCard: null, // 候補から作った、カードの下書き（プレビューで直せる）
+            draftCard: null, // 判定の結果から作った、カードの内容（変更はできない）
             draftImage: null, // 縮小した写真 { dataUrl, bytes, withinLimit }
             draftStatus: "", // preparing | ready | saving | done | error
             draftMessage: "",
             faceFound: null, // true: 顔あり / false: 顔なし / null: この端末では調べられない
             faceChecked: false, // faceFound が null のとき、おとなが確認したか
             duplicateCount: 0, // 同じ学名のカードの枚数（登録は止めない）
-            currentUser: null,
-            nameMaxLength: CARD_NAME_MAX_LENGTH,
-            rarityOptions: RARITY_OPTIONS,
-            levelOptions: LEVEL_OPTIONS,
-            habitatOptions: HABITAT_OPTIONS
+            currentUser: null
         };
     },
 
     computed: {
-        regionOptions() {
+        // プレビューの項目（判定の結果を、読み取り専用で表示する）
+        readonlyFields() {
+            if (!this.draftCard) return [];
+            const labelOf = (options, value) => {
+                const option = options.find(item => item.value === value);
+                return option ? option.label : "";
+            };
             return [
-                { value: "", label: "ちいき なし" },
-                ...Object.entries(REGION_LABELS).map(([value, label]) => ({ value, label }))
+                { label: "なまえ", value: this.draftCard.name },
+                { label: "レア度", value: labelOf(RARITY_OPTIONS, this.draftCard.rarity) },
+                { label: "生態系レベル", value: labelOf(LEVEL_OPTIONS, this.draftCard.level) },
+                { label: "すみか", value: labelOf(HABITAT_OPTIONS, this.draftCard.habitat) },
+                { label: "ちいき", value: this.draftCard.region ? REGION_LABELS[this.draftCard.region] : "ちいき なし" }
             ];
         },
 
@@ -459,9 +455,11 @@ export default {
             this.errorMessage = "";
             this.phase = "idle";
 
-            if (this.$refs.fileInput) {
-                this.$refs.fileInput.value = "";
-            }
+            ["cameraInput", "albumInput"].forEach(name => {
+                if (this.$refs[name]) {
+                    this.$refs[name].value = "";
+                }
+            });
         },
 
         async identify() {
