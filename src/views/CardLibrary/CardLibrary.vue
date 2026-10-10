@@ -52,8 +52,21 @@
                     </template>
                 </p>
 
-                <!-- 絞り込み：1段目＝持っているかどうか（最初は「もっている」）、2段目＝ロケーション -->
+                <!-- タブ：ぜんぶ／じぶんがとった／ほかの人がとった（タブを選ぶと、下の「もっている」などの絞り込みは使わない） -->
                 <div class="mb-2 flex flex-wrap gap-2">
+                    <button
+                        v-for="option in tabOptions"
+                        :key="option.value"
+                        class="filter-button"
+                        :class="{ active: tab === option.value }"
+                        @click="tab = option.value"
+                    >
+                        {{ option.label }}
+                    </button>
+                </div>
+
+                <!-- 絞り込み：1段目＝持っているかどうか（最初は「もっている」）、2段目＝ロケーション（タブが「ぜんぶ」のときだけ） -->
+                <div v-if="tab === 'all'" class="mb-2 flex flex-wrap gap-2">
                     <button
                         v-for="option in ownedOptions"
                         :key="option.value"
@@ -149,13 +162,18 @@ export default {
             loadError: "",
             library: [],
             instances: [],
+            tab: "all", // all（ぜんぶ）／mine（じぶんがとった）／others（ほかの人がとった）
+            tabOptions: [
+                { value: "all", label: "ぜんぶ" },
+                { value: "mine", label: "📷 じぶんがとった" },
+                { value: "others", label: "👥 ほかの人がとった" }
+            ],
             ownedFilter: "owned", // 最初は持っているカードだけ表示する
             regionFilter: "all",
             ownedOptions: [
                 { value: "all", label: "すべて" },
                 { value: "owned", label: "もっている" },
-                { value: "unowned", label: "もっていない" },
-                { value: "mine", label: "📷 じぶんがとった" }
+                { value: "unowned", label: "もっていない" }
             ],
             regionOptions: [
                 { value: "all", label: "すべての場所" },
@@ -194,7 +212,8 @@ export default {
 
         filteredCards() {
             return this.cards.filter(card =>
-                this.matchesOwnedFilter(card)
+                this.matchesTab(card)
+                && (this.tab !== "all" || this.matchesOwnedFilter(card))
                 && (this.regionFilter === "all" || card.region === this.regionFilter)
             );
         },
@@ -236,8 +255,14 @@ export default {
 
         matchesOwnedFilter(card) {
             if (this.ownedFilter === "all") return true;
-            if (this.ownedFilter === "mine") return this.isMine(card);
             return (this.ownedFilter === "owned") === card.owned;
+        },
+
+        // タブ：じぶんがとった／ほかの人がとった（スキャンで登録されたカードのうち、持ち主が自分か他の人か）
+        matchesTab(card) {
+            if (this.tab === "mine") return this.isMine(card);
+            if (this.tab === "others") return card.source === "scan" && !this.isMine(card);
+            return true;
         },
 
         // ■画面に収まる最大2.2倍まで拡大して表示
