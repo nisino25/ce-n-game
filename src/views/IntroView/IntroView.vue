@@ -92,7 +92,8 @@
         },
 
         mounted() {
-            console.clear();
+            // console.clear();
+            console.log("Introが受け取った cenId:", this.$route.query.cenId);
             // this.playerName = this.$route.query.name;
             // this.avatar = JSON.parse(this.$route.query.avatar);
             // this.avatarSvg = this.$buildAvatar(this.avatar);
@@ -176,10 +177,19 @@
                     return;
                 }
 
-                this.createAccount();
+                // this.createAccount();
                 this.spinning = true;
                 this.result = "";
-
+                // ■挿入
+                try {
+                    // 会員登録とチーム登録の完了を待つ
+                    await this.createAccount();
+                } catch (error) {
+                    console.error("Account creation failed:", error);
+                    this.spinning = false;
+                    return;
+                }
+                // ■ここまで
                 this.index++;
 
                 if (this.index >= this.teams.length) {
@@ -216,6 +226,25 @@
             },
             
             async createAccount(){
+                // cenIdが一致する既存会員を確認
+                const snapshot = await db
+                    .collection("users")
+                    .where("cenId", "==", this.cenId)
+                    .limit(1)
+                    .get();
+                if (!snapshot.empty) {
+                    // 既存会員なら新規作成しない
+                    const userDoc = snapshot.docs[0];
+                    const userData = userDoc.data();
+                    setSession("playerUid", userDoc.id);
+                    setSession("playerData", JSON.stringify(userData));
+                    setSession("myTeam", userData.team);
+                    setSession("loginCenId", this.cenId);
+                    console.log("既存会員を確認しました:", userDoc.id);
+                    return;
+                }
+
+                // 初回会員だけ新規作成
                 const uid = Date.now().toString();
 
                 const userData = {

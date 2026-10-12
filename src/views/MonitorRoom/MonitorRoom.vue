@@ -918,10 +918,20 @@ export default {
 							query: {cenId: this.currentPlayerData.cenId}
 					});
         },
-				// ■保存されているログイン日時が7日以上前なら自動ログアウトする。
+				// ■保存されているログイン日時が7日(=>12hに変更)以上前なら自動ログアウトする。
 				// 期限内であれば、今回のアクセスとして日時を更新して続行する
 				checkSessionExpired() {
-					const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+					const SEVEN_DAYS_MS = 12 * 60 * 60 * 1000;
+                    // ■会員IDと会員情報を取得:26.10.11
+                    const loginCenId = getSession("loginCenId");
+                    const playerData = getSession("playerData");
+                    // ■会員IDまたは会員情報がない場合はエラー画面へ:26.10.11
+                    if (!loginCenId || !playerData) {
+                        console.warn("会員情報がありません。アクセスエラー！");
+                        this.$router.replace({ name: "Error" });
+                        return true;
+                    }
+
 					const storedLoginDate = getSession("loginDate");
 
 					if (storedLoginDate && Date.now() - Number(storedLoginDate) > SEVEN_DAYS_MS) {

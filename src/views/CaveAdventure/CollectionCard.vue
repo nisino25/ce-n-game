@@ -77,7 +77,7 @@ export default {
     z-index:10;
 }
 .team-bg{
-    position:absolute;top:-4px;left:50%;
+    position:absolute;top:-9px;left:50%;
     transform:translateX(-50%) scale(1.4);transform-origin:center top;
     width:36px;height:36px;object-fit:contain;z-index:1;
 }

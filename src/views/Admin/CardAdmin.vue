@@ -78,9 +78,10 @@
         <!-- 画像 -->
         <div class="preview-area">
           <img
-            v-if="imagePreview || editCard.image"
-            :src="imagePreview || editCard.image"
+            v-if="editCard.image"
+            :src="editCard.image"
             class="preview-image"
+            alt="カード画像"
           />
           <div v-else class="no-image">
             画像なし
@@ -95,17 +96,17 @@
 
         <!-- 画像 -->
         <label>
-          画像パス
+          カード画像を選択
           <input
-            ref="imageInput"
             type="file"
             accept="image/*"
             @change="handleImageSelect"
           />
         </label>
-        <div v-if="selectedImageFile" class="selected-file">
-          選択中：{{ selectedImageFile.name }}
-        </div>
+        <p class="image-help">
+          画像を選択するとプレビューに表示されます。
+          保存ボタンを押すとカード情報と一緒に登録されます。
+        </p>
 
         <!-- 生態系レベル -->
         <label>
@@ -240,7 +241,8 @@
 </template>
 
 <script>
-import db, { storage } from "@/firebase.js";
+import db from "@/firebase.js";
+import { compressCardImage } from "@/utils/creatureCard.js";
 
 export default {
   name: "CardAdmin",
@@ -254,8 +256,6 @@ export default {
       foodText: "",
       saving: false,
       message: "",
-      selectedImageFile: null,
-      imagePreview: "",
 
       // 新規カードかどうか
       isNewCard: false
@@ -312,14 +312,10 @@ export default {
     // カード選択
     // ----------------------------------------
     selectCard(card) {
-      this.selectedImageFile = null;
-      this.revokeImagePreview();
-      if (this.$refs.imageInput) {
-        this.$refs.imageInput.value = "";
-      }
-
       this.isNewCard = false;
+
       this.selectedCard = card;
+
       this.editCard = {
         ...card
       };
@@ -334,47 +330,46 @@ export default {
       this.message = "";
     },
 
-    // ----------------------------------------
-    // 画像選択処理
-    // ----------------------------------------
-    handleImageSelect(event) {
-      const file = event.target.files && event.target.files[0];
-      if (!file) {
+  // ----------------------------------------
+  // 画像ファイルを選択し、生きものスキャンと同じ方式で圧縮
+  // ----------------------------------------
+  async handleImageSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) {
       return;
-      }
-      // 画像ファイルか確認
-      if (!file.type.startsWith("image/")) {
-        alert("画像ファイルを選択してください。");
-        event.target.value = "";
-        return;
-      }
-      // 以前のプレビューを破棄
-      this.revokeImagePreview();
-      // 選択したファイルを保持
-      this.selectedImageFile = file;
-      // プレビュー表示
-      this.imagePreview = URL.createObjectURL(file);
-    },
-    revokeImagePreview() {
-      if (this.imagePreview && this.imagePreview.startsWith("blob:")) {
-        URL.revokeObjectURL(this.imagePreview);
-      }
-      this.imagePreview = "";
-    },
-
+    }
+    if (!file.type.startsWith("image/")) {
+      alert("画像ファイルを選択してください。");
+      event.target.value = "";
+      return;
+    }
+    try {
+      this.message = "画像を読み込んでいます...";
+      // 生きものスキャンと同じ画像圧縮処理
+      const compressed = await compressCardImage(file);
+      // 圧縮した画像データをカード情報に設定
+      this.editCard.image = compressed.dataUrl;
+      this.message =
+        "画像を読み込みました。保存ボタンを押してください。";
+    } catch (error) {
+      console.error("画像読み込みエラー:", error);
+      this.message =
+        "画像を読み込めませんでした。別の画像をお試しください。";
+    } finally {
+      // 同じ画像ファイルを再選択できるようにする
+      event.target.value = "";
+    }
+  },
 
     // ----------------------------------------
     // 新しいカードを追加する画面
     // ----------------------------------------
     startNewCard() {
-      this.revokeImagePreview();
-      this.selectedImageFile = null;
-      if (this.$refs.imageInput) {
-        this.$refs.imageInput.value = "";
-      }
 
       this.isNewCard = true;
+
       this.selectedCard = null;
+
       this.editCard = {
         name: "",
         image: "",
@@ -388,6 +383,7 @@ export default {
       };
 
       this.foodText = "";
+
       this.message = "";
     },
 
@@ -395,12 +391,6 @@ export default {
     // 編集取り消し
     // ----------------------------------------
     cancelEdit() {
-      this.revokeImagePreview();
-      this.selectedImageFile = null;
-      if (this.$refs.imageInput) {
-        this.$refs.imageInput.value = "";
-      }
-
       this.editCard = null;
       this.selectedCard = null;
       this.foodText = "";
@@ -412,25 +402,20 @@ export default {
     // 既存カードを保存
     // ----------------------------------------
     async saveCard() {
+
       if (!this.editCard) {
         return;
       }
+
       if (!this.editCard.name) {
         alert("カード名を入力してください。");
         return;
       }
+
       this.saving = true;
       this.message = "";
+
       try {
-        // 現在登録されている画像を維持
-        let imageUrl = this.editCard.image || "";
-        // 新しい画像が選択されていたらアップロード
-        if (this.selectedImageFile) {
-          imageUrl = await this.uploadImage(
-            this.selectedImageFile,
-            this.editCard.cardId
-          );
-        }
 
         // 食物連鎖を配列に戻す
         const food = this.foodText
@@ -440,7 +425,7 @@ export default {
 
         const cardData = {
           name: this.editCard.name,
-          image: imageUrl,
+          image: this.editCard.image || "",
           level: Number(this.editCard.level) || 1,
           rarity: this.editCard.rarity || "D",
           region: this.editCard.region || "",
@@ -455,68 +440,29 @@ export default {
           .collection("cards")
           .doc(this.editCard.cardId)
           .set(cardData, { merge: true });
-        
-        // 画面上のデータも更新
-        this.editCard.image = imageUrl;
-        const index = this.cards.findIndex(
+
+        this.message = "カード情報を保存しました。";
+
+        // 一覧も更新
+        await this.loadCards();
+
+        // 保存後、同じカードを再選択
+        const savedCard = this.cards.find(
           card => card.cardId === this.editCard.cardId
         );
-        if (index !== -1) {
-          this.cards[index] = {
-            ...this.cards[index],
-            ...cardData
-          };
+        if (savedCard) {
+          this.selectCard(savedCard);
         }
-        // 選択画像をリセット
-        this.selectedImageFile = null;
-        this.revokeImagePreview();
-        if (this.$refs.imageInput) {
-          this.$refs.imageInput.value = "";
-        }
-        this.message = "カードを保存しました。";
 
       } catch (error) {
+
         console.error("カード保存エラー:", error);
+
         this.message =
           "保存できませんでした。Firestoreの権限などを確認してください。";
+
       } finally {
         this.saving = false;
-      }
-    },
-
-    // ----------------------------------------
-    // Firestoreにアップロード
-    // ----------------------------------------
-    async uploadImage(file, cardId) {
-      console.log("画像アップロード開始");
-      console.log("ファイル:", file);
-      console.log("カードID:", cardId);
-      
-      const safeName = file.name.replace(
-        /[^a-zA-Z0-9._-]/g,
-        "_"
-      );
-      const fileName = `${Date.now()}_${safeName}`;
-      const fileRef = storage
-        .ref()
-        .child(`cards/${cardId}/${fileName}`);
-      console.log("Storage保存先:", `cards/${cardId}/${fileName}`);
-      try {
-        // アップロード開始
-        const uploadTask = fileRef.put(file);
-        // アップロード完了を待つ
-        const snapshot = await uploadTask;
-        console.log("画像アップロード完了:", snapshot);
-        // URL取得
-        const downloadURL = await fileRef.getDownloadURL();
-        console.log("画像URL取得:", downloadURL);
-        return downloadURL;
-
-      } catch (error) {
-        console.error("Firebase Storage アップロードエラー:", error);
-        console.error("error.code:", error.code);
-        console.error("error.message:", error.message);
-        throw error;
       }
     },
 
@@ -524,30 +470,28 @@ export default {
     // 新しいカードをFirestoreに追加
     // ----------------------------------------
     async addCard() {
+
+      if (!this.editCard) {
+        return;
+      }
+      if (!this.editCard.name) {
+        alert("カード名を入力してください。");
+        return;
+      }
       this.saving = true;
       this.message = "";
 
       try {
-        // 先にFirestoreのIDを作る
-        const ref = db.collection("cards").doc();
-        let imageUrl = "";
-        // 画像が選択されている場合
-        if (this.selectedImageFile) {
-          imageUrl = await this.uploadImage(
-            this.selectedImageFile,
-            ref.id
-          );
-        }
 
         // 食物連鎖を配列に戻す
         const food = this.foodText
           .split("\n")
           .map(item => item.trim())
-          .filter(item => item);
+          .filter(item => item !== "");
 
         const cardData = {
           name: this.editCard.name,
-          image: imageUrl,
+          image: this.editCard.image || "",
           level: Number(this.editCard.level) || 1,
           rarity: this.editCard.rarity || "D",
           region: this.editCard.region || "",
@@ -558,29 +502,22 @@ export default {
           food: food
         };
 
-        // Firestoreに登録
-        await ref.set(cardData);
-        const newCard = {
-          cardId: ref.id,
-          ...cardData
-        };
-        this.cards.push(newCard);
+        // FirestoreがカードIDを自動生成
+        const ref = await db
+          .collection("cards")
+          .add(cardData);
+        this.message = "新しいカードを追加しました。";
 
-        this.selectedCard = newCard;
-        this.editCard = {
-          ...newCard
-        };
-        this.foodText = food.join("\n");
+        // 一覧を更新
+        await this.loadCards();
 
-        // 画像選択をリセット
-        this.selectedImageFile = null;
-        this.revokeImagePreview();
-        if (this.$refs.imageInput) {
-          this.$refs.imageInput.value = "";
+        // 追加したカードを選択状態にする
+        const newCard = this.cards.find(
+          card => card.cardId === ref.id
+        );
+        if (newCard) {
+          this.selectCard(newCard);
         }
-        this.isNewCard = false;
-
-        this.message = "新しいカードを登録しました。";
 
       } catch (error) {
 
@@ -825,5 +762,81 @@ h2 {
   align-items: center;
   justify-content: center;
   color: #777;
+}
+
+.image-help {
+  margin-top: -8px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  color: #666;
+}
+
+.edit-area input[type="file"] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 14px;
+}
+
+/* 入力項目を囲む枠 */
+.edit-area label {
+  display: block;
+  margin-bottom: 18px;
+  padding: 12px;
+  border: 1px solid #b8c5d1;
+  border-radius: 6px;
+  background: #f9fbfd;
+  font-weight: bold;
+  box-sizing: border-box;
+}
+
+/* ---テキスト入力・選択欄--- */
+.edit-area input[type="text"],
+.edit-area select,
+.edit-area textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #aab7c4;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 15px;
+  font-weight: normal;
+}
+/* 画像ファイル選択欄 */
+.edit-area input[type="file"] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #aab7c4;
+  border-radius: 4px;
+  background: #fff;
+  font-weight: normal;
+}
+/* 入力欄を選択したとき */
+.edit-area input:focus,
+.edit-area select:focus,
+.edit-area textarea:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+}
+/* 公開チェック欄は通常の入力枠と分ける */
+.edit-area label.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* チェックボックスのサイズ */
+.checkbox-label input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
 }
 </style>

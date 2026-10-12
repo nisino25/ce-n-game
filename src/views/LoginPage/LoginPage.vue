@@ -49,6 +49,7 @@ export default {
 
         async checkUser(cenId) {
             this.errorMessage = "";
+            console.log("Introへ渡す cenId:", cenId);
 
             try {
                 // ■ce-n.org側の会員IDとして有効かをまず確認する。
@@ -67,22 +68,67 @@ export default {
                     .where("cenId", "==", cenId)
                     .get();
 
+                // ★ 検索結果を確認するログ
+                console.log("=== LoginPage 判定 ===");
+                console.log("受け取った cenId:", cenId);
+                console.log("users検索件数:", snapshot.size);
+                console.log(
+                    "検索結果:",
+                    snapshot.docs.map(doc => ({
+                        uid: doc.id,
+                        cenId: doc.data().cenId,
+                        team: doc.data().team
+                    }))
+                );
+
+                // if (!snapshot.empty) {
+                //     await this.initializeMemberGame(cenId);
+                //     setSession("loginCenId", cenId);
+                //     setSession("playerData", JSON.stringify(snapshot.docs[0].data()));
+                //     setSession("myTeam", snapshot.docs[0].data().team);
+                //     this.$router.push({ name: "Home" });
+                //     return;
+                // }
+
+                // this.$router.push({
+                //     name: "Intro",
+                //     query: { cenId }
+                // });
                 if (!snapshot.empty) {
+                    // 既存会員：保存済みのゲームを再開
+                    const userDoc = snapshot.docs[0];
+                    const userData = userDoc.data();
                     setSession("loginCenId", cenId);
-                    setSession("playerData", JSON.stringify(snapshot.docs[0].data()));
-                    setSession("myTeam", snapshot.docs[0].data().team);
+                    setSession("playerUid", userDoc.id);
+                    setSession("playerData", JSON.stringify(userData));
+                    setSession("myTeam", userData.team);
                     this.$router.push({ name: "Home" });
                     return;
                 }
-
+                // usersにデータがない場合だけ、初回INTROへ
+                console.log("Introへ渡す cenId:", cenId);
                 this.$router.push({
                     name: "Intro",
                     query: { cenId }
                 });
+                
             } catch (error) {
                 console.error("Failed to check user:", error);
                 this.errorMessage = "確認に失敗しました。通信状況を確認してください。";
             }
+        },
+        async initializeMemberGame(cenId) {
+            // 会員ごとに初回アクセスを判定
+            const initKey = `ceN_initialized_${cenId}`;
+            if (localStorage.getItem(initKey) === "true") {
+                console.log("前回のゲームを継続します");
+                return;
+            }
+            // 初回アクセス時のみ実行
+            console.log("初回アクセス：ゲームを初期化します");
+            // 初期化処理は、会員別の保存データに対して実行します。
+            // 全体の localStorage.clear() は使用しません。
+            localStorage.setItem(initKey, "true");
         }
     }
 };

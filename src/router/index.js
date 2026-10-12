@@ -23,9 +23,10 @@ import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
 
 import CreatureScan from "@/views/CreatureScan/CreatureScan.vue";
 
-import { getSession } from "@/utils/session.js";
+// import { getSession } from "@/utils/session.js";
 
 import CardAdmin from "@/views/Admin/CardAdmin.vue";
+import CustAdmin from "@/views/Admin/CustAdmin.vue";
 import DocsView from "@/views/Docs/DocsView.vue";
 import NoticeBoard from "@/views/NoticeBoard/NoticeBoard.vue";
 import CommentsAdmin from "@/views/Admin/CommentsAdmin.vue";
@@ -34,7 +35,6 @@ import ResultCompare from "@/views/DominationGame/ResultCompare.vue";
 import SoundTest from "@/views/DominationGame/SoundTest.vue";
 import EatenCompare from "@/views/DominationGame/EatenCompare.vue";
 import DeviceStats from "@/views/Admin/DeviceStats.vue";
-import CardAdminOld from "@/views/Admin/CardAdminOld.vue";
 
 
 const routes = [
@@ -133,10 +133,11 @@ const routes = [
         name: "CardAdmin", 
         component: CardAdmin 
     },
+    // ■会員管理画面
     { 
-        path: "/card-admin-old", 
-        name: "CardAdminOld", 
-        component: CardAdminOld 
+        path: "/cust-admin", 
+        name: "CustAdmin", 
+        component: CustAdmin 
     },
     
     // ■かんばん：これからのアップデートのお知らせと、みんなの声（コメント）を送る場所
@@ -228,40 +229,32 @@ const router = createRouter({
 //     return true;
 // });
 
-router.beforeEach((to) => {
-    const loginCenId = getSession("loginCenId");
-
-    // ■Errorページは未ログイン状態（例：ce-n.orgに存在しないIDでのログイン試行）でも
-    // 表示できる必要があるため、ログイン判定より先に常に許可する
-    if (to.name === "Error") {
-        return true;
-    }
 
     // ■LoginPageはPWAの起動先やce-n.org側のリンクから何度でも訪れる想定のため、
     // ログイン済みでもErrorにはせず、そのままHomeへ通す（再度findMeを叩き直す必要は無い）
-    if (to.name === "LoginPage") {
-        if (loginCenId) {
-            return { name: "Home" };
-        }
-        return true;
-    }
+    //  if (to.name === "LoginPage") {
+    //     if (loginCenId) {
+    //         return { name: "Home" };
+    //     }
+    //     return true;
+    // }
 
     // ■Introは新規登録フローなので、ログイン済みでの再訪はErrorへ（誤って登録し直すのを防ぐ）
-    const publicRoutes = ["Intro"];
+    // const publicRoutes = ["Intro"];
 
-    if (publicRoutes.includes(to.name)) {
-        if (loginCenId) {
-            return { name: "Error" };
-        }
-        return true;
-    }
+    // if (publicRoutes.includes(to.name)) {
+    //     if (loginCenId) {
+    //         return { name: "Error" };
+    //     }
+    //     return true;
+    // }
 
-    if (!loginCenId) {
-        return { name: "LoginPage" };
-    }
+    // if (!loginCenId) {
+    //     return { name: "LoginPage" };
+    // }
 
-    return true;
-});
+    // return true;
+// });
 
 
 export default router;
