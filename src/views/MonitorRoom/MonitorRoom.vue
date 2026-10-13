@@ -7,6 +7,13 @@
 
         <!-- Background -->
         <div class="absolute inset-0 room-bg"></div>
+            <!-- ■■帰還・ログアウトボタン -->
+            <button
+                class="return-button"
+                @click="logout"
+            >
+                 帰還ボタン
+            </button>
 
         <!-- Title -->
         <h1 class="m-4 room-title text-3xl font-bold tracking-wider">
@@ -1000,6 +1007,31 @@ export default {
       transition: background 1s ease;
   }
 
+/* 左上の帰還ボタン */
+.return-button {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 3000;
+
+    padding: 6px 2px;
+    color: #ffffff;
+    background: rgba(15, 80, 55, 0.95);
+    border: 2px solid #5ee8a5;
+    border-radius: 10px;
+
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+
+    box-shadow: 0 0 12px rgba(94, 232, 165, 0.4);
+    transition: background 0.2s, transform 0.2s;
+}
+
+.return-button:hover {
+    background: #176b48;
+    transform: scale(1.05);
+}
   .room-avatar-ring{
       box-shadow: 0 0 0 4px var(--team-accent, #3b82f6), 0 0 10px var(--team-accent, #3b82f6), 0 0 25px var(--team-accent, #3b82f6);
       /* ■このセレクタの方がTailwindのtransition-allより後にCDNから注入され、

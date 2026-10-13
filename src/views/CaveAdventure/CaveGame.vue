@@ -70,7 +70,8 @@ import {
     CAVE_AREAS,
     CAVE_AREA_IDS,
     loadCaveKeys,
-    saveCaveKeys,
+    // saveCaveKeys,
+    changeCaveKey,
     saveLastCaveArea,
     takeNextCaveArea
 } from "./caveAreas.js";
@@ -178,8 +179,17 @@ export default {
         this.canvas = this.$refs.canvas;
         this.ctx = this.canvas.getContext("2d");
         // ■エリアごとのカギ数を読み込む
-        this.caveKeys = loadCaveKeys();
-
+        // 以下に変更：this.caveKeys = loadCaveKeys();
+        const cenId = getSession("loginCenId");
+        loadCaveKeys(cenId)
+            .then((keys) => {
+                this.caveKeys = keys;
+            })
+            .catch((error) => {
+                console.error("カギ情報の読み込みに失敗しました:", error);
+                alert("カギ情報を読み込めませんでした。再ログインして確認してください。");
+            });
+        // --end
 
         this.resize();
 
@@ -608,8 +618,9 @@ export default {
             hitEnemy.bubbleUntil = now + ENEMY_STUN_TIME;
 
             if (this.caveKeys[this.area] > 0) {
-                this.caveKeys[this.area]--;
-                saveCaveKeys(this.caveKeys);
+                // this.caveKeys[this.area]--;
+                // saveCaveKeys(this.caveKeys); 2行の代わりに下1行を挿入
+                this.changeKeyCount(-1);
                 this.showPop(this.player.r, this.player.c, { icon: "🔑", text: "-1", hit: true });
                 this.keyBumpId++;
                 this.keyBumpLose = true;
@@ -708,8 +719,9 @@ export default {
                   item.get = true;
 
                   // ■いまのエリアのカギとして確保
-                  this.caveKeys[this.area]++;
-                  saveCaveKeys(this.caveKeys);
+                  // this.caveKeys[this.area]++;
+                  // saveCaveKeys(this.caveKeys);
+                  this.changeKeyCount(1);
 
                   this.playKeySound();
                   this.showKeyPop(item.r, item.c);
@@ -1076,8 +1088,40 @@ export default {
               !item.get &&
               Math.abs(r - item.r) + Math.abs(c - item.c) <= 1
           );
-
       },
+
+      // ■カギ数更新
+        async changeKeyCount(delta) {
+            const cenId = getSession("loginCenId");
+            const areaId = this.area;
+            if (!cenId) {
+                console.error(
+                    "カギ更新エラー：loginCenIdが取得できません",
+                    cenId
+                );
+                alert("会員IDを取得できません。再ログインしてください。");
+                return;
+            }
+
+            try {
+                console.log("カギ更新開始:", {
+                    cenId,
+                    areaId,
+                    delta
+                });
+                const nextCount = await changeCaveKey(
+                    cenId,
+                    areaId,
+                    delta
+                );
+                console.log("データベース更新成功:", nextCount);
+                // 画面のカギ数も更新
+                this.caveKeys = { ...this.caveKeys, [areaId]: nextCount };
+            } catch (error) {
+                console.error("カギの更新に失敗しました:", error);
+                alert("カギを更新できませんでした。通信状態を確認してください。");
+            }
+        },
     },
 
     computed: {

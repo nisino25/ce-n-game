@@ -131,13 +131,15 @@ const routes = [
     { 
         path: "/card-admin", 
         name: "CardAdmin", 
-        component: CardAdmin 
+        component: CardAdmin ,
+        meta: { requiresAdmin: true }
     },
     // ■会員管理画面
     { 
         path: "/cust-admin", 
         name: "CustAdmin", 
-        component: CustAdmin 
+        component: CustAdmin ,
+        meta: { requiresAdmin: true }
     },
     
     // ■かんばん：これからのアップデートのお知らせと、みんなの声（コメント）を送る場所
@@ -255,6 +257,33 @@ const router = createRouter({
 
     // return true;
 // });
+// 管理者として許可するcenId
+const ADMIN_KANRI_IDS = ["101010","101023","124015"];
 
+// Admin専用画面のアクセス制御
+router.beforeEach((to) => {
+  console.log("遷移先:", to.fullPath);
+  console.log("ルート名:", to.name);
+  console.log("URLのkanriId:", to.query.kanriId);
+  // 管理者専用画面以外は通常どおり
+  if (!to.matched.some(
+    record => record.meta.requiresAdmin
+  )) {
+    return true;
+  }
+  // URLのkanriIdを取得
+  const kanriId = String(to.query.kanriId || "");
+  // 登録された管理者IDと一致する場合だけ許可
+  if (ADMIN_KANRI_IDS.includes(kanriId)) {
+    console.log("管理者IDを確認。管理画面へ進みます");
+    return true;
+  }
+  // 管理者IDがない、または一致しない場合は拒否
+  console.log("管理者IDが不正です");
+  return {
+    name: "Error",
+    replace: true
+  };
+});
 
 export default router;

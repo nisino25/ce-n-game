@@ -94,7 +94,11 @@ export async function countCollectionCards(where) {
 // そのエリアのカードが無ければ、全カードから選ぶ
 export function drawCard(library, region) {
     const regionCards = library.filter(card => card.region === region);
-    const pool = regionCards.length ? regionCards : library;
+
+    const silverCards = library.filter(card => card.frame === "silver" && card.published === true && card.source !== "scan");
+    // 指定地域かつ銀フレームのカードに絞り込む
+    const pool = regionCards.filter( card => silverCards.includes(card));
+    // const pool = regionCards.length ? regionCards : library;
     if (!pool.length) return null;
 
     const weights = pool.map(card => RARITY_WEIGHTS[card.rarity] || 1);

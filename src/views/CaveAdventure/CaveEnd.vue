@@ -191,9 +191,10 @@ import {
     CAVE_AREAS,
     CAVE_AREA_IDS,
     loadCaveKeys,
-    saveCaveKeys,
+    changeCaveKey,  // カギ保存で修正saveCaveKeys,
     loadLastCaveArea
 } from "./caveAreas.js";
+import { getSession } from "@/utils/session.js";
 import db from "@/firebase.js";
 import CollectionCard from "./CollectionCard.vue";
 import {
@@ -214,7 +215,7 @@ export default {
           library: [],
           user: null,
           areas: CAVE_AREAS,
-          caveKeys: loadCaveKeys(),
+          caveKeys: {}, // カギ更新変更：loadCaveKeys(),
           selectedArea: CAVE_AREA_IDS[0],
           chestPhase: "idle", // idle | unlocking | opening | open
           showOverlay: false,
@@ -254,7 +255,24 @@ export default {
         }
     },
 
-    mounted() {
+    async mounted() {
+        const cenId = getSession("loginCenId");
+        console.log("CaveEnd 会員ID:", cenId);
+        if (!cenId) {
+            console.error("CaveEndで会員IDを取得できません");
+            alert("会員IDを取得できません。再ログインしてください。");
+            return;
+        }
+        // ■データベースからカギ情報を読み込む
+        try {
+            this.caveKeys = await loadCaveKeys(cenId);
+            console.log("CaveEnd カギ情報:", this.caveKeys);
+        } catch (error) {
+            console.error("カギ情報の読み込みに失敗しました:", error);
+            alert("カギ情報を読み込めませんでした。");
+            return;
+        }
+
         // 最後に遊んだ洞窟のエリア → 無ければカギを持っているエリア → 無ければ先頭のエリア
         this.selectedArea =
             loadLastCaveArea() ||
@@ -278,50 +296,140 @@ export default {
 
         async openChest() {
             if(this.chestPhase !== "idle") return;
-            if (this.remainKeys <= 0) {
-                alert(`${this.selectedAreaInfo.name}のカギがありません`);
-                return;
-            }
             if (!this.library.length || !this.user) {
                 alert("カード情報を読み込み中です。少し待ってからもう一度開けてください。");
                 return;
             }
-
+            const cenId = getSession("loginCenId");
             const areaId = this.selectedArea;
-            const card = drawCard(this.library, areaId);
-
-            this.caveKeys[areaId]--;
-            saveCaveKeys(this.caveKeys);
-
-            // カギを差して回す(〜1.1秒) → 錠前が外れてフタが開く(〜1.9秒) → カード登場
-            // 演出の間に、引いたカードを所持カードとしてDBに保存する
-            this.chestPhase = "unlocking";
-            const saving = addCardInstance({
-                card,
-                user: this.user,
-                obtainedFrom: `cave:${areaId}`
-            });
-            const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-            await wait(1100);
-            this.chestPhase = "opening";
-            await wait(900);
-
+            if (!cenId) { alert("会員IDを取得できません。再ログインしてください。");
+                return;
+            }
+            // ★追加：カギが0本なら宝箱を開かない
+            const currentKeys = Number(this.caveKeys[areaId] || 0);
+            if (currentKeys <= 0) {
+                alert(`${this.areas[areaId].name}のカギがありません。`);
+                return;
+            }
+            let keyConsumed = false;
             try {
+                // ① Firestoreでカギを1本消費
+                const nextCount = await changeCaveKey( cenId, areaId, -1 );
+                keyConsumed = true;
+                // ② 画面のカギ数をデータベースと同期
+                this.caveKeys = {
+                    ...this.caveKeys,
+                    [areaId]: nextCount
+                };
+                // ③ カードを抽選
+                const card = drawCard(this.library, areaId);
+                // ④ カードをデータベースに保存
+                this.chestPhase = "unlocking";
+                const saving = addCardInstance({
+                    card,
+                    user: this.user,
+                    obtainedFrom: `cave:${areaId}`
+                });
+
+                // 宝箱
+                const wait = ms =>
+                    new Promise(resolve => setTimeout(resolve, ms));
+                await wait(1100);
+                this.chestPhase = "opening";
+                await wait(900);
                 const instance = await saving;
+
                 this.currentCard = toDisplayCard(card, instance);
                 this.chestPhase = "open";
                 this.showOverlay = true;
             } catch (error) {
-                console.error("カードの保存に失敗しました:", error);
-                // 保存できなかったらカギを返す
-                this.caveKeys[areaId]++;
-                saveCaveKeys(this.caveKeys);
+                console.error("宝箱を開く処理に失敗しました:", error);
+                // ⑤ カード保存などに失敗した場合は、消費したカギを返す
+                if (keyConsumed) {
+                    try {
+                        const restoredCount = await changeCaveKey( cenId, areaId, 1 );
+                        this.caveKeys = {
+                                ...this.caveKeys, [areaId]: restoredCount };
+                    } catch (restoreError) {
+                        console.error(
+                            "カギの返却に失敗しました:",
+                            restoreError
+                        );
+                        // データベースから最新のカギ数を再取得
+                        try {
+                            this.caveKeys = await loadCaveKeys(cenId);
+                        } catch (reloadError) {
+                            console.error(
+                                "カギ情報の再取得に失敗しました:",
+                                reloadError
+                            );
+                        }
+                    }
+                } else {
+                    // カギを消費できなかった場合も最新情報を確認
+                    try {
+                        this.caveKeys = await loadCaveKeys(cenId);
+                    } catch (reloadError) {
+                        console.error(
+                            "カギ情報の再取得に失敗しました:",
+                            reloadError
+                        );
+                    }
+                }
                 this.chestPhase = "idle";
-                alert("カードを保存できませんでした。通信状況を確認して、もう一度開けてください。");
+                alert(
+                    "宝箱を開けられませんでした。\n" +
+                    (error.message || "通信状態を確認してください。")
+                );
             }
         },
 
+
+
+//             if (this.remainKeys <= 0) {
+//                 alert(`${this.selectedAreaInfo.name}のカギがありません`);
+//                 return;
+//             }
+//             if (!this.library.length || !this.user) {
+//                 alert("カード情報を読み込み中です。少し待ってからもう一度開けてください。");
+//                 return;
+//             }
+// 
+//             const areaId = this.selectedArea;
+//             const card = drawCard(this.library, areaId);
+// 
+//             this.caveKeys[areaId]--;
+//             saveCaveKeys(this.caveKeys);
+// 
+//             // カギを差して回す(〜1.1秒) → 錠前が外れてフタが開く(〜1.9秒) → カード登場
+//             // 演出の間に、引いたカードを所持カードとしてDBに保存する
+//             this.chestPhase = "unlocking";
+//             const saving = addCardInstance({
+//                 card,
+//                 user: this.user,
+//                 obtainedFrom: `cave:${areaId}`
+//             });
+//             const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+// 
+//             await wait(1100);
+//             this.chestPhase = "opening";
+//             await wait(900);
+// 
+//             try {
+//                 const instance = await saving;
+//                 this.currentCard = toDisplayCard(card, instance);
+//                 this.chestPhase = "open";
+//                 this.showOverlay = true;
+//             } catch (error) {
+//                 console.error("カードの保存に失敗しました:", error);
+//                 // 保存できなかったらカギを返す
+//                 this.caveKeys[areaId]++;
+//                 saveCaveKeys(this.caveKeys);
+//                 this.chestPhase = "idle";
+//                 alert("カードを保存できませんでした。通信状況を確認して、もう一度開けてください。");
+//             }
+//         },
+// 
         // 宝箱から飛び出すキラキラの向き・距離・タイミング（上方向に扇状に散らす）
         sparkleStyle(n) {
             const angle = (-160 + (140 / 13) * (n - 1)) * Math.PI / 180;
@@ -730,7 +838,7 @@ export default {
         padding: 0 !important;
         display: block !important;
         text-align: center !important;
-        font-size: 13px !important;
+        font-size: 13 px !important;
         line-height: 1.2 !important;
         white-space: nowrap !important;
         color: #000000 !important;
