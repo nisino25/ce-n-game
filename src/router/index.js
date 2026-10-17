@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import LoginPage from "@/views/LoginPage/LoginPage.vue";
+import ScanLogin from "@/views/LoginPage/ScanLogin.vue";
 
 import Intro from "@/views/IntroView/IntroView.vue";
 import TeamIntro from "@/views/Team/TeamIntro.vue";
@@ -52,6 +53,12 @@ const routes = [
         path: "/loginPage",
         name: "LoginPage",
         component: LoginPage
+    },
+
+    {
+        path: "/Scanlogin",
+        name: "ScanLogin",
+        component: ScanLogin
     },
 
     {
