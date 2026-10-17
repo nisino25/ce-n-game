@@ -301,6 +301,11 @@
 <script>
 import CollectionCard from "@/views/CaveAdventure/CollectionCard.vue";
 import { getCurrentUser, toDisplayCard, REGION_LABELS } from "@/utils/cards.js";
+
+// ■■直接呼びだし対応
+import { resetCurrentUserCache } from "@/utils/cards.js";
+import { getSession, removeSession } from "@/utils/session.js";
+
 import {
     candidateToCardDraft,
     validateCardDraft,
@@ -428,7 +433,21 @@ export default {
 
     methods: {
         goHome() {
-            this.$router.push({ name: "Home" });
+            // ■■直接呼出し対応
+            const cenId = (this.currentUser && this.currentUser.cenId) || getSession("loginCenId");
+            removeSession("playerUid");
+            removeSession("playerData");
+            removeSession("myTeam");
+            removeSession("loginCenId");
+            removeSession("loginDate");
+            resetCurrentUserCache();
+            // cenIdがあればWix側の個別プロフィールページへ、なければログインページへ戻る
+            if (cenId) {
+                window.location.href = `https://www.ce-n.org/hui-yuan-purohuiru/${cenId}`;
+            } else {
+                this.$router.push({ name: "LoginPage" });
+            }
+        // ■もとにコード：this.$router.push({ name: "Home" });
         },
 
         onFileChange(e) {
