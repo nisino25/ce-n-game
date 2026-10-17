@@ -10,9 +10,9 @@
             <!-- ■■帰還・ログアウトボタン -->
             <button
                 class="return-button"
-                @click="logout"
+                @click="endGame"
             >
-                 帰還ボタン
+                 退出ボタン
             </button>
 
         <!-- Title -->
@@ -1027,6 +1027,7 @@ export default {
     box-shadow: 0 0 12px rgba(94, 232, 165, 0.4);
     transition: background 0.2s, transform 0.2s;
 }
+@media (max-width: 640px) { .return-button { left: 8px; }}
 
 .return-button:hover {
     background: #176b48;

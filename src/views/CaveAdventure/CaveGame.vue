@@ -212,7 +212,9 @@ export default {
         this.loadAvatar();
 
         // 洞窟の入口で選んだエリアで始める（選ばれていなければランダム）
-        this.resetGame(takeNextCaveArea());
+        const queryArea = this.$route.query.area;
+        const targetArea = queryArea || takeNextCaveArea();
+        this.resetGame(targetArea);
 
         // ■敵はプレイヤーの操作と関係なく、一定間隔で動かす
         this.enemyTimer = setInterval(this.enemyTick, 100);

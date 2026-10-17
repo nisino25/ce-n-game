@@ -537,7 +537,9 @@ export default {
             warp.style.width = "300vmax";
             warp.style.height = "300vmax";
             setTimeout(() => {
-                this.$router.back();
+                this.$router.push({
+                    path: "/cave-adventure/cave-game", query: { area: this.selectedArea }
+                });           
             }, 600);
        
         }

@@ -33,14 +33,30 @@ export default {
         };
     },
     mounted() {
-        const cenId = new URLSearchParams(window.location.search).get("cenId");
-
+        console.log("=== LoginPage mounted ===");
+        console.log("現在のURL:", window.location.href);
+        console.log("検索パラメータ:", window.location.search);
+        const cenId = new URLSearchParams(
+            window.location.search
+        ).get("cenId");
+        console.log("取得した cenId:", cenId);
         if (!cenId) {
+            console.log("cenIdがありません。ce-n.orgへ移動します");
             this.backToCeN();
             return;
         }
 
-        this.checkUser(cenId);
+    console.log("cenIdがあります。会員確認を開始します");
+    this.checkUser(cenId);
+
+    //    const cenId = new URLSearchParams(window.location.search).get("cenId");
+
+    //    if (!cenId) {
+    //        this.backToCeN();
+    //        return;
+    //    }
+
+    //    this.checkUser(cenId);
     },
     methods: {
         backToCeN() {
