@@ -62,26 +62,39 @@ export default {
           this.$router.push({ name: "Error" });
           return;
         }
-
         // 2. Firestore から cenId に紐づくユーザーデータを取得
         const snapshot = await db
           .collection("users")
           .where("cenId", "==", cenId)
           .get();
-
         setSession("loginCenId", cenId);
 
+        let userDocId = null;
         if (!snapshot.empty) {
-          // 既存ユーザーデータが存在する場合、セッション情報を格納
+          // 【既存ユーザー】データを取得
           const userDoc = snapshot.docs[0];
+          userDocId = userDoc.id;
           const userData = userDoc.data();
 
-          setSession("playerUid", userDoc.id);
+          setSession("playerUid", userDocId);
           setSession("playerData", JSON.stringify(userData));
-          setSession("myTeam", userData.team);
+          if (userData.team) {
+            setSession("myTeam", userData.team);
+          }
+        } else {
+          // 【新規ユーザー】データが存在しないため、新しく作成して cenId を登録
+          // ※ firebaseオブジェクトを使わず、通常のJSのDateオブジェクトで日時を保存します
+          const newUserData = {
+            cenId: cenId,
+            createdAt: new Date()
+          };
+          const docRef = await db.collection("users").add(newUserData);
+          userDocId = docRef.id;
+          setSession("playerUid", userDocId);
+          setSession("playerData", JSON.stringify(newUserData));
         }
 
-        // URL・認証に問題がなければ、Introを経由せず CreatureScan.vue を直接起動
+        // URL・認証に問題がなければ、CreatureScan.vue へ起動
         this.$router.push({
           name: "CreatureScan",
           query: { cenId }

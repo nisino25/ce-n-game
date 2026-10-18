@@ -236,8 +236,13 @@
                     // 既存会員なら新規作成しない
                     const userDoc = snapshot.docs[0];
                     const userData = userDoc.data();
+                    await db.collection("users").doc(userDoc.id).update({
+                        introCompleted: true,
+                        introCompletedAt: firebase.firestore.Timestamp.now()
+                    });
+                    const latestUserData = { ...userData, introCompleted: true };
                     setSession("playerUid", userDoc.id);
-                    setSession("playerData", JSON.stringify(userData));
+                    setSession("playerData", JSON.stringify(latestUserData));
                     setSession("myTeam", userData.team);
                     setSession("loginCenId", this.cenId);
                     console.log("既存会員を確認しました:", userDoc.id);
@@ -256,7 +261,8 @@
                     level: 1,
                     createdAt: new Date(),
                     cenId: this.cenId,
-                    enteredMonitorRoomAt: firebase.firestore.Timestamp.now()
+                    enteredMonitorRoomAt: firebase.firestore.Timestamp.now(),
+                    introCompleted: true
                 };
 
                 await db.collection("users").doc(uid).set({

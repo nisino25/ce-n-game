@@ -114,6 +114,10 @@ export default {
                     // 既存会員：保存済みのゲームを再開
                     const userDoc = snapshot.docs[0];
                     const userData = userDoc.data();
+                    // ★ ここで中身を丸ごとコンソールに出してみる
+                    console.log("【デバッグ】取得したuserDataの中身:", userData);
+                    console.log("【デバッグ】introCompletedの値:", userData.introCompleted, " (型:", typeof userData.introCompleted, ")");
+
                     if (userData.introCompleted === true) {
                         setSession("loginCenId", cenId);
                         setSession("playerUid", userDoc.id);
