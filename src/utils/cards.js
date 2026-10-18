@@ -134,6 +134,10 @@ export async function addCardInstance({ card, user, obtainedFrom }) {
 
 // ■カード表示用のデータ（カードライブラリの情報＋所持カードの情報）
 export function toDisplayCard(card, instance = null) {
+    let group = "";
+    if (instance && instance.team) {
+        group = TEAM_LABELS[instance.team] || instance.team || "";
+    }
     return {
         cardId: card.cardId,
         name: card.name,
@@ -142,7 +146,7 @@ export function toDisplayCard(card, instance = null) {
         levelNumber: card.level,
         rare: card.rarity || "",
         area2: HABITAT_ICONS[card.habitat] || "",
-        group: instance ? TEAM_LABELS[instance.team] || "" : "",
+        group: group,
         owner: instance ? instance.ownerName : "",
         // スキャンでとったカードは、保存された枠に関係なくゴールド
         card: card.source === "scan" ? "gold" : card.frame || "silver"

@@ -98,12 +98,14 @@ export default {
                     // 既存会員：保存済みのゲームを再開
                     const userDoc = snapshot.docs[0];
                     const userData = userDoc.data();
-                    setSession("loginCenId", cenId);
-                    setSession("playerUid", userDoc.id);
-                    setSession("playerData", JSON.stringify(userData));
-                    setSession("myTeam", userData.team);
-                    this.$router.push({ name: "Home" });
-                    return;
+                    if (userData.introCompleted === true) {
+                        setSession("loginCenId", cenId);
+                        setSession("playerUid", userDoc.id);
+                        setSession("playerData", JSON.stringify(userData));
+                        setSession("myTeam", userData.team);
+                        this.$router.push({ name: "Home" });
+                        return;
+                    }
                 }
                 // usersにデータがない場合だけ、初回INTROへ
                 console.log("Introへ渡す cenId:", cenId);

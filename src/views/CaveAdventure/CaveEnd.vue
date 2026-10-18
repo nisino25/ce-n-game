@@ -311,6 +311,11 @@ export default {
                 alert(`${this.areas[areaId].name}のカギがありません。`);
                 return;
             }
+
+            this.currentCard = {
+                cardId: "", instanceId: "", name: "", icon: "", owner: "", level: "",
+                rare: "", area1: "", area2: "", card: ""
+            };
             let keyConsumed = false;
             try {
                 // ① Firestoreでカギを1本消費
@@ -445,6 +450,18 @@ export default {
         closeCard() {
             this.showOverlay = false;
             this.chestPhase = "idle";
+            this.currentCard = {
+                cardId: "",
+                instanceId: "",
+                name: "",
+                icon: "",
+                owner: "",
+                level: "",
+                rare: "",
+                area1: "",
+                area2: "",
+                card: ""
+            };
         },
 
         // ■獲得カード一覧：自分の所持カード（cardInstances）をカードライブラリの情報と合わせて表示
