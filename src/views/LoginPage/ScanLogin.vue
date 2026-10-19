@@ -97,7 +97,7 @@ export default {
         // URL・認証に問題がなければ、CreatureScan.vue へ起動
         this.$router.push({
           name: "CreatureScan",
-          query: { cenId }
+          query: { cenId, from: "login" }
         });
 
       } catch (error) {

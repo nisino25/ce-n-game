@@ -431,7 +431,46 @@ export default {
         }
     },
 
+    async mounted() {
+        // 1. ログインチェック（会員IDの有無）
+        const cenId = getSession("loginCenId");
+        if (!cenId) {
+            console.error("CreatureScan: 認証情報（loginCenId）がありません。");
+            alert("ログイン情報が見つかりません。もう一度ログインし直してください。");
+            this.$router.push({ name: "LoginPage" });
+            return;
+        }
+        // 2. セッション有効期限のチェック
+        if (this.checkSessionExpired()) {
+            return;
+        }
+        // 3. 直叩き防止：URLに合言葉（?from=login）があるかチェックする
+        if (this.$route.query.from !== "login") {
+            console.error("CreatureScan: URLの直叩き、または不正な経路からのアクセスです。");
+            alert("正しい手順からアクセスしてください。");
+            this.$router.push({ name: "ScanLogin" }); // またはホーム画面などへ
+            return;
+        }
+    },
+
     methods: {
+        // ■追加：セッション有効期限のチェック用関数
+        checkSessionExpired() {
+            const lastActive = getSession("lastActiveTime");
+            if (lastActive) {
+                const diffDays = (Date.now() - Number(lastActive)) / (1000 * 60 * 60 * 24);
+                if (diffDays > 7) {
+                    removeSession("loginCenId");
+                    removeSession("myTeam");
+                    removeSession("playerData");
+                    alert("セッションの有効期限が切れました。再度ログインしてください。");
+                    this.$router.push({ name: "LoginPage" });
+                    return true;
+                }
+            }
+            return false;
+        },
+        
         goHome() {
             // ■■直接呼出し対応
             const cenId = (this.currentUser && this.currentUser.cenId) || getSession("loginCenId");

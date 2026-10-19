@@ -570,6 +570,9 @@ export default {
         margin:0;font-family:sans-serif;height:100vh !important;
         display:flex;justify-content:center;align-items:center;flex-direction:column;
         background:radial-gradient(circle,#5b4732,#1d1711) !important;
+        /* ■スマートフォン揺れを抑える
+        overflow-x: hidden;
+        overflow-y: hidden;
     }
     #result{
         color:#fff;
