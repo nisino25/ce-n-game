@@ -242,6 +242,7 @@
                     <div class="dock-panel-title">
                         <span>🃏 あなたのカード</span>
                         <button v-if="testMode && !spectator" class="test-card-button" @click="showTestCards = true">🧪 カードを えらぶ</button>
+                        <button v-if="!spectator" class="cave-jump-button" @click="goToCave">⛏ 洞窟へ</button>
                         <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI && !aiOnlyMode" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</span>
                         <span v-else-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」→ きいろい マスに おけるよ</span>
                     </div>
@@ -1087,6 +1088,12 @@ export default {
                 console.error('陣取りゲームの読み込みに失敗しました', e)
                 return false
             }
+        },
+
+        // ■洞窟へ行く。確認してから、洞窟のゲーム画面へ。いまは釧路（北海道のエリア）の洞窟に行く
+        goToCave() {
+            if (!window.confirm('洞窟へ いきますか？')) return
+            this.$router.push({ name: 'CaveGame', query: { area: 'hokkaido' } })
         },
 
         // ■最後に地図から入った場所（{city, cityName}）。ルームの「場所」として一緒に保存する
@@ -3219,6 +3226,21 @@ export default {
       white-space: nowrap;
   }
   .test-card-button:active{ transform: scale(0.95); }
+
+  /* ■「洞窟へ」ボタン（「あなたのカード」の 右はし） */
+  .cave-jump-button{
+      flex: none;
+      margin-left: auto;
+      padding: 1px 10px;
+      border: 1.5px solid #f59e0b;
+      border-radius: 9999px;
+      background: #fffbeb;
+      color: #92400e;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+  }
+  .cave-jump-button:active{ transform: scale(0.95); }
 
   /* ■レベル4（★）の支配エリア：まわり8マスが、そのチームの色で、ゆっくり光る。★は、ゆっくり脈うつ */
   .tile-domain{
