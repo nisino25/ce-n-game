@@ -119,7 +119,7 @@
 
         <!-- ■仮リンク集約：本来はそれぞれの本来の画面（地図側など）に組み込む予定の暫定導線をまとめておく場所
              ■スマホ幅で画面を覆ってしまわないよう、<details>で普段は折りたたんでおく -->
-        <details class="fixed bottom-4 right-4 z-[450] w-[17rem] max-w-[85vw] max-h-[75vh] overflow-y-auto bg-black/80 border border-dashed border-yellow-400/60 rounded-xl p-3 backdrop-blur-sm">
+        <details ref="devLinks" class="fixed bottom-4 right-4 z-[450] w-[17rem] max-w-[85vw] max-h-[75vh] overflow-y-auto bg-black/80 border border-dashed border-yellow-400/60 rounded-xl p-3 backdrop-blur-sm">
             <summary class="text-yellow-300 text-xs font-bold tracking-wider cursor-pointer select-none">🚧 仮リンク</summary>
 
             <div class="mt-3 flex flex-col gap-5">
@@ -589,6 +589,9 @@ export default {
     },
 
     async mounted() {
+        // ■仮リンクの外側を押したら閉じるための監視（beforeUnmountで外す）
+        document.addEventListener("pointerdown", this.closeDevLinksOnOutsideClick);
+
         // ■最終ログイン日時を毎回更新し、7日以上放置されたセッションは自動でログアウトする
         if (this.checkSessionExpired()) {
             return;
@@ -614,7 +617,18 @@ export default {
 				console.log("Online Team Members:", this.onlineTeamMembers);
     },
 
+    beforeUnmount() {
+        document.removeEventListener("pointerdown", this.closeDevLinksOnOutsideClick);
+    },
+
     methods: {
+        // ■仮リンクのパネルが開いているとき、そのパネルの外側を押したら閉じる
+        closeDevLinksOnOutsideClick(event) {
+            const panel = this.$refs.devLinks;
+            if (!panel || !panel.open || panel.contains(event.target)) return;
+            panel.open = false;
+        },
+
         // ■デモ：レベル4のカードが出た、保存されている試合を、けっかの画面で開く（見るだけ）
         async openDemoLv4Game() {
             this.demoMessage = "";
