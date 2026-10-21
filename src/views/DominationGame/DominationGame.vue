@@ -567,6 +567,19 @@
             </div>
         </div>
 
+        <!-- ■洞窟へ行く前の確認（ブラウザの確認ダイアログの代わり）。外側を押すと、やめる -->
+        <div v-if="showCaveConfirm" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" @click.self="showCaveConfirm = false">
+            <div class="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-xl" role="dialog" aria-modal="true" aria-label="洞窟へ いきますか？">
+                <p class="text-3xl">⛏</p>
+                <p class="mt-2 text-base font-black text-slate-700">洞窟へ いきますか？</p>
+                <p class="mt-1 text-xs font-bold text-slate-500">洞窟の ぼうけんに いくよ</p>
+                <div class="mt-4 flex gap-2">
+                    <button class="flex-1 rounded-xl border border-slate-300 bg-slate-100 py-2.5 font-black text-slate-600" @click="showCaveConfirm = false">やめる</button>
+                    <button class="flex-1 rounded-xl bg-amber-500 py-2.5 font-black text-white" @click="goCaveNow">いく</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ■テストモード（手元の開発環境、または ?test=1）：カードを自由に手札へ足す。テラは もらえなくなる -->
         <div v-if="testMode && showTestCards" class="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-3 sm:items-center" @click.self="showTestCards = false">
             <div class="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white p-4 shadow-xl">
@@ -783,6 +796,7 @@ export default {
         showTerritory: false, // ゲームのおわりに、じんち（チームごとのマス）を盤面で見る
         testMode: isTestMode(), // テストモード（カードを自由にえらべる）
         showTestCards: false,
+        showCaveConfirm: false, // 「洞窟へ」の確認パネル
         usedTestCards: false, // テストのカードをつかったゲームは、テラをもらえない
         testMessage: '',
         sfxMuted: sfx.isMuted(), // 効果音のミュート
@@ -1090,9 +1104,12 @@ export default {
             }
         },
 
-        // ■洞窟へ行く。確認してから、洞窟のゲーム画面へ。いまは釧路（北海道のエリア）の洞窟に行く
+        // ■洞窟へ行く。まず確認パネルを出し、「いく」を押したら洞窟のゲーム画面へ（いまは釧路＝北海道のエリア）
         goToCave() {
-            if (!window.confirm('洞窟へ いきますか？')) return
+            this.showCaveConfirm = true
+        },
+        goCaveNow() {
+            this.showCaveConfirm = false
             this.$router.push({ name: 'CaveGame', query: { area: 'hokkaido' } })
         },
 
