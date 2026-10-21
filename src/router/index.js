@@ -29,6 +29,7 @@ import CreatureScan from "@/views/CreatureScan/CreatureScan.vue";
 import CardAdmin from "@/views/Admin/CardAdmin.vue";
 import CustAdmin from "@/views/Admin/CustAdmin.vue";
 import DocsView from "@/views/Docs/DocsView.vue";
+import RegionCardSpec from "@/views/DominationGame/RegionCardSpec.vue";
 import NoticeBoard from "@/views/NoticeBoard/NoticeBoard.vue";
 import CommentsAdmin from "@/views/Admin/CommentsAdmin.vue";
 import HabitatCompare from "@/views/HabitatCompare/HabitatCompare.vue";
@@ -203,6 +204,12 @@ const routes = [
         path: "/docs",
         name: "Docs",
         component: DocsView
+    },
+    // ■陣取りゲームの地域のカード（どの街で、どのカードが手札に出るかの仕様。モニタールームの仮リンクから）
+    {
+        path: "/region-card-spec",
+        name: "RegionCardSpec",
+        component: RegionCardSpec
     },
 
     {
