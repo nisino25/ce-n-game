@@ -21,7 +21,7 @@
                             @click="roomLabelText() ? null : copyRoomCode()"
                         >
                             <span class="text-slate-400">{{ roomLabelText() ? '📍' : '🔑ルーム' }}</span>
-                            <span class="truncate">{{ roomLabelText() || roomCode }}</span>
+                            <span class="whitespace-pre-line text-left leading-tight">{{ roomLabelText() || roomCode }}</span>
                             <span v-if="roomLabelText()"></span>
                             <span v-else-if="roomCodeCopied" class="text-emerald-600 font-sans font-normal">コピーしました！</span>
                             <span v-else class="text-slate-400 font-sans font-normal">📋</span>
@@ -1137,8 +1137,13 @@ export default {
         roomLabelText() {
             const place = this.loadPlace()
             if (!place) return ''
-            if (place.spotName && place.gameNo) return `${place.spotName} ゲーム${place.gameNo}`
-            return place.cityName || ''
+            // ■街の名前（平塚市・釧路市）を1行目、場所とゲーム番号を2行目にして、バッジの中で改行する
+            const city = place.cityName || ''
+            if (place.spotName && place.gameNo) {
+                const spot = `${place.spotName} ゲーム${place.gameNo}`
+                return city ? `${city}\n${spot}` : spot
+            }
+            return city
         },
 
         // ■カードを共通のカード表示（カードライブラリ・宝箱と同じ）で出すためのデータ。
