@@ -154,7 +154,7 @@
                             <div class="flex items-center gap-2 mb-3">
                                 <div class="w-5 h-5 rounded-md flex-none" :style="{ background: currentPlayer?.color }"></div>
                                 <span class="font-bold text-sm">{{ currentPlayer?.name }}</span>
-                                <button v-if="testMode" class="test-card-button" @click="showTestCards = true">🧪 カードを えらぶ</button>
+                                <button v-if="testMode" class="test-card-button" @click="showTestCards = true">🧪 デモ</button>
                                 <span class="text-sm text-slate-500 ml-auto">{{ currentPlayer?.score }}点</span>
                             </div>
 
@@ -241,7 +241,7 @@
                 <div v-if="!spectator" class="dock-panel dock-hand-panel">
                     <div class="dock-panel-title">
                         <span>🃏 あなたのカード</span>
-                        <button v-if="testMode && !spectator" class="test-card-button" @click="showTestCards = true">🧪 カードを えらぶ</button>
+                        <button v-if="testMode && !spectator" class="test-card-button" @click="showTestCards = true">🧪 デモ</button>
                         <button v-if="!spectator" class="cave-jump-button" @click="goToCave">⛏ 洞窟へ</button>
                         <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI && !aiOnlyMode" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</span>
                         <span v-else-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」→ きいろい マスに おけるよ</span>
