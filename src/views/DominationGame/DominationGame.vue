@@ -571,7 +571,7 @@
         <div v-if="showCaveConfirm" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" @click.self="showCaveConfirm = false">
             <div class="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-xl" role="dialog" aria-modal="true" aria-label="洞窟へ いきますか？">
                 <p class="text-3xl">⛏</p>
-                <p class="mt-2 text-base font-black text-slate-700">洞窟へ いきますか？</p>
+                <p class="mt-2 text-base font-black text-slate-700">{{ caveTarget() ? caveTarget().name + 'の洞窟へ いきますか？' : '洞窟へ いきますか？' }}</p>
                 <p class="mt-1 text-xs font-bold text-slate-500">洞窟の ぼうけんに いくよ</p>
                 <div class="mt-4 flex gap-2">
                     <button class="flex-1 rounded-xl border border-slate-300 bg-slate-100 py-2.5 font-black text-slate-600" @click="showCaveConfirm = false">やめる</button>
@@ -674,6 +674,12 @@ import ABGameProposalB from '@/views/ABGame/ABGameProposalB.vue';
 import { getSession } from '@/utils/session.js';
 import { generateSpotBoard } from './habitatBoard.js';
 import { isFresh } from '@/utils/dominationSlots.js';
+
+// ■街ごとの洞窟（洞窟のエリアの id と、表示する名前）。「洞窟へ」ボタンの行き先に使う
+const CITY_CAVE = {
+    hiratsuka: { area: 'kanagawa', name: '神奈川' },
+    kushiro: { area: 'hokkaido', name: '北海道' },
+};
 import { sfx } from '@/utils/sfx.js';
 import { addPoints } from '@/utils/points.js';
 import { isTestMode } from '@/utils/env.js';
@@ -1104,13 +1110,18 @@ export default {
             }
         },
 
-        // ■洞窟へ行く。まず確認パネルを出し、「いく」を押したら洞窟のゲーム画面へ（いまは釧路＝北海道のエリア）
+        // ■今の街の洞窟（平塚市→神奈川、釧路市→北海道）。街が決まらないときは null（どの洞窟かは指定しない）
+        caveTarget() {
+            return CITY_CAVE[this.loadPlace()?.city] || null
+        },
+        // ■洞窟へ行く。まず確認パネルを出し、「いく」を押したら、今の街の洞窟のゲーム画面へ
         goToCave() {
             this.showCaveConfirm = true
         },
         goCaveNow() {
+            const target = this.caveTarget()
             this.showCaveConfirm = false
-            this.$router.push({ name: 'CaveGame', query: { area: 'hokkaido' } })
+            this.$router.push({ name: 'CaveGame', query: target ? { area: target.area } : {} })
         },
 
         // ■最後に地図から入った場所（{city, cityName}）。ルームの「場所」として一緒に保存する
