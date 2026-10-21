@@ -7,6 +7,13 @@
                     <span>🔎</span><span>生き物スキャン</span>
                 </h1>
                 <button
+                    class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1"
+                    @click="goLibrary"
+                >
+                    <span>📚</span><span>図鑑をみる</span>
+                </button>
+
+                <button
                     class="text-sm text-emerald-700 hover:text-emerald-900 underline"
                     @click="goHome"
                 >
