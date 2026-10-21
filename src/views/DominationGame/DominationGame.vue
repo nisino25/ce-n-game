@@ -1102,7 +1102,9 @@ export default {
         roomLabelText() {
             const place = this.loadPlace()
             if (!place) return ''
-            if (place.spotName && place.gameNo) return `${place.spotName} ゲーム${place.gameNo}`
+            // ■街の名前（平塚市・釧路市）を先頭に付けて、どの街のゲームかわかるようにする
+            const city = place.cityName ? `${place.cityName} ` : ''
+            if (place.spotName && place.gameNo) return `${city}${place.spotName} ゲーム${place.gameNo}`
             return place.cityName || ''
         },
 
