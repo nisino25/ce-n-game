@@ -709,6 +709,8 @@ const AB_CHALLENGE_POINTS = 2
 
 // ■地形の名前（チャレンジ成功でなおる地形の案内に使う）
 const AREA_NAMES = { town: '町', forest: '森', dirt: '土', river: '川', sea: '海' }
+// ■街（mapSpots の city）と、カードの region（洞窟のエリア）の対応
+const CITY_REGION = { hiratsuka: 'kanagawa', kushiro: 'hokkaido' }
 
 // ■地形のうっすらした模様（草・水など）。ゲームの見やすさをじゃましない、うすい線だけ。
 //   SVGを、そのままマスの背景にする（マスの大きさに合わせて拡大・縮小される）
@@ -2061,8 +2063,11 @@ export default {
         // ■チームの所持カード（DBの cardInstances）から、人間チームの手札を作る
         handFromInstances(instances) {
             const libraryById = Object.fromEntries(this.cardLibrary.map(card => [card.cardId, card]))
+            // ■今いる街の地域（平塚市→神奈川、釧路市→北海道）のカードだけを手札にする。地域が決まらない（テスト等）ときは絞らない
+            const region = CITY_REGION[this.loadPlace()?.city]
             return instances
                 .filter(instance => libraryById[instance.cardId])
+                .filter(instance => !region || libraryById[instance.cardId].region === region)
                 .map(instance => toDominationCard(libraryById[instance.cardId], instance.instanceId))
         },
 
