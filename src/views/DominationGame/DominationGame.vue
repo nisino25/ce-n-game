@@ -613,7 +613,7 @@
             <div class="relative w-full max-w-lg">
                 <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" aria-label="やめる" @click="cancelChallenge">✕</button>
                 <div class="max-h-[90vh] overflow-y-auto rounded-2xl bg-[#f4f1e8] shadow-xl">
-                    <ABGameProposalB embedded challenge :question-count="2" @start="challengeStarted = true" @finish="onChallengeFinish" />
+                    <ABGameProposalB embedded challenge :city="(loadPlace() && loadPlace().city) || 'hiratsuka'" :question-count="2" @start="challengeStarted = true" @finish="onChallengeFinish" />
                 </div>
             </div>
         </div>

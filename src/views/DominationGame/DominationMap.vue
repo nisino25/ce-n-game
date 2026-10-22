@@ -155,7 +155,7 @@
                 v-if="tutorial.phase === 'game'"
                 class="my-auto max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl bg-[#f4f1e8] shadow-xl"
             >
-                <ABGameProposalB embedded @finish="finishTutorial" />
+                <ABGameProposalB embedded :city="tutorial.location" @finish="finishTutorial" />
             </div>
         </div>
 

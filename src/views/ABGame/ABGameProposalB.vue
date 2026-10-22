@@ -178,12 +178,16 @@
 <script>
 import db from "@/firebase.js";
 
-const QUESTION_LOCATION = "hiratsuka";
-
 export default {
     name: "ABGameProposalB",
 
     props: {
+        // ■今の街（hiratsuka / kushiro）。その街の問題を使う。問題がまだ無い街は、平塚の問題を使う
+        city: {
+            type: String,
+            default: "hiratsuka"
+        },
+
         // ■地図画面のモーダル内で遊ぶ場合はtrue。終了時に遷移せずfinishイベントを出す
         embedded: {
             type: Boolean,
@@ -243,9 +247,15 @@ export default {
 
     async mounted() {
         try {
-            const snapshot = await db.collection("abGameQuestions")
-                .where("location", "==", QUESTION_LOCATION)
+            let snapshot = await db.collection("abGameQuestions")
+                .where("location", "==", this.city)
                 .get();
+            // ■その街の問題がまだ無いときは、平塚の問題を使う（今までどおり）
+            if (snapshot.empty && this.city !== "hiratsuka") {
+                snapshot = await db.collection("abGameQuestions")
+                    .where("location", "==", "hiratsuka")
+                    .get();
+            }
             this.questions = snapshot.docs
                 .map(doc => doc.data())
                 .sort((a, b) => a.order - b.order);
