@@ -1,54 +1,73 @@
 <template>
     <!-- ■ABゲームのデモ：平塚市・釧路市を選んで、そのエリアの全問題を遊べる。モニタールームの仮リンクから -->
-    <div class="min-h-screen bg-slate-50 p-4 text-slate-700">
-        <div class="mx-auto max-w-xl">
-            <button class="mb-3 text-sm font-black text-slate-500" @click="$router.push({ name: 'Home' })">← モニタールームにもどる</button>
-            <h1 class="mb-3 text-center text-lg font-black">ABゲーム デモ</h1>
+    <div class="min-h-screen bg-[#f4f1e8] px-4 py-8">
+        <div class="mx-auto w-full max-w-2xl">
+
+            <!-- Header（ABゲーム本体と同じ作り） -->
+            <header class="flex items-center justify-between mb-5">
+                <h1 class="text-xl font-bold text-emerald-900 tracking-wide">
+                    ABゲーム デモ<span class="text-sm font-normal text-emerald-700 ml-1">（{{ area ? area.name : 'エリアをえらぶ' }}）</span>
+                </h1>
+                <div v-if="area && !finished" class="bg-emerald-800 text-white text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                    Q. {{ idx + 1 }} / {{ area.questions.length }}
+                </div>
+            </header>
 
             <!-- エリアえらび -->
-            <div v-if="!area" class="rounded-xl bg-white p-4 shadow-sm">
-                <p class="mb-3 text-sm">エリアをえらんでね（全部の問題で あそべるよ）</p>
+            <div v-if="!area" class="bg-white rounded-3xl shadow-md p-8 text-center">
+                <p class="text-emerald-900 font-bold text-lg mb-6">エリアをえらんでね（全部の問題で あそべるよ）</p>
                 <div class="flex gap-3">
-                    <button class="flex-1 rounded-xl bg-emerald-600 py-3 text-lg font-black text-white" @click="startArea('hiratsuka')">平塚市</button>
-                    <button class="flex-1 rounded-xl bg-sky-600 py-3 text-lg font-black text-white" @click="startArea('kushiro')">釧路市</button>
+                    <button class="flex-1 rounded-2xl bg-emerald-600 hover:bg-emerald-700 py-4 text-lg font-bold text-white shadow" @click="startArea('hiratsuka')">平塚市</button>
+                    <button class="flex-1 rounded-2xl bg-sky-600 hover:bg-sky-700 py-4 text-lg font-bold text-white shadow" @click="startArea('kushiro')">釧路市</button>
                 </div>
             </div>
 
             <!-- 問題 -->
-            <div v-else-if="!finished" class="rounded-xl bg-white p-4 shadow-sm">
-                <div class="mb-2 text-xs font-bold text-slate-500">{{ area.name }} {{ idx + 1 }} / {{ area.questions.length }}問め</div>
-                <p class="text-base leading-relaxed">{{ current.text }}</p>
+            <div v-else-if="!finished" class="bg-white rounded-3xl shadow-md p-6">
+                <p class="text-gray-800 text-base leading-relaxed mb-5">{{ current.text }}</p>
 
-                <div class="mt-4 flex gap-3">
-                    <button class="flex-1 rounded-xl bg-sky-100 py-4 text-base font-black text-sky-900" :disabled="answered" @click="pick('A')">A：{{ area.labelA }}</button>
-                    <button class="flex-1 rounded-xl bg-rose-100 py-4 text-base font-black text-rose-900" :disabled="answered" @click="pick('C')">C：{{ area.labelC }}</button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button class="rounded-2xl border-2 border-sky-200 bg-sky-50 hover:bg-sky-100 py-4 px-3 text-sm font-bold text-sky-900 disabled:opacity-50" :disabled="answered" @click="pick('A')">
+                        🏖️ A：{{ area.labelA }}
+                    </button>
+                    <button class="rounded-2xl border-2 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 py-4 px-3 text-sm font-bold text-emerald-900 disabled:opacity-50" :disabled="answered" @click="pick('C')">
+                        ⛰️ C：{{ area.labelC }}
+                    </button>
                 </div>
 
                 <!-- 正解 -->
-                <div v-if="answered && isCorrect" class="mt-4">
-                    <p class="text-base font-black text-emerald-700">正解！</p>
-                    <p class="mt-1 text-sm leading-relaxed">{{ current.comment }}</p>
-                    <button class="mt-3 rounded-xl bg-orange-500 px-6 py-3 text-base font-black text-white" @click="nextQ">次へ</button>
+                <div v-if="answered && isCorrect" class="mt-5 rounded-2xl bg-emerald-50 p-4">
+                    <p class="text-emerald-900 font-bold text-base mb-1">せいかい！</p>
+                    <p class="text-gray-700 text-sm leading-relaxed">{{ current.comment }}</p>
+                    <div class="mt-4 text-right">
+                        <button class="rounded-2xl bg-emerald-600 hover:bg-emerald-700 px-6 py-3 font-bold text-white shadow" @click="nextQ">次へ</button>
+                    </div>
                 </div>
 
                 <!-- 間違い -->
-                <div v-if="wrongMessage" class="mt-4">
-                    <p class="text-base font-black text-rose-700">ちがうかも…もう一度読んでみよう！</p>
-                    <p class="mt-1 text-xs leading-relaxed text-slate-600">おとりの答え：{{ current.wrongText }}<br>なぜ違うか：{{ current.whyWrong }}</p>
+                <div v-if="wrongMessage" class="mt-5 rounded-2xl bg-rose-50 p-4">
+                    <p class="text-rose-700 font-bold text-base mb-1">ちがうかも…もう一度読んでみよう！</p>
+                    <p class="text-gray-700 text-sm leading-relaxed">おとりの答え：{{ current.wrongText }}</p>
+                    <p class="text-gray-700 text-sm leading-relaxed">なぜ違うか：{{ current.whyWrong }}</p>
                 </div>
             </div>
 
             <!-- おわり -->
-            <div v-else class="rounded-xl bg-white p-4 text-center shadow-sm">
-                <p class="text-lg font-black">{{ area.name }} おわり！</p>
-                <p class="mt-2 text-sm">{{ area.questions.length }}問中、1回で正解したのは {{ firstTry }}問</p>
-                <div class="mt-4 flex flex-col gap-2">
-                    <button class="rounded-xl bg-orange-500 py-3 font-black text-white" @click="startArea(areaKey)">もう一度</button>
-                    <button class="text-sm font-bold text-slate-500" @click="backToMenu">エリアをえらびなおす</button>
+            <div v-else class="bg-white rounded-3xl shadow-md p-8 text-center">
+                <p class="text-emerald-900 font-bold text-lg mb-2">{{ area.name }} おわり！</p>
+                <p class="text-gray-600 text-sm mb-6">{{ area.questions.length }}問中、1回で正解したのは {{ firstTry }}問</p>
+                <div class="flex flex-col gap-3">
+                    <button class="rounded-2xl bg-emerald-600 hover:bg-emerald-700 py-3 font-bold text-white shadow" @click="startArea(areaKey)">もう一度</button>
+                    <button class="text-sm font-bold text-gray-500" @click="backToMenu">エリアをえらびなおす</button>
                 </div>
             </div>
 
-            <button v-if="area && !finished" class="mt-3 text-sm font-bold text-slate-500" @click="backToMenu">← エリアをえらびなおす</button>
+            <div v-if="area && !finished" class="mt-4 text-center">
+                <button class="text-sm font-bold text-gray-500" @click="backToMenu">← エリアをえらびなおす</button>
+            </div>
+            <div class="mt-6 text-center">
+                <button class="text-sm font-bold text-gray-500" @click="$router.push({ name: 'Home' })">← モニタールームにもどる</button>
+            </div>
         </div>
     </div>
 </template>
