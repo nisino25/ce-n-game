@@ -16,13 +16,13 @@
             <!-- Impact meters -->
             <div v-if="phase !== 'intro'" class="grid grid-cols-2 gap-3 mb-6">
                 <div class="bg-white rounded-2xl p-3 shadow-sm border border-sky-100">
-                    <div class="text-xs font-bold text-sky-700 mb-1">🏖️ 海ごみ対策</div>
+                    <div class="text-xs font-bold text-sky-700 mb-1">{{ sideText.A.meter }}</div>
                     <div class="h-2.5 bg-sky-100 rounded-full overflow-hidden">
                         <div class="h-full bg-sky-500 rounded-full transition-all duration-500" :style="{ width: impactAPercent + '%' }"></div>
                     </div>
                 </div>
                 <div class="bg-white rounded-2xl p-3 shadow-sm border border-emerald-100">
-                    <div class="text-xs font-bold text-emerald-700 mb-1">⛰️ 里山再生</div>
+                    <div class="text-xs font-bold text-emerald-700 mb-1">{{ sideText.C.meter }}</div>
                     <div class="h-2.5 bg-emerald-100 rounded-full overflow-hidden">
                         <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" :style="{ width: impactCPercent + '%' }"></div>
                     </div>
@@ -68,9 +68,9 @@
                             @click="choose('A')"
                         >
                             <img src="/images/ABGames/env1.jpg" class="w-full h-28 object-cover rounded-xl mb-2">
-                            <span class="font-bold text-sky-800 text-sm">すいがら・海ごみ</span>
+                            <span class="font-bold text-sky-800 text-sm">{{ sideText.A.choice }}</span>
                         </button>
-                        <button class="help-button" aria-label="すいがら・海ごみって？" @click="helpSide = 'A'">？</button>
+                        <button class="help-button" :aria-label="sideText.A.choice + 'って？'" @click="helpSide = 'A'">？</button>
                     </div>
                     <div class="relative">
                         <button
@@ -80,9 +80,9 @@
                             @click="choose('C')"
                         >
                             <img src="/images/ABGames/env2.jpg" class="w-full h-28 object-cover rounded-xl mb-2">
-                            <span class="font-bold text-emerald-800 text-sm">里山のくらし</span>
+                            <span class="font-bold text-emerald-800 text-sm">{{ sideText.C.choice }}</span>
                         </button>
-                        <button class="help-button" aria-label="里山のくらしって？" @click="helpSide = 'C'">？</button>
+                        <button class="help-button" :aria-label="sideText.C.choice + 'って？'" @click="helpSide = 'C'">？</button>
                     </div>
                 </div>
 
@@ -143,7 +143,7 @@
                 <template v-else>
                     <p class="text-emerald-900 font-bold text-xl mb-2">おわり！よく考えてくれたね。</p>
                     <p class="text-gray-600 text-sm mb-5">
-                        海ごみ対策 {{ correctCountA }}問 ／ 里山再生 {{ correctCountC }}問、解決に貢献したよ。
+                        {{ sideText.A.result }} {{ correctCountA }}問 ／ {{ sideText.C.result }} {{ correctCountC }}問、解決に貢献したよ。
                     </p>
                     <div class="flex flex-wrap gap-2 justify-center mb-6">
                         <img
@@ -167,8 +167,8 @@
         <!-- ■選択肢の説明（？ボタン） -->
         <div v-if="helpSide" class="fixed inset-0 z-[4000] flex items-center justify-center bg-black/60 p-4" @click.self="helpSide = null">
             <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
-                <p class="mb-2 text-lg font-bold" :class="helpSide === 'A' ? 'text-sky-800' : 'text-emerald-800'">{{ helps[helpSide].title }}</p>
-                <p class="text-sm leading-relaxed text-gray-700">{{ helps[helpSide].body }}</p>
+                <p class="mb-2 text-lg font-bold" :class="helpSide === 'A' ? 'text-sky-800' : 'text-emerald-800'">{{ helpText.title }}</p>
+                <p class="text-sm leading-relaxed text-gray-700">{{ helpText.body }}</p>
                 <button class="mt-4 w-full rounded-xl bg-emerald-600 py-2 font-bold text-white hover:bg-emerald-700" @click="helpSide = null">とじる</button>
             </div>
         </div>
@@ -177,6 +177,18 @@
 
 <script>
 import db from "@/firebase.js";
+
+// ■街ごとの選択肢の名前（A・C）。平塚は海ごみ対策・里山再生、釧路はエネルギー・ごみのポイ捨て対策
+const SIDE_TEXT = {
+    hiratsuka: {
+        A: { meter: "🏖️ 海ごみ対策", choice: "すいがら・海ごみ", result: "海ごみ対策" },
+        C: { meter: "⛰️ 里山再生", choice: "里山のくらし", result: "里山再生" },
+    },
+    kushiro: {
+        A: { meter: "⚡ エネルギー", choice: "エネルギー", result: "エネルギー" },
+        C: { meter: "🗑️ ごみのポイ捨て対策", choice: "ごみのポイ捨て対策", result: "ごみのポイ捨て対策" },
+    },
+};
 
 export default {
     name: "ABGameProposalB",
@@ -281,6 +293,18 @@ export default {
     },
 
     computed: {
+        // ■街（平塚・釧路）ごとの選択肢の名前。釧路は、釧路の選択肢（エネルギー・ごみのポイ捨て対策）
+        sideText() {
+            return SIDE_TEXT[this.city] || SIDE_TEXT.hiratsuka;
+        },
+        // ■？ボタンで開く説明。釧路の説明はまだないので、選択肢の名前だけ出す
+        helpText() {
+            if (this.city === "kushiro") {
+                const side = this.sideText[this.helpSide] || {};
+                return { title: side.choice || "", body: "（この選択肢の説明は、まだ用意していません）" };
+            }
+            return this.helps[this.helpSide];
+        },
         currentQuestion() {
             return this.questions[this.qIndex] || {};
         },
