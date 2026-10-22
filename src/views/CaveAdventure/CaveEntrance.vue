@@ -4,13 +4,6 @@
         ◉
         <div>帰還ゲート</div>
     </div>
-    <!-- ■ABゲームのデモ（平塚・釧路の全問題。仮リンクからも開ける） -->
-    <button
-        class="fixed right-3 top-3 z-[60] rounded-xl bg-white/90 px-3 py-2 text-sm font-black text-slate-700 shadow"
-        @click="$router.push({ name: 'ABGameDemo' })"
-    >
-        📝 ABゲームのデモ
-    </button>
     <!-- ■追加：ワープ演出 -->
     <div id="warpEffect"></div>
 
