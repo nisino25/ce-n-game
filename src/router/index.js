@@ -30,6 +30,7 @@ import CardAdmin from "@/views/Admin/CardAdmin.vue";
 import CustAdmin from "@/views/Admin/CustAdmin.vue";
 import DocsView from "@/views/Docs/DocsView.vue";
 import RegionCardSpec from "@/views/DominationGame/RegionCardSpec.vue";
+import ABGameDemo from "@/views/ABGame/ABGameDemo.vue";
 import NoticeBoard from "@/views/NoticeBoard/NoticeBoard.vue";
 import CommentsAdmin from "@/views/Admin/CommentsAdmin.vue";
 import HabitatCompare from "@/views/HabitatCompare/HabitatCompare.vue";
@@ -210,6 +211,12 @@ const routes = [
         path: "/region-card-spec",
         name: "RegionCardSpec",
         component: RegionCardSpec
+    },
+    // ■ABゲームのデモ（平塚・釧路の全問題）。モニタールームの仮リンクから
+    {
+        path: "/ab-game-demo",
+        name: "ABGameDemo",
+        component: ABGameDemo
     },
 
     {
