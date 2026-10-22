@@ -6,7 +6,7 @@
             <!-- Header -->
             <header class="flex items-center justify-between mb-5">
                 <h1 class="text-xl font-bold text-emerald-900 tracking-wide">
-                    ひらつか かんきょうチャレンジ<span v-if="!challenge" class="text-sm font-normal text-emerald-700 ml-1">（提案B）</span>
+                    ひらつか かんきょうチャレンジ
                 </h1>
                 <div v-if="phase === 'question' || phase === 'correct'" class="bg-emerald-800 text-white text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap">
                     Q. {{ progressIndex }} / {{ questions.length }}
