@@ -16,7 +16,7 @@
 
             <!-- 問題 -->
             <div v-else-if="!finished" class="rounded-xl bg-white p-4 shadow-sm">
-                <div class="mb-2 text-xs font-bold text-slate-500">{{ area.name }}　{{ idx + 1 }} / {{ area.questions.length }}問め</div>
+                <div class="mb-2 text-xs font-bold text-slate-500">{{ area.name }} {{ idx + 1 }} / {{ area.questions.length }}問め</div>
                 <p class="text-base leading-relaxed">{{ current.text }}</p>
 
                 <div class="mt-4 flex gap-3">
