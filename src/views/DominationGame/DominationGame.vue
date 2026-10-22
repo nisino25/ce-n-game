@@ -687,7 +687,7 @@ import {
     fetchCardLibrary,
     getCurrentUser,
     toDisplayCard,
-    fetchTeamCollectionInstances,
+    fetchMyCollectionInstances,
     placeCardInstance,
     markCardInstancesEaten,
     toDominationCard
@@ -1639,8 +1639,8 @@ export default {
                         return []
                     }),
                 this.loadSavedGame(),
-                fetchTeamCollectionInstances(team).catch(e => {
-                    console.error('チームの所持カードの読み込みに失敗しました', e)
+                this.fetchMyHandInstances().catch(e => {
+                    console.error('自分の所持カードの読み込みに失敗しました', e)
                     return []
                 }),
                 slot ? this.fetchSlotContext() : Promise.resolve(null)
@@ -2059,8 +2059,13 @@ export default {
             return arr;
         },
 
-        // ■人間チームの手札：チームのメンバー全員の、手元にある所持カード
-        // ■チームの所持カード（DBの cardInstances）から、人間チームの手札を作る
+        // ■人間の手札：自分が持っている、手元にある（盤面に置いていない）カード。図鑑の「もっている」と同じ持ち主
+        async fetchMyHandInstances() {
+            const user = await getCurrentUser().catch(() => null)
+            return fetchMyCollectionInstances(user ? user.uid : null)
+        },
+
+        // ■人間の手札（DBの cardInstances から作った、自分のカードのうち、今の街の地域のもの）
         handFromInstances(instances) {
             const libraryById = Object.fromEntries(this.cardLibrary.map(card => [card.cardId, card]))
             // ■今いる街の地域（平塚市→神奈川、釧路市→北海道）のカードだけを手札にする。地域が決まらない（テスト等）ときは絞らない
@@ -2072,11 +2077,10 @@ export default {
         },
 
         async fetchHumanHand() {
-            const team = TEAM_NAME_BY_ID[this.humanPlayerId]
             try {
-                return this.handFromInstances(await fetchTeamCollectionInstances(team))
+                return this.handFromInstances(await this.fetchMyHandInstances())
             } catch (e) {
-                console.error('チームの所持カードの読み込みに失敗しました', e)
+                console.error('自分の所持カードの読み込みに失敗しました', e)
                 return []
             }
         },

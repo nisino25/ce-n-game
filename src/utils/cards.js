@@ -166,6 +166,16 @@ export async function fetchTeamCollectionInstances(team) {
     return snapshot.docs.map(doc => ({ instanceId: doc.id, ...doc.data() }));
 }
 
+// 自分が持っている、手元にある（まだ盤面に置いていない）カード。図鑑の「もっている」から、盤面に置いたものを除いたもの
+export async function fetchMyCollectionInstances(uid) {
+    if (!uid) return [];
+    const snapshot = await db.collection("cardInstances")
+        .where("ownerUid", "==", uid)
+        .where("status", "==", "collection")
+        .get();
+    return snapshot.docs.map(doc => ({ instanceId: doc.id, ...doc.data() }));
+}
+
 // 所持カードを盤面に置く。同じカードが別のゲームで同時に使われないよう、
 // トランザクションで「まだ手元にある（collection）」ことを確かめてから placed にする。
 // 置けたら true、すでに使われていたら false

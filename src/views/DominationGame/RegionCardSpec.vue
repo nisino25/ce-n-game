@@ -10,6 +10,7 @@
             <section class="mb-4 rounded-xl bg-white p-3 shadow-sm">
                 <h2 class="mb-2 text-sm font-black">ルール</h2>
                 <ul class="list-disc space-y-1 pl-5 text-xs leading-relaxed">
+                    <li>手札は、<b>自分が持っている</b>カードのうち、まだ盤面に置いていないもの（図鑑の「もっている」から、置いたものを除く）</li>
                     <li>平塚市のゲームは、<b>神奈川</b>のカードだけ手札に出る</li>
                     <li>釧路市のゲームは、<b>北海道</b>のカードだけ手札に出る</li>
                     <li>スキャンで作ったカード（地域なし）は、どの街の手札にも出ない</li>
@@ -42,8 +43,6 @@
                 <ul class="list-disc space-y-1 pl-5 text-xs leading-relaxed">
                     <li>スキャンのカード（地域なし）を、どちらかの街に出すか</li>
                     <li>AIのチームの手札も、街の地域で絞るか</li>
-                    <li>手札の持ち主を、チーム全員にするか、自分だけにするか（図鑑は「自分の持っているカード」）</li>
-                    <li>盤面に置いたカードを、手札から外すか（図鑑の「もっている」には含まれる）</li>
                 </ul>
             </section>
         </div>
