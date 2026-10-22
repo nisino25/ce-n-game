@@ -67,7 +67,7 @@
                             :disabled="phase === 'correct'"
                             @click="choose('A')"
                         >
-                            <img src="/images/ABGames/env1.jpg" class="w-full h-28 object-cover rounded-xl mb-2">
+                            <img :src="sideText.A.img" class="w-full h-28 object-cover rounded-xl mb-2">
                             <span class="font-bold text-sky-800 text-sm">{{ sideText.A.choice }}</span>
                         </button>
                         <button class="help-button" :aria-label="sideText.A.choice + 'って？'" @click="helpSide = 'A'">？</button>
@@ -79,7 +79,7 @@
                             :disabled="phase === 'correct'"
                             @click="choose('C')"
                         >
-                            <img src="/images/ABGames/env2.jpg" class="w-full h-28 object-cover rounded-xl mb-2">
+                            <img :src="sideText.C.img" class="w-full h-28 object-cover rounded-xl mb-2">
                             <span class="font-bold text-emerald-800 text-sm">{{ sideText.C.choice }}</span>
                         </button>
                         <button class="help-button" :aria-label="sideText.C.choice + 'って？'" @click="helpSide = 'C'">？</button>
@@ -181,12 +181,26 @@ import db from "@/firebase.js";
 // ■街ごとの選択肢の名前（A・C）。平塚は海ごみ対策・里山再生、釧路はエネルギー・ごみのポイ捨て対策
 const SIDE_TEXT = {
     hiratsuka: {
-        A: { meter: "🏖️ 海ごみ対策", choice: "すいがら・海ごみ", result: "海ごみ対策" },
-        C: { meter: "⛰️ 里山再生", choice: "里山のくらし", result: "里山再生" },
+        A: { meter: "🏖️ 海ごみ対策", choice: "すいがら・海ごみ", result: "海ごみ対策", img: "/images/ABGames/env1.jpg" },
+        C: { meter: "⛰️ 里山再生", choice: "里山のくらし", result: "里山再生", img: "/images/ABGames/env2.jpg" },
     },
     kushiro: {
-        A: { meter: "⚡ エネルギー", choice: "エネルギー", result: "エネルギー" },
-        C: { meter: "🗑️ ごみのポイ捨て対策", choice: "ごみのポイ捨て対策", result: "ごみのポイ捨て対策" },
+        A: {
+            meter: "⚡ エネルギー", choice: "エネルギー", result: "エネルギー",
+            img: "/images/ABGames/kushiro/env1.jpg",
+            help: {
+                title: "自然をこわしてつくる再生エネルギーは本当にいいの？",
+                body: "湿原の自然を壊して作られるメガソーラーが問題になっているよ。ここにはシマフクロウなどの希少ないきものが住んでいるのに、たいせつなすみかを追われたり、エサがなくなって、もっと少なくなってしまうよ。これ以上メガソーラーを増やさないためにどうすればいい？",
+            },
+        },
+        C: {
+            meter: "🗑️ ごみのポイ捨て対策", choice: "ごみのポイ捨て対策", result: "ごみのポイ捨て対策",
+            img: "/images/ABGames/kushiro/env2.jpg",
+            help: {
+                title: "ポイ捨てしないで！",
+                body: "湿原の中にごみをポイ捨てする人があとをたたないよ。観光客やトラックの運転手など、遠くから来た人たちが、湿原に住むいきものや地域に住む人をくるしめているよ。日本で一番大きな、自然豊かな湿原を守るためには、みんなの行動が一番大切だよ。",
+            },
+        },
     },
 };
 
@@ -301,7 +315,7 @@ export default {
         helpText() {
             if (this.city === "kushiro") {
                 const side = this.sideText[this.helpSide] || {};
-                return { title: side.choice || "", body: "（この選択肢の説明は、まだ用意していません）" };
+                return side.help || { title: side.choice || "", body: "（この選択肢の説明は、まだ用意していません）" };
             }
             return this.helps[this.helpSide];
         },
