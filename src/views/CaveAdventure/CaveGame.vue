@@ -58,6 +58,7 @@
         <ul v-if="areaInfo" class="legend legend-bottom">
             <li v-for="item in legendItems" :key="item.label">
                 <span class="legend-icon" :class="item.badgeClass" :style="item.badgeStyle">{{ item.icon }}</span>
+                {{ item.label }}
             </li>
         </ul>
     </div>
@@ -272,19 +273,17 @@ export default {
         },
 
         resize() {
+            const maxWidth = window.innerWidth * 0.95;
+            const maxHeight = window.innerHeight * 0.90;
 
-            if (window.innerWidth <= 767) {
-                this.CELL = window.innerWidth / this.COLS;
-                this.canvas.width = this.CELL * this.COLS;
-                this.canvas.height = Math.min(this.CELL * this.ROWS, window.innerHeight * 0.6);
-            } else {
-                this.CELL = Math.min(
-                    window.innerWidth / this.COLS,
-                    window.innerHeight / this.ROWS
-                );
-                this.canvas.width = this.CELL * this.COLS;
-                this.canvas.height = this.CELL * this.ROWS;
-            }
+            this.CELL = Math.min(
+                maxWidth / this.COLS,
+                maxHeight / this.ROWS
+            );
+
+            this.canvas.width = this.CELL * this.COLS;
+            this.canvas.height = this.CELL * this.ROWS;
+
         },
 
         resetGame(areaId) {
@@ -1172,22 +1171,8 @@ canvas{
 @media (max-width: 767px){
     .legend-side{display:none}
     .legend-bottom{
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 12px;
-        margin: 2px 12px 10px 12px;
-        color: #fff;
-        font-size: 13px;
-        padding: 6px 12px;
-    }
-    /* 各項目（li）を縦並びにして、ラベルを上、内容を下にする */
-    .legend-bottom li {
-        display: flex;
-        flex-direction: column;
-        align-items: center; 
-        gap: 2px; 
-        padding: 0;
+        display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;
+        margin:10px 12px;color:#fff;font-size:13px;
     }
 }
 .key-pop{
@@ -1268,12 +1253,10 @@ canvas{
 }
 *{box-sizing:border-box; }
 body{
-    margin: 0;
-    font-family: sans-serif;
-    min-height: 100vh; display: block; 
-    background: radial-gradient(circle,#5b4732,#1d1711);
+margin:0;font-family:sans-serif;height:100vh;
+display:flex;justify-content:center;align-items:center;flex-direction:column;
+background:radial-gradient(circle,#5b4732,#1d1711);
 }
-
 #result{
   color:#fff;
   font-weight:900;
@@ -1419,38 +1402,22 @@ width:95%;height:80%;background:white;border-radius:16px;padding:16px;
 
     .keyCount{ top:6px !important; right:6px !important; font-size:12px !important; }
     .keyCount img{ display:none; }
-    /* ★追加：スマホで迷路（コンテンツ全体）を一番上から表示させる */
-    .bg-\[\#111\] { margin-top: 0 !important;}
 }
 
 @media (max-width: 767px){
-    /* 画面の一番上からコンテンツを配置する */
-    html, body {
-        margin: 0 !important;
-        padding: 0 !important;
-        display: block !important;
-        align-items: initial !important;
-        justify-content: initial !important;
-        min-height: 100vh !important;
-    }
-    /* 迷路とカード一覧を囲んでいる親要素を強制的に上寄せにする */
-    .bg-\[\#111\] {
-        margin-top: 0 !important;
-        padding-top: 0 !important;
-        transform: none !important;
-    }
-    /* キャンバス自体の位置も強制固定 */
-    canvas {
-        display: block !important;
-        margin: 0 auto !important;
-    }
-}
-@media (max-width: 767px) {
-    /* スマホのときはbodyの中心寄せと高さ固定を解除して上部に配置する */
     body {
-        align-items: flex-start !important;
-        height: auto !important;
-        min-height: 100vh !important;
+        height: auto;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+    .bg-\[\#111\] {
+        max-width: 100vw;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center; /* ★ここを center にすることで真ん中に固定されます */
+        flex-grow: 1;
     }
 }
 
@@ -1474,4 +1441,8 @@ width:95%;height:80%;background:white;border-radius:16px;padding:16px;
   transition: width 1.5s ease, height 1.5s ease;
 }
 
+canvas {
+    touch-action: none;
+    margin-top: 40px;
+}
 </style>
