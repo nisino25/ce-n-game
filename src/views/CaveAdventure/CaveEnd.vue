@@ -1262,6 +1262,24 @@ export default {
         background-color: #fff;
         font-size: 14px;
     }
+    @media (max-width: 767px){
+        .collection-filters {
+            justify-content: center !important; }
+        .filter-group {
+            flex-direction: column !important;
+            align-items: center !important; /* align-items: flex-start から center に変更すると中央に揃います */
+            gap: 4px !important;
+        }
+
+        .collection-modal {
+            align-items: flex-start !important;
+            padding-top: max(10px, env(safe-area-inset-top)) !important;
+        }
+        .collection-sheet {
+            border-radius: 0 0 18px 18px !important;
+            max-height: 90vh !important;
+        }
+    }
 /* 使用中バッジの指定（任意） */
     .collection-item {
         position: relative;

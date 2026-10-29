@@ -12,7 +12,7 @@
                     class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-bold hover:bg-white/10"
                     @click="$router.back()"
                 >
-                    モニタールームにもどる
+                    もどる
                 </button>
                 <!-- クリック修正前：@click="$router.push({ name: 'Home' })" -->
 

@@ -7,7 +7,7 @@
             class="text-2xl font-bold drop-shadow mb-4"
             :class="teamConfig.titleClass"
         >
-            {{ teamConfig.icon }} {{ teamConfig.title }}のチームへようこそ
+            きみは {{ teamConfig.icon }} {{ teamConfig.title }} の充士だ！
         </h1>
 
         <img
