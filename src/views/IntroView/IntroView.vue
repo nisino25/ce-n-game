@@ -1,7 +1,9 @@
 <template>
     <!-- Intro Video -->
     <div v-if="showVideo" class="fixed inset-0 bg-black flex flex-col items-center justify-center">
-        <div id="player"></div>
+        <div class="video-wrapper">
+            <div id="player"></div>
+        </div>
 
         <p class="mt-6 text-white text-2xl" @click="showVideo = false;">
             あと {{ remaining }} 秒
@@ -338,3 +340,30 @@
         }
     };
 </script>
+
+<style scoped>
+/* 動画をスマートフォンでも縦で見やすく、画面に収まるようにする調整 */
+.video-wrapper {
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 16 / 9; /* 基本の横長比率を維持しつつレスポンシブ化 */
+    max-height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+/* YouTubeのiframe（#player）を親要素いっぱいに合わせる */
+#player {
+    width: 100% !important;
+    height: 100% !important;
+}
+/* スマートフォン（縦持ち）のときの調整 */
+@media (max-width: 767px) {
+    .video-wrapper {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 9 / 16; /* スマホで縦長に見せたい場合はここを調整できます */
+        max-height: 70vh;
+    }
+}
+</style>
