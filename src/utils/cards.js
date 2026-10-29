@@ -149,7 +149,9 @@ export function toDisplayCard(card, instance = null) {
         group: group,
         owner: instance ? instance.ownerName : "",
         // スキャンでとったカードは、保存された枠に関係なくゴールド
-        card: card.source === "scan" ? "gold" : card.frame || "silver"
+        card: card.source === "scan" ? "gold" : card.frame || "silver",
+        // 植物は、植物用の台紙を使う（生産者のバッジ）
+        plant: card.category === "plant"
     };
 }
 

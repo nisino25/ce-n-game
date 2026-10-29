@@ -410,7 +410,8 @@ export default {
                     level: this.draftCard.level,
                     rarity: this.draftCard.rarity,
                     habitat: this.draftCard.habitat,
-                    frame: this.draftCard.frame
+                    frame: this.draftCard.frame,
+                    category: this.draftCard.category
                 },
                 {
                     team: (this.currentUser && this.currentUser.team) || "",
