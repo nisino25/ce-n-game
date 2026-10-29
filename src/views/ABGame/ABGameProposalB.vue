@@ -6,7 +6,7 @@
             <!-- Header -->
             <header class="flex items-center justify-between mb-5">
                 <h1 class="text-xl font-bold text-emerald-900 tracking-wide">
-                    ひらつか かんきょうチャレンジ<span v-if="!challenge" class="text-sm font-normal text-emerald-700 ml-1">（提案B）</span>
+                    {{ cityLabel }} かんきょうチャレンジ<span v-if="!challenge" class="text-sm font-normal text-emerald-700 ml-1">（提案B）</span>
                 </h1>
                 <div v-if="phase === 'question' || phase === 'correct'" class="bg-emerald-800 text-white text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap">
                     Q. {{ progressIndex }} / {{ questions.length }}
@@ -38,7 +38,7 @@
                     <p class="text-gray-600 text-sm mb-6">せいこうすると、この ばしょが いきものの すめる ところに なおるよ。</p>
                 </template>
                 <template v-else>
-                    <p class="text-emerald-900 font-bold text-lg mb-1">ひらつかの2つのかんきょう問題</p>
+                    <p class="text-emerald-900 font-bold text-lg mb-1">{{ cityLabel }}の2つのかんきょう問題</p>
                     <p class="text-gray-600 text-sm mb-6">出てくる取り組みが、どっちの問題を解決するかを選んでいこう！</p>
                 </template>
                 <p v-if="loadError" class="text-red-600 text-sm mb-4">{{ loadError }}</p>
@@ -178,12 +178,19 @@
 <script>
 import db from "@/firebase.js";
 
-const QUESTION_LOCATION = "hiratsuka";
+// ■街ごとの、問題の場所（abGameQuestions の location）と、画面に出す名前
+const CITY_LABELS = { hiratsuka: "ひらつか", kushiro: "くしろ" };
 
 export default {
     name: "ABGameProposalB",
 
     props: {
+        // ■どの街の問題を出すか（hiratsuka / kushiro）。陣取りゲームの街のチュートリアルから渡す
+        location: {
+            type: String,
+            default: "hiratsuka"
+        },
+
         // ■地図画面のモーダル内で遊ぶ場合はtrue。終了時に遷移せずfinishイベントを出す
         embedded: {
             type: Boolean,
@@ -244,7 +251,7 @@ export default {
     async mounted() {
         try {
             const snapshot = await db.collection("abGameQuestions")
-                .where("location", "==", QUESTION_LOCATION)
+                .where("location", "==", this.location)
                 .get();
             this.questions = snapshot.docs
                 .map(doc => doc.data())
@@ -271,6 +278,11 @@ export default {
     },
 
     computed: {
+        // ■画面に出す街の名前（「ひらつか」「くしろ」）
+        cityLabel() {
+            return CITY_LABELS[this.location] || "";
+        },
+
         currentQuestion() {
             return this.questions[this.qIndex] || {};
         },

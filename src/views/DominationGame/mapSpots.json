@@ -14,6 +14,13 @@
         144.3814
       ]
     },
+    "kyoto": {
+      "name": "京都市",
+      "center": [
+        35.0116,
+        135.7681
+      ]
+    },
     "aitest": {
       "name": "AIテスト",
       "center": [
@@ -381,6 +388,186 @@
       "icon": "🌫",
       "habitat": "sea",
       "order": 15,
+      "row": 4,
+      "col": 3
+    },
+    {
+      "id": "kyoto-forest-1",
+      "city": "kyoto",
+      "name": "森のばしょ 1",
+      "icon": "🌲",
+      "habitat": "forest",
+      "order": 1,
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "kyoto-river-1",
+      "city": "kyoto",
+      "name": "川のばしょ 1",
+      "icon": "🦆",
+      "habitat": "river",
+      "order": 2,
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "kyoto-forest-2",
+      "city": "kyoto",
+      "name": "森のばしょ 2",
+      "icon": "🌲",
+      "habitat": "forest",
+      "order": 3,
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "kyoto-forest-3",
+      "city": "kyoto",
+      "name": "森のばしょ 3",
+      "icon": "🌲",
+      "habitat": "forest",
+      "order": 4,
+      "row": 0,
+      "col": 3
+    },
+    {
+      "id": "kyoto-town-1",
+      "city": "kyoto",
+      "name": "町のばしょ 1",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 5,
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "kyoto-river-2",
+      "city": "kyoto",
+      "name": "川のばしょ 2",
+      "icon": "🦆",
+      "habitat": "river",
+      "order": 6,
+      "row": 1,
+      "col": 1
+    },
+    {
+      "id": "kyoto-town-2",
+      "city": "kyoto",
+      "name": "町のばしょ 2",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 7,
+      "row": 1,
+      "col": 2
+    },
+    {
+      "id": "kyoto-town-3",
+      "city": "kyoto",
+      "name": "町のばしょ 3",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 8,
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "kyoto-river-3",
+      "city": "kyoto",
+      "name": "川のばしょ 3",
+      "icon": "🦆",
+      "habitat": "river",
+      "order": 9,
+      "row": 2,
+      "col": 1
+    },
+    {
+      "id": "kyoto-town-4",
+      "city": "kyoto",
+      "name": "町のばしょ 4",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 10,
+      "row": 2,
+      "col": 2
+    },
+    {
+      "id": "kyoto-forest-4",
+      "city": "kyoto",
+      "name": "森のばしょ 4",
+      "icon": "🌳",
+      "habitat": "forest",
+      "order": 11,
+      "row": 2,
+      "col": 3
+    },
+    {
+      "id": "kyoto-town-5",
+      "city": "kyoto",
+      "name": "町のばしょ 5",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 12,
+      "row": 3,
+      "col": 0
+    },
+    {
+      "id": "kyoto-river-4",
+      "city": "kyoto",
+      "name": "川のばしょ 4",
+      "icon": "🦆",
+      "habitat": "river",
+      "order": 13,
+      "row": 3,
+      "col": 1
+    },
+    {
+      "id": "kyoto-dirt-1",
+      "city": "kyoto",
+      "name": "土のばしょ 1",
+      "icon": "🌾",
+      "habitat": "dirt",
+      "order": 14,
+      "row": 3,
+      "col": 2
+    },
+    {
+      "id": "kyoto-dirt-2",
+      "city": "kyoto",
+      "name": "土のばしょ 2",
+      "icon": "🌾",
+      "habitat": "dirt",
+      "order": 15,
+      "row": 4,
+      "col": 0
+    },
+    {
+      "id": "kyoto-river-5",
+      "city": "kyoto",
+      "name": "川のばしょ 5",
+      "icon": "🦆",
+      "habitat": "river",
+      "order": 16,
+      "row": 4,
+      "col": 1
+    },
+    {
+      "id": "kyoto-dirt-3",
+      "city": "kyoto",
+      "name": "土のばしょ 3",
+      "icon": "🥬",
+      "habitat": "dirt",
+      "order": 17,
+      "row": 4,
+      "col": 2
+    },
+    {
+      "id": "kyoto-town-6",
+      "city": "kyoto",
+      "name": "町のばしょ 6",
+      "icon": "🏘",
+      "habitat": "town",
+      "order": 18,
       "row": 4,
       "col": 3
     },

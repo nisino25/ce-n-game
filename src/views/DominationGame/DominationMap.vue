@@ -90,7 +90,7 @@
                     v-if="myActiveSlots[spotSheet.city] && myActiveSlots[spotSheet.city].spotId !== spotSheet.id"
                     class="mb-3 rounded-xl border border-yellow-300/60 bg-yellow-300/10 p-3 text-sm font-bold text-yellow-100"
                 >
-                    {{ spotSheet.city === 'hiratsuka' ? '平塚市' : '釧路市' }}では、いま「{{ myActiveSlots[spotSheet.city].spotName }} ゲーム{{ myActiveSlots[spotSheet.city].gameNo }}」を あそび中だよ。
+                    {{ cityNameOf(spotSheet.city) }}では、いま「{{ myActiveSlots[spotSheet.city].spotName }} ゲーム{{ myActiveSlots[spotSheet.city].gameNo }}」を あそび中だよ。
                     おわらせると、ほかの ゲームが あそべるよ。
                     <button class="mt-2 w-full rounded-lg bg-yellow-300 px-3 py-2 font-black text-slate-900" @click="goToMyActiveSlot(spotSheet.city)">
                         ▶ そこへ いく
@@ -155,7 +155,7 @@
                 v-if="tutorial.phase === 'game'"
                 class="my-auto max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl bg-[#f4f1e8] shadow-xl"
             >
-                <ABGameProposalB embedded @finish="finishTutorial" />
+                <ABGameProposalB embedded :location="tutorial.location" @finish="finishTutorial" />
             </div>
         </div>
 
@@ -224,11 +224,12 @@ export default {
             hiratsukaMarker: null,
 
             kushiroMarker: null,
+            kyotoMarker: null,
             testMarker: null,
             // ■追加：エリア表示
             honeycombLayers: [],
             spots: mapSpotsSeed.spots, // 場所の一覧。Firestoreのmapspots（loadSpots）で上書きする。読めないときは同梱のデータを使う
-            directCity: null, // 街の六角形の画面から始めたときの街（hiratsuka / kushiro）
+            directCity: null, // 街の六角形の画面から始めたときの街（hiratsuka / kushiro / kyoto）
             hexRadius: 80, // いまの六角形の大きさ（画面のピクセル）
             slots: {}, // 「場所ID-ゲーム番号」→ { state: none / mine / other / won, ownerName, winnerTeam }
             myActiveSlots: {}, // 街ごとの、自分があそび中のゲーム（街ごとに1つだけ。平塚と釧路は1つずつ同時に遊べる）
@@ -475,6 +476,7 @@ L.tileLayer(
 
             if (this.hiratsukaMarker) this.map.removeLayer(this.hiratsukaMarker);
             if (this.kushiroMarker) this.map.removeLayer(this.kushiroMarker);
+            if (this.kyotoMarker) this.map.removeLayer(this.kyotoMarker);
             if (this.testMarker) this.map.removeLayer(this.testMarker);
             this.createStartMarkers();
 
@@ -502,6 +504,7 @@ L.tileLayer(
 
             this.hiratsukaMarker = cityMarker([35.3150, 139.3497], "平塚市", () => this.startHiratsuka());
             this.kushiroMarker = cityMarker([42.9849, 144.3814], "釧路市", () => this.startKushiro());
+            this.kyotoMarker = cityMarker([35.0116, 135.7681], "京都市", () => this.startKyoto());
             // ■AIテストエリア（テストモードのときだけ）：平塚・釧路とは別に、AIとの試しのゲームを、何回でも遊べる
             if (isTestMode()) this.testMarker = cityMarker([37.5, 134.5], "🧪 AIテスト", () => this.startAiTest());
         },
@@ -543,6 +546,12 @@ L.tileLayer(
         // ■未完了の地域なら、チュートリアル（動画→ABゲーム）を挟んでから進む（拡大が終わったあと、六角形が出る前）
         async withTutorial(location, cityName, onDone) {
             if (this.tutorial) return;
+
+            // ■紹介動画がまだない街（京都など）は、チュートリアルを飛ばして、すぐ六角形を出す
+            if (!TUTORIAL_VIDEOS[location]) {
+                onDone();
+                return;
+            }
 
             await this.userLoading;
 
@@ -617,6 +626,16 @@ L.tileLayer(
         startKushiro() {
             this.currentPlace = { city: "kushiro", cityName: "釧路市" };
             this.startZoom("釧路市", [42.9849, 144.3814], 13);
+        },
+
+        startKyoto() {
+            this.currentPlace = { city: "kyoto", cityName: "京都市" };
+            this.startZoom("京都市", [35.0116, 135.7681], 13);
+        },
+
+        // ■街のidから、表示する名前（「京都市」など）を返す
+        cityNameOf(city) {
+            return mapSpotsSeed.cities[city]?.name || "";
         },
 
         // ■その街の「場所」を、ハチの巣のように並べた六角形で表示する（4・3・4・3・4個の5段で18か所）。
@@ -889,6 +908,9 @@ L.tileLayer(
             }
             if (this.kushiroMarker) {
                 this.map.removeLayer(this.kushiroMarker);
+            }
+            if (this.kyotoMarker) {
+                this.map.removeLayer(this.kyotoMarker);
             }
             if (this.testMarker) {
                 this.map.removeLayer(this.testMarker);
