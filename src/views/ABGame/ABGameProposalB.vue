@@ -6,7 +6,7 @@
             <!-- Header -->
             <header class="flex items-center justify-between mb-5">
                 <h1 class="text-xl font-bold text-emerald-900 tracking-wide">
-                    {{ cityLabel }} かんきょうチャレンジ<span v-if="!challenge" class="text-sm font-normal text-emerald-700 ml-1">（提案B）</span>
+                    {{ cityLabel }} かんきょうチャレンジ
                 </h1>
                 <div v-if="phase === 'question' || phase === 'correct'" class="bg-emerald-800 text-white text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap">
                     Q. {{ progressIndex }} / {{ questions.length }}
@@ -16,13 +16,13 @@
             <!-- Impact meters -->
             <div v-if="phase !== 'intro'" class="grid grid-cols-2 gap-3 mb-6">
                 <div class="bg-white rounded-2xl p-3 shadow-sm border border-sky-100">
-                    <div class="text-xs font-bold text-sky-700 mb-1">🏖️ 海ごみ対策</div>
+                    <div class="text-xs font-bold text-sky-700 mb-1">{{ sideText.A.meter }}</div>
                     <div class="h-2.5 bg-sky-100 rounded-full overflow-hidden">
                         <div class="h-full bg-sky-500 rounded-full transition-all duration-500" :style="{ width: impactAPercent + '%' }"></div>
                     </div>
                 </div>
                 <div class="bg-white rounded-2xl p-3 shadow-sm border border-emerald-100">
-                    <div class="text-xs font-bold text-emerald-700 mb-1">⛰️ 里山再生</div>
+                    <div class="text-xs font-bold text-emerald-700 mb-1">{{ sideText.C.meter }}</div>
                     <div class="h-2.5 bg-emerald-100 rounded-full overflow-hidden">
                         <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" :style="{ width: impactCPercent + '%' }"></div>
                     </div>
@@ -67,10 +67,10 @@
                             :disabled="phase === 'correct'"
                             @click="choose('A')"
                         >
-                            <img src="/images/ABGames/env1.jpg" class="w-full h-28 object-cover rounded-xl mb-2">
-                            <span class="font-bold text-sky-800 text-sm">すいがら・海ごみ</span>
+                            <img :src="sideText.A.img" class="w-full h-28 object-cover rounded-xl mb-2">
+                            <span class="font-bold text-sky-800 text-sm">{{ sideText.A.choice }}</span>
                         </button>
-                        <button class="help-button" aria-label="すいがら・海ごみって？" @click="helpSide = 'A'">？</button>
+                        <button class="help-button" :aria-label="sideText.A.choice + 'って？'" @click="helpSide = 'A'">？</button>
                     </div>
                     <div class="relative">
                         <button
@@ -79,10 +79,10 @@
                             :disabled="phase === 'correct'"
                             @click="choose('C')"
                         >
-                            <img src="/images/ABGames/env2.jpg" class="w-full h-28 object-cover rounded-xl mb-2">
-                            <span class="font-bold text-emerald-800 text-sm">里山のくらし</span>
+                            <img :src="sideText.C.img" class="w-full h-28 object-cover rounded-xl mb-2">
+                            <span class="font-bold text-emerald-800 text-sm">{{ sideText.C.choice }}</span>
                         </button>
-                        <button class="help-button" aria-label="里山のくらしって？" @click="helpSide = 'C'">？</button>
+                        <button class="help-button" :aria-label="sideText.C.choice + 'って？'" @click="helpSide = 'C'">？</button>
                     </div>
                 </div>
 
@@ -143,7 +143,7 @@
                 <template v-else>
                     <p class="text-emerald-900 font-bold text-xl mb-2">おわり！よく考えてくれたね。</p>
                     <p class="text-gray-600 text-sm mb-5">
-                        海ごみ対策 {{ correctCountA }}問 ／ 里山再生 {{ correctCountC }}問、解決に貢献したよ。
+                        {{ sideText.A.result }} {{ correctCountA }}問 ／ {{ sideText.C.result }} {{ correctCountC }}問、解決に貢献したよ。
                     </p>
                     <div class="flex flex-wrap gap-2 justify-center mb-6">
                         <img
@@ -167,8 +167,8 @@
         <!-- ■選択肢の説明（？ボタン） -->
         <div v-if="helpSide" class="fixed inset-0 z-[4000] flex items-center justify-center bg-black/60 p-4" @click.self="helpSide = null">
             <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
-                <p class="mb-2 text-lg font-bold" :class="helpSide === 'A' ? 'text-sky-800' : 'text-emerald-800'">{{ helps[helpSide].title }}</p>
-                <p class="text-sm leading-relaxed text-gray-700">{{ helps[helpSide].body }}</p>
+                <p class="mb-2 text-lg font-bold" :class="helpSide === 'A' ? 'text-sky-800' : 'text-emerald-800'">{{ helpText.title }}</p>
+                <p class="text-sm leading-relaxed text-gray-700">{{ helpText.body }}</p>
                 <button class="mt-4 w-full rounded-xl bg-emerald-600 py-2 font-bold text-white hover:bg-emerald-700" @click="helpSide = null">とじる</button>
             </div>
         </div>
@@ -178,15 +178,41 @@
 <script>
 import db from "@/firebase.js";
 
-// ■街ごとの、問題の場所（abGameQuestions の location）と、画面に出す名前
+// ■画面に出す街の名前（「ひらつか」「くしろ」）
 const CITY_LABELS = { hiratsuka: "ひらつか", kushiro: "くしろ" };
+
+// ■街ごとの選択肢の名前（A・C）。平塚は海ごみ対策・里山再生、釧路はエネルギー・ごみのポイ捨て対策
+const SIDE_TEXT = {
+    hiratsuka: {
+        A: { meter: "🏖️ 海ごみ対策", choice: "すいがら・海ごみ", result: "海ごみ対策", img: "/images/ABGames/env1.jpg" },
+        C: { meter: "⛰️ 里山再生", choice: "里山のくらし", result: "里山再生", img: "/images/ABGames/env2.jpg" },
+    },
+    kushiro: {
+        A: {
+            meter: "⚡ エネルギー", choice: "エネルギー", result: "エネルギー",
+            img: "/images/ABGames/kushiro/env1.jpg",
+            help: {
+                title: "自然をこわしてつくる再生エネルギーは本当にいいの？",
+                body: "湿原の自然を壊して作られるメガソーラーが問題になっているよ。ここにはシマフクロウなどの希少ないきものが住んでいるのに、たいせつなすみかを追われたり、エサがなくなって、もっと少なくなってしまうよ。これ以上メガソーラーを増やさないためにどうすればいい？",
+            },
+        },
+        C: {
+            meter: "🗑️ ごみのポイ捨て対策", choice: "ごみのポイ捨て対策", result: "ごみのポイ捨て対策",
+            img: "/images/ABGames/kushiro/env2.jpg",
+            help: {
+                title: "ポイ捨てしないで！",
+                body: "湿原の中にごみをポイ捨てする人があとをたたないよ。観光客やトラックの運転手など、遠くから来た人たちが、湿原に住むいきものや地域に住む人をくるしめているよ。日本で一番大きな、自然豊かな湿原を守るためには、みんなの行動が一番大切だよ。",
+            },
+        },
+    },
+};
 
 export default {
     name: "ABGameProposalB",
 
     props: {
-        // ■どの街の問題を出すか（hiratsuka / kushiro）。陣取りゲームの街のチュートリアルから渡す
-        location: {
+        // ■今の街（hiratsuka / kushiro）。その街の問題を使う。問題がまだ無い街は、平塚の問題を使う
+        city: {
             type: String,
             default: "hiratsuka"
         },
@@ -250,9 +276,15 @@ export default {
 
     async mounted() {
         try {
-            const snapshot = await db.collection("abGameQuestions")
-                .where("location", "==", this.location)
+            let snapshot = await db.collection("abGameQuestions")
+                .where("location", "==", this.city)
                 .get();
+            // ■その街の問題がまだ無いときは、平塚の問題を使う（今までどおり）
+            if (snapshot.empty && this.city !== "hiratsuka") {
+                snapshot = await db.collection("abGameQuestions")
+                    .where("location", "==", "hiratsuka")
+                    .get();
+            }
             this.questions = snapshot.docs
                 .map(doc => doc.data())
                 .sort((a, b) => a.order - b.order);
@@ -278,11 +310,21 @@ export default {
     },
 
     computed: {
-        // ■画面に出す街の名前（「ひらつか」「くしろ」）
         cityLabel() {
-            return CITY_LABELS[this.location] || "";
+            return CITY_LABELS[this.city] || "";
         },
-
+        // ■街（平塚・釧路）ごとの選択肢の名前。釧路は、釧路の選択肢（エネルギー・ごみのポイ捨て対策）
+        sideText() {
+            return SIDE_TEXT[this.city] || SIDE_TEXT.hiratsuka;
+        },
+        // ■？ボタンで開く説明。釧路の説明はまだないので、選択肢の名前だけ出す
+        helpText() {
+            if (this.city === "kushiro") {
+                const side = this.sideText[this.helpSide] || {};
+                return side.help || { title: side.choice || "", body: "（この選択肢の説明は、まだ用意していません）" };
+            }
+            return this.helps[this.helpSide];
+        },
         currentQuestion() {
             return this.questions[this.qIndex] || {};
         },

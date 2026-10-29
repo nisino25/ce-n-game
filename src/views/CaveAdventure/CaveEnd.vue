@@ -122,10 +122,32 @@
             <header class="collection-head">
                 <div>
                     <h2>獲得カード一覧</h2>
-                    <p v-if="!collectionLoading">{{ collection.length }}枚 あつめたよ</p>
+                    <p v-if="!collectionLoading">{{ filteredCollection.length }} / {{ collection.length }}枚 あつめたよ</p>
                 </div>
                 <button class="collection-close" aria-label="閉じる" @click="closeCollection">✕</button>
             </header>
+
+            <!-- ★追加：フィルタコントロールエリア -->
+            <div class="collection-filters">
+                <!-- 盤面使用状況フィルタ -->
+                <div class="filter-group">
+                    <label>使用状況：</label>
+                    <select v-model="filterStatus">
+                        <option value="all">すべて</option>
+                        <option value="unused">使っていない</option>
+                        <option value="used">使っている</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>地域：</label>
+                    <select v-model="filterArea">
+                        <option value="all">すべての地域</option>
+                        <option v-for="(info, id) in areas" :key="id" :value="id">
+                            {{ info.name }}
+                        </option>
+                    </select>
+                </div>
+            </div>
 
             <p v-if="collectionNotice" class="collection-notice">{{ collectionNotice }}</p>
 
@@ -139,11 +161,17 @@
                     <p>まだカードがありません</p>
                     <p class="sub">宝箱をあけて、カードをあつめよう！</p>
                 </div>
+                <!-- ★追加: フィルタ結果が0件の場合 -->
+                <div v-else-if="filteredCollection.length === 0" class="collection-empty">
+                    <div class="empty-icon">🔍</div>
+                    <p>条件に合うカードがありません</p>
+                    <p class="sub">フィルタの条件を変えてみてください</p>
+                </div>
 
                 <div v-else class="collection-grid">
                     <!-- ■タップするとカードを拡大して見られる -->
                     <button
-                        v-for="(card, index) in collection"
+                        v-for="(card, index) in filteredCollection"
                         :key="card.instanceId"
                         class="collection-item"
                         :aria-label="card.name + 'を拡大して見る'"
@@ -154,9 +182,7 @@
                 </div>
             </div>
 
-            <footer class="collection-foot">
-                <button type="button" class="collection-reset" @click="askResetCollection">カードクリア（仮）</button>
-            </footer>
+            <!-- 削除：<footer class="collection-foot">  <button type="button" class="collection-reset" @click="askResetCollection">カードクリア（仮）</button> </footer> -->
         </div>
     </div>
 
@@ -169,8 +195,8 @@
             <CollectionCard :card="focusedCard" />
         </div>
 
-        <button class="focus-nav focus-next" aria-label="次のカード" :disabled="focusedIndex === collection.length - 1" @click.stop="moveFocus(1)">▶</button>
-        <p class="focus-count">{{ focusedIndex + 1 }} / {{ collection.length }}</p>
+        <button class="focus-nav focus-next" aria-label="次のカード" :disabled="focusedIndex === filteredCollection.length - 1" @click.stop="moveFocus(1)">▶</button>
+        <p class="focus-count">{{ focusedIndex + 1 }} / {{ filteredCollection.length }}</p>
     </div>
 
     <!-- ■確認ダイアログ（ネイティブのconfirmは環境によって動かないため画面内で出す） -->
@@ -238,12 +264,40 @@ export default {
           focusedIndex: null,
           focusScale: 2,
           confirmReset: false,
+          // フィルタ用データ
+          filterStatus: "all", // "all": すべて, "unused": 未使用, "used": 使用中
+          filterArea: "all",   // "all": 全地域, または エリアID ("lake", "forest", etc.),
+
+          isOpening: false,
         };
     },
 
     computed: {
+        // 絞り込まれたカード一覧
+        filteredCollection() {
+            return this.collection.filter(card => {
+                // ① 盤面使用状況のフィルタ
+                const isUsed = Boolean(
+                    card.isUsed === true || card.isUsed === "true" ||
+                    card.used === true || card.used === "true" ||
+                    card.inBoard === true || card.inBoard === "true"
+                );
+                if (this.filterStatus === "used" && !isUsed) return false;
+                if (this.filterStatus === "unused" && isUsed) return false;
+                // ② 地域（エリア）のフィルタ
+                if (this.filterArea !== "all") {
+                    const selectedAreaId = this.filterArea; // 例: "lake" など
+                    const cardSource = String(card.obtainedFrom || "").toLowerCase();
+                    if (!cardSource.includes(selectedAreaId.toLowerCase())) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+        },
+
         focusedCard() {
-            return this.focusedIndex === null ? null : this.collection[this.focusedIndex] || null;
+            return this.focusedIndex === null ? null : this.filteredCollection[this.focusedIndex] || null;
         },
 
         selectedAreaInfo() {
@@ -295,7 +349,7 @@ export default {
         },
 
         async openChest() {
-            if(this.chestPhase !== "idle") return;
+            if (this.isOpening || this.chestPhase !== "idle") return;
             if (!this.library.length || !this.user) {
                 alert("カード情報を読み込み中です。少し待ってからもう一度開けてください。");
                 return;
@@ -312,6 +366,7 @@ export default {
                 return;
             }
 
+            this.isOpening = true;
             this.currentCard = {
                 cardId: "", instanceId: "", name: "", icon: "", owner: "", level: "",
                 rare: "", area1: "", area2: "", card: ""
@@ -339,9 +394,9 @@ export default {
                 // 宝箱
                 const wait = ms =>
                     new Promise(resolve => setTimeout(resolve, ms));
-                await wait(1100);
+                await wait(300);
                 this.chestPhase = "opening";
-                await wait(900);
+                await wait(600);
                 const instance = await saving;
 
                 this.currentCard = toDisplayCard(card, instance);
@@ -450,6 +505,7 @@ export default {
         closeCard() {
             this.showOverlay = false;
             this.chestPhase = "idle";
+            this.isOpening = false;
             this.currentCard = {
                 cardId: "",
                 instanceId: "",
@@ -472,11 +528,15 @@ export default {
                 const user = this.user || await getCurrentUser();
                 const instances = user ? await fetchMyCardInstances(user.uid) : [];
                 const libraryById = Object.fromEntries(this.library.map(card => [card.cardId, card]));
+                
                 this.collection = instances
                     .filter(instance => libraryById[instance.cardId])
                     .sort((a, b) => (b.obtainedAt?.seconds || 0) - (a.obtainedAt?.seconds || 0))
                     .map(instance => ({
                         instanceId: instance.instanceId,
+                        obtainedFrom: instance.obtainedFrom || "", // ★ ここを追加して獲得元のエリア情報を保持させる
+                        status: instance.status || "collection", 
+                        isUsed: instance.status && instance.status !== "collection",
                         ...toDisplayCard(libraryById[instance.cardId], instance)
                     }));
             } catch (error) {
@@ -504,7 +564,7 @@ export default {
 
         moveFocus(delta) {
             const next = this.focusedIndex + delta;
-            if (next < 0 || next >= this.collection.length) return;
+            if (next < 0 || next >= this.filteredCollection.length) return;
             this.focusedIndex = next;
         },
 
@@ -772,6 +832,7 @@ export default {
         .chest,.lid,.key,.sparkle,.light-rays,.overlay,.overlay .card,.tap-hint{animation:none !important}
     }
     button{margin:8px;padding:10px 16px}
+    .chest, .area-tab, button { touch-action: manipulation; }
 
     .area-tabs{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
     .area-tab{
@@ -1175,5 +1236,65 @@ export default {
         z-index: 9999;
         pointer-events: none;
         transition: width 1.5s ease, height 1.5s ease;
+    }
+
+    /* フィルタコントロール */
+    .collection-filters {
+        display: flex;
+        gap: 12px;
+        padding: 10px 16px;
+        background: rgba(0, 0, 0, 0.05);
+        border-bottom: 1px solid #ddd;
+        flex-wrap: wrap;
+    }
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        font-weight: bold;
+        color: #333;
+    }
+    .filter-group select {
+        padding: 4px 8px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        font-size: 14px;
+    }
+    @media (max-width: 767px){
+        .collection-filters {
+            justify-content: center !important; }
+        .filter-group {
+            flex-direction: column !important;
+            align-items: center !important; /* align-items: flex-start から center に変更すると中央に揃います */
+            gap: 4px !important;
+        }
+
+        .collection-modal {
+            align-items: flex-start !important;
+            padding-top: max(10px, env(safe-area-inset-top)) !important;
+        }
+        .collection-sheet {
+            border-radius: 0 0 18px 18px !important;
+            max-height: 90vh !important;
+        }
+    }
+/* 使用中バッジの指定（任意） */
+    .collection-item {
+        position: relative;
+    }
+    .used-badge {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: #e53e3e;
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 4px;
+        z-index: 5;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
 </style>

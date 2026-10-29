@@ -1,7 +1,9 @@
 <template>
     <!-- Intro Video -->
     <div v-if="showVideo" class="fixed inset-0 bg-black flex flex-col items-center justify-center">
-        <div id="player"></div>
+        <div class="video-wrapper">
+            <div id="player"></div>
+        </div>
 
         <p class="mt-6 text-white text-2xl" @click="showVideo = false;">
             あと {{ remaining }} 秒
@@ -232,26 +234,43 @@
                     .where("cenId", "==", this.cenId)
                     .limit(1)
                     .get();
+
                 if (!snapshot.empty) {
-                    // 既存会員なら新規作成しない
+                    // 既存会員の場合
                     const userDoc = snapshot.docs[0];
                     const userData = userDoc.data();
+                    const oldTeam = userData.team; // 以前のチームがあれば保持
+                    // 1. users コレクションを更新（チームとイントロ完了フラグを今回決まったものに更新）
                     await db.collection("users").doc(userDoc.id).update({
+                        team: this.potentialTeam,
                         introCompleted: true,
                         introCompletedAt: firebase.firestore.Timestamp.now()
                     });
-                    const latestUserData = { ...userData, introCompleted: true };
+                    // 2. もしチームが変わった場合、古いteamsのmembersから外し、新しいteamsのmembersに追加する
+                    const batch = db.batch();
+                    if (oldTeam && oldTeam !== this.potentialTeam) {
+                        const oldTeamRef = db.collection("teams").doc(oldTeam);
+                        batch.update(oldTeamRef, {
+                            members: firebase.firestore.FieldValue.arrayRemove(userDoc.id)
+                        });
+                    }
+                    const newTeamRef = db.collection("teams").doc(this.potentialTeam);
+                    batch.update(newTeamRef, {
+                        members: firebase.firestore.FieldValue.arrayUnion(userDoc.id)
+                    });
+                    await batch.commit();
+                    // 3. セッションの更新
+                    const latestUserData = { ...userData, team: this.potentialTeam, introCompleted: true };
                     setSession("playerUid", userDoc.id);
                     setSession("playerData", JSON.stringify(latestUserData));
-                    setSession("myTeam", userData.team);
+                    setSession("myTeam", this.potentialTeam); // 決定したチームをセット
                     setSession("loginCenId", this.cenId);
-                    console.log("既存会員を確認しました:", userDoc.id);
+                    console.log("既存会員のチームを更新しました:", userDoc.id, "チーム:", this.potentialTeam);
                     return;
                 }
 
                 // 初回会員だけ新規作成
                 const uid = Date.now().toString();
-
                 const userData = {
                     uid,
                     name: this.playerName,
@@ -264,12 +283,11 @@
                     enteredMonitorRoomAt: firebase.firestore.Timestamp.now(),
                     introCompleted: true
                 };
-
                 await db.collection("users").doc(uid).set({
                     ...userData
                 });
 
-                 await db.collection("teams")
+                await db.collection("teams")
                     .doc(this.potentialTeam)
                     .update({
                         members: firebase.firestore.FieldValue.arrayUnion(uid)
@@ -279,9 +297,7 @@
                 setSession("playerData", JSON.stringify(userData));
                 setSession("myTeam", this.potentialTeam);
                 setSession("loginCenId", this.cenId);
-
-                console.log("Account created:", uid);
-
+                console.log("新規アカウント作成:", uid, "チーム:", this.potentialTeam);
             },
 
             async getTeamCounts(){
@@ -324,3 +340,30 @@
         }
     };
 </script>
+
+<style scoped>
+/* 動画をスマートフォンでも縦で見やすく、画面に収まるようにする調整 */
+.video-wrapper {
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 16 / 9; /* 基本の横長比率を維持しつつレスポンシブ化 */
+    max-height: 80vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+/* YouTubeのiframe（#player）を親要素いっぱいに合わせる */
+#player {
+    width: 100% !important;
+    height: 100% !important;
+}
+/* スマートフォン（縦持ち）のときの調整 */
+@media (max-width: 767px) {
+    .video-wrapper {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 9 / 16; /* スマホで縦長に見せたい場合はここを調整できます */
+        max-height: 70vh;
+    }
+}
+</style>

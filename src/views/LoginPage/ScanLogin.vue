@@ -86,6 +86,7 @@ export default {
           // ※ firebaseオブジェクトを使わず、通常のJSのDateオブジェクトで日時を保存します
           const newUserData = {
             cenId: cenId,
+            introCompleted: false,
             createdAt: new Date()
           };
           const docRef = await db.collection("users").add(newUserData);

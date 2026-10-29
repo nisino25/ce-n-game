@@ -66,23 +66,46 @@ export default {
         async checkUser(cenId) {
             this.errorMessage = "";
             console.log("Introへ渡す cenId:", cenId);
-
-            try {
-                // ■ce-n.org側の会員IDとして有効かをまず確認する。
-                // 存在しなければこのアプリには入れず、ce-n.orgへ案内する
-                const findMeUrl = `https://www.ce-n.org/_functions/findMe?id=${encodeURIComponent(cenId)}`;
-                const findMeResponse = await fetch(findMeUrl);
-                const findMeResult = await findMeResponse.json();
-
-                if (findMeResult.message) {
-                    this.$router.push({ name: "Error" });
-                    return;
+            // 最大2回までリトライする仕組み（一時的な通信エラー対策）
+            let maxRetries = 2;
+            let findMeResult = null;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const findMeUrl = `https://www.ce-n.org/_functions/findMe?id=${encodeURIComponent(cenId)}`;
+                    const findMeResponse = await fetch(findMeUrl);
+                    findMeResult = await findMeResponse.json();
+                    break; // 成功したらループを抜ける
+                } catch (fetchError) {
+                    console.warn(`findMe 通信リトライ (${i + 1}/${maxRetries}):`, fetchError);
+                    if (i === maxRetries - 1) {
+                        // 通信自体が完全に失敗した場合のフェイルセーフ（必要に応じてそのまま通すかエラーにするか）
+                        console.error("findMe APIへの接続に失敗しました。続行します。");
+                        findMeResult = null; // API確認スキップ扱いにすることも可能
+                    } else {
+                        await new Promise(r => setTimeout(r, 1000)); // 1秒待ってリトライ
+                    }
                 }
+            }
 
-                const snapshot = await db
-                    .collection("users")
-                    .where("cenId", "==", cenId)
-                    .get();
+            if (findMeResult.message) {
+                this.$router.push({ name: "Error" });
+                return;
+            }
+            try {
+                // Firestoreからのデータ取得にもリトライを挟むとさらに安全
+                let snapshot = null;
+                for (let i = 0; i < maxRetries; i++) {
+                 try {
+                    snapshot = await db
+                        .collection("users")
+                        .where("cenId", "==", cenId)
+                        .get();
+                    break;
+                    } catch (dbError) {
+                        if (i === maxRetries - 1) throw dbError;
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
+                }
 
                 // ★ 検索結果を確認するログ
                 console.log("=== LoginPage 判定 ===");

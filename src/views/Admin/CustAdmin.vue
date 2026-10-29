@@ -2,7 +2,6 @@
   <div class="member-admin">
     <h1>会員情報管理</h1>
 
-
     <!-- 会員検索 -->
     <section class="panel">
       <h2>会員検索</h2>
@@ -38,7 +37,15 @@
             >
               <td>{{ member.name || "未登録" }}</td>
               <td>{{ teamName(member.team) }}</td>
-              <td class="cen-id">{{ member.cenId || "未登録" }}</td>
+              <td class="cen-id">
+                <div>{{ member.cenId || "未登録" }}</div>
+                <div class="intro-status">
+                  イントロ: 
+                  <span :class="member.introCompleted ? 'status-true' : 'status-false'">
+                    {{ member.introCompleted === true ? "完了 (true)" : "未完了 (false)" }}
+                  </span>
+                </div>
+              </td>
               <td>
                 <button @click="selectMember(member)">
                   詳細・編集
@@ -83,6 +90,13 @@
         type="text"
       />
 
+      <!-- ▼ イントロ完了状態の編集 (valueを文字列で扱い、確実に同期) ▼ -->
+      <label for="member-intro">イントロ完了フラグ（introCompleted）</label>
+      <select id="member-intro" v-model="form.introCompleted">
+        <option value="true">完了済み（true）</option>
+        <option value="false">未完了（false）</option>
+      </select>
+
       <p class="note">
         cenIdを変更すると、次回ログイン時の会員照合に
         影響します。変更前に正しいIDか確認してください。
@@ -100,7 +114,6 @@
           キャンセル
         </button>
 
-        <!-- ▼ 会員削除ボタンの追加 ▼ -->
         <button 
           class="danger-button" 
           :disabled="saving || deleting" 
@@ -137,68 +150,66 @@
           保存すると、Firestore上のチュートリアル完了フラグが更新されます。
         </p>
 
+        <!-- 所持カードは初期版では閲覧のみ -->
+        <div class="cards-area">
+          <h2>所持カード（cards）</h2>
 
-      <!-- 所持カードは初期版では閲覧のみ -->
-      <div class="cards-area">
-        <h2>所持カード（cards）</h2>
+          <p>
+            登録件数：
+            <strong>{{ cardCount }}</strong>
+          </p>
 
-        <p>
-          登録件数：
-          <strong>{{ cardCount }}</strong>
-        </p>
+          <pre>{{ cardsText }}</pre>
 
-        <pre>{{ cardsText }}</pre>
+          <p class="note">
+            カードのデータ構造を確認するため、
+            この画面ではカード情報を変更しません。
+          </p>
+        </div>
 
-        <p class="note">
-          カードのデータ構造を確認するため、
-          この画面ではカード情報を変更しません。
-        </p>
-      </div>
-
-      <!-- カギの本数 -->
-      <div class="future-area">
-        <h2>洞窟のカギ</h2>
-        <p v-if="keyLoading" class="note">
-          カギの情報を読み込み中です...
-        </p>
-        <div v-else class="key-grid">
-          <div v-for="area in caveAreas" :key="area.id">
-            <label :for="'key-' + area.id">
-              {{ area.name }}のカギ
-            </label>
-            <input
-              :id="'key-' + area.id"
-              v-model.number="keyForm[area.id]"
-              type="number"
-              min="0"
-              step="1"
-            />
+        <!-- カギの本数 -->
+        <div class="future-area">
+          <h2>洞窟のカギ</h2>
+          <p v-if="keyLoading" class="note">
+            カギの情報を読み込み中です...
+          </p>
+          <div v-else class="key-grid">
+            <div v-for="area in caveAreas" :key="area.id">
+              <label :for="'key-' + area.id">
+                {{ area.name }}のカギ
+              </label>
+              <input
+                :id="'key-' + area.id"
+                v-model.number="keyForm[area.id]"
+                type="number"
+                min="0"
+                step="1"
+              />
+            </div>
           </div>
-        </div>
 
-        <div class="button-row">
-          <button
-            :disabled="keyLoading || keySaving"
-            @click="saveCaveKeyCounts"
-          >
-            {{ keySaving ? "保存中..." : "カギの本数を保存" }}
-          </button>
-          <button
-            class="secondary"
-            :disabled="keyLoading || keySaving"
-            @click="loadMemberKeys"
-          >
-            再読み込み
-          </button>
+          <div class="button-row">
+            <button
+              :disabled="keyLoading || keySaving"
+              @click="saveCaveKeyCounts"
+            >
+              {{ keySaving ? "保存中..." : "カギの本数を保存" }}
+            </button>
+            <button
+              class="secondary"
+              :disabled="keyLoading || keySaving"
+              @click="loadMemberKeys"
+            >
+              再読み込み
+            </button>
+          </div>
+          <p v-if="keyMessage" class="message">
+            {{ keyMessage }}
+          </p>
+          <p class="note">
+            保存すると、選択した会員のFirestore上のカギの本数が更新されます。
+          </p>
         </div>
-        <p v-if="keyMessage" class="message">
-          {{ keyMessage }}
-        </p>
-        <p class="note">
-          保存すると、選択した会員のFirestore上のカギの本数が更新されます。
-        </p>
-      </div>
-
       </div>
     </section>
   </div>
@@ -212,7 +223,9 @@ import { CAVE_AREAS, CAVE_AREA_IDS } from "../CaveAdventure/caveAreas.js";
 
 export default {
   name: "MemberAdmin",
-  mounted() {this.loadAllMembers();},
+  mounted() {
+    this.loadAllMembers();
+  },
 
   data() {
     return {
@@ -224,6 +237,7 @@ export default {
         name: "",
         team: "",
         cenId: "",
+        introCompleted: "false", // selectの初期化用に文字列で定義
         tutorialCleared: {
           hiratsuka: false,
           kushiro: false
@@ -248,7 +262,7 @@ export default {
       },
       keyLoading: false,
       keySaving: false,
-      keyMessage: "",
+      keyMessage: ""
     };
   },
 
@@ -286,23 +300,19 @@ export default {
   },
 
   methods: {
-
     async loadAllMembers() {
       this.loading = true;
       this.searched = false;
       this.message = "";
       this.selectedMember = null;
       try {
-        const snapshot = await db
-          .collection("users")
-          .get();
+        const snapshot = await db.collection("users").get();
         this.members = snapshot.docs.map(doc => ({
           ...doc.data(),
           docId: doc.id
         }));
         this.searched = true;
-        this.message =
-          `${this.members.length}件の会員データを表示しています。`;
+        this.message = `${this.members.length}件の会員データを表示しています。`;
         console.log("全会員データ:", this.members);
       } catch (error) {
         console.error("全会員取得エラー:", error);
@@ -313,7 +323,6 @@ export default {
       }
     },
 
-    // カギの確認・修正
     async loadMemberKeys() {
       if (!this.selectedMember || !this.selectedMember.cenId) {
         this.keyMessage = "会員ID（cenId）がありません。";
@@ -325,8 +334,7 @@ export default {
         const cenId = String(this.selectedMember.cenId);
         const entries = await Promise.all(
           CAVE_AREA_IDS.map(async areaId => {
-            const docId =
-              `${encodeURIComponent(cenId)}_${areaId}`;
+            const docId = `${encodeURIComponent(cenId)}_${areaId}`;
             const snapshot = await db
               .collection("caveKeys")
               .doc(docId)
@@ -347,6 +355,7 @@ export default {
         this.keyLoading = false;
       }
     },
+
     async saveCaveKeyCounts() {
       if (
         !this.selectedMember ||
@@ -370,18 +379,19 @@ export default {
         const cenId = String(this.selectedMember.cenId);
         const batch = db.batch();
         for (const areaId of CAVE_AREA_IDS) {
-          const docId =
-            `${encodeURIComponent(cenId)}_${areaId}`;
-          const docRef = db
-            .collection("caveKeys")
-            .doc(docId);
-          batch.set(docRef, {
-            cenId,
-            areaId,
-            count: Number(this.keyForm[areaId]),
-            updatedAt:
-              firebase.firestore.FieldValue.serverTimestamp()
-          }, { merge: true });
+          const docId = `${encodeURIComponent(cenId)}_${areaId}`;
+          const docRef = db.collection("caveKeys").doc(docId);
+          batch.set(
+            docRef,
+            {
+              cenId,
+              areaId,
+              count: Number(this.keyForm[areaId]),
+              updatedAt:
+                firebase.firestore.FieldValue.serverTimestamp()
+            },
+            { merge: true }
+          );
         }
         await batch.commit();
         this.keyMessage = "カギの本数を保存しました。";
@@ -393,13 +403,13 @@ export default {
         this.keySaving = false;
       }
     },
+
     teamName(team) {
       const names = {
         earth: "土チーム",
         water: "水チーム",
         air: "風チーム"
       };
-
       return names[team] || team || "未設定";
     },
 
@@ -451,8 +461,7 @@ export default {
         if (this.members.length === 0) {
           this.message = "該当する会員が見つかりません。";
         } else {
-          this.message =
-            `${this.members.length}件の会員データが見つかりました。`;
+          this.message = `${this.members.length}件の会員データが見つかりました。`;
         }
       } catch (error) {
         console.error("会員検索エラー:", error);
@@ -464,48 +473,41 @@ export default {
     },
 
     async selectMember(member) {
-      console.log("① 詳細・編集ボタンが押されました", member);
       this.selectedMember = { ...member };
-      
-      // フォームに値をセット（Firestoreから再取得した値や既存の値に対応）
+      // selectで扱いやすいよう文字列 "true" / "false" に変換
+      const initialIntro = (member.introCompleted === true || member.introCompleted === "true") ? "true" : "false";
+
       this.form = {
         name: member.name || "",
         team: member.team || "",
         cenId: member.cenId || "",
+        introCompleted: initialIntro,
         tutorialCleared: {
-          hiratsuka: member.tutorialCleared?.hiratsuka || false,
-          kushiro: member.tutorialCleared?.kushiro || false
+          hiratsuka: Boolean(member.tutorialCleared?.hiratsuka),
+          kushiro: Boolean(member.tutorialCleared?.kushiro)
         }
       };
-
       this.saveMessage = "";
       this.keyMessage = "";
-      this.keyForm = {
-        kanagawa: 0,
-        hokkaido: 0,
-        kyoto: 0
-      };
+      this.keyForm = { kanagawa: 0, hokkaido: 0, kyoto: 0 };
 
-      // Firestoreから最新の会員情報を取得して確実に同期する
       try {
-        const doc = await db
-          .collection("users")
-          .doc(member.docId)
-          .get();
+        const doc = await db.collection("users").doc(member.docId).get();
         if (doc.exists) {
           const freshData = doc.data();
+          const isFreshTrue = freshData.introCompleted === true || freshData.introCompleted === "true";
+
           this.selectedMember = {
             ...freshData,
-            docId: doc.id
+            docId: doc.id,
+            introCompleted: isFreshTrue
           };
-          // フォーム側のチュートリアル完了状態も最新化
+
+          this.form.introCompleted = isFreshTrue ? "true" : "false";
           this.form.tutorialCleared = {
-            hiratsuka: freshData.tutorialCleared?.hiratsuka || false,
-            kushiro: freshData.tutorialCleared?.kushiro || false
+            hiratsuka: Boolean(freshData.tutorialCleared?.hiratsuka),
+            kushiro: Boolean(freshData.tutorialCleared?.kushiro)
           };
-          console.log("④ 最新のtutorialCleared:", this.selectedMember.tutorialCleared);
-        } else {
-          console.warn("会員データが見つかりません:", member.docId);
         }
       } catch (error) {
         console.error("会員情報の再取得エラー:", error);
@@ -513,13 +515,13 @@ export default {
       await this.loadMemberKeys();
     },
 
-    // 削除処理
     async deleteMember() {
       if (!this.selectedMember || this.deleting) return;
 
-      // 誤操作防止の確認ダイアログ
       const memberName = this.form.name || "この会員";
-      const confirmed = window.confirm(`本当に「${memberName}」のデータを削除しますか？\nこの操作は元に戻せません。`);
+      const confirmed = window.confirm(
+        `本当に「${memberName}」のデータを削除しますか？\nこの操作は元に戻せません。`
+      );
       if (!confirmed) return;
 
       this.deleting = true;
@@ -532,11 +534,9 @@ export default {
 
         const batch = db.batch();
 
-        // 1. users コレクションのドキュメントを削除
         const userRef = db.collection("users").doc(docId);
         batch.delete(userRef);
 
-        // 2. チームに所属している場合は、teamsコレクションの members 配列からも削除する
         if (["earth", "water", "air"].includes(team)) {
           const teamRef = db.collection("teams").doc(team);
           batch.update(teamRef, {
@@ -544,9 +544,8 @@ export default {
           });
         }
 
-        // 3. （必要に応じて）関連する caveKeys も削除する場合
         if (cenId) {
-          const areaIds = ["kanagawa", "hokkaido", "kyoto"]; // CAVE_AREA_IDS など
+          const areaIds = ["kanagawa", "hokkaido", "kyoto"];
           for (const areaId of areaIds) {
             const keyDocId = `${encodeURIComponent(cenId)}_${areaId}`;
             const keyRef = db.collection("caveKeys").doc(keyDocId);
@@ -556,16 +555,15 @@ export default {
 
         await batch.commit();
 
-        // 4. 画面側のリストからも削除された会員を除外して、編集画面を閉じる
         this.members = this.members.filter(m => m.docId !== docId);
         this.selectedMember = null;
         this.saveMessage = "";
-        
-        alert("会員データを削除しました。");
 
+        alert("会員データを削除しました。");
       } catch (error) {
         console.error("会員削除エラー:", error);
-        this.saveMessage = "削除できませんでした。Firestoreの権限を確認してください。";
+        this.saveMessage =
+          "削除できませんでした。Firestoreの権限を確認してください。";
       } finally {
         this.deleting = false;
       }
@@ -578,123 +576,47 @@ export default {
 
     async saveMember() {
       if (!this.selectedMember || this.saving) return;
-
-      if (!this.form.name) {
-        this.saveMessage = "会員名を入力してください。";
-        return;
-      }
-
-      if (!this.form.cenId) {
-        this.saveMessage = "cenIdを入力してください。";
-        return;
-      }
-
-      if (!["earth", "water", "air"].includes(this.form.team)) {
-        this.saveMessage = "所属チームを選択してください。";
+      if (!this.form.name || !this.form.cenId) {
+        this.saveMessage = "名前とcenIdを入力してください。";
         return;
       }
 
       const oldMember = this.selectedMember;
-      const oldTeam = oldMember.team;
       const newTeam = this.form.team;
       const newCenId = this.form.cenId;
-
+      const isIntroCompleted = String(this.form.introCompleted) === "true";
       this.saving = true;
       this.saveMessage = "";
 
       try {
-        const duplicateSnapshot = await db
-          .collection("users")
-          .where("cenId", "==", newCenId)
-          .get();
+        const userRef = db.collection("users").doc(oldMember.docId);
 
-        const duplicate = duplicateSnapshot.docs.find(
-          doc => doc.id !== oldMember.docId
-        );
-
-        if (duplicate) {
-          this.saveMessage =
-            "このcenIdは別の会員データで使用されています。";
-          return;
-        }
-
-        const batch = db.batch();
-        const userRef = db
-          .collection("users")
-          .doc(oldMember.docId);
-
-        // チュートリアル完了状態を含めて更新
         const updateData = {
           name: this.form.name,
           team: newTeam,
           cenId: newCenId,
+          introCompleted: isIntroCompleted,
           tutorialCleared: {
-            hiratsuka: !!this.form.tutorialCleared.hiratsuka,
-            kushiro: !!this.form.tutorialCleared.kushiro
+            hiratsuka: Boolean(this.form.tutorialCleared?.hiratsuka),
+            kushiro: Boolean(this.form.tutorialCleared?.kushiro)
           },
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
+        await userRef.set(updateData, { merge: true });
 
-        if (oldTeam !== newTeam) {
-          if (
-            !["earth", "water", "air"].includes(oldTeam)
-          ) {
-            this.saveMessage =
-              "現在のチームを特定できないため、チーム変更を保存できません。";
-            return;
-          }
-
-          const oldTeamRef = db.collection("teams").doc(oldTeam);
-          const newTeamRef = db.collection("teams").doc(newTeam);
-
-          const oldTeamDoc = await oldTeamRef.get();
-          const newTeamDoc = await newTeamRef.get();
-
-          if (!oldTeamDoc.exists || !newTeamDoc.exists) {
-            this.saveMessage =
-              "変更前または変更先のチームデータがありません。保存を中止しました。";
-            return;
-          }
-
-          batch.update(oldTeamRef, {
-            members: firebase.firestore.FieldValue.arrayRemove(
-              oldMember.docId
-            )
-          });
-
-          batch.update(newTeamRef, {
-            members: firebase.firestore.FieldValue.arrayUnion(
-              oldMember.docId
-            )
-          });
-        }
-
-        batch.update(userRef, updateData);
-
-        await batch.commit();
-
-        // 保存後のローカル状態を更新
+        // ローカル状態の更新
         const updatedMember = {
           ...oldMember,
-          name: this.form.name,
-          team: newTeam,
-          cenId: newCenId,
-          tutorialCleared: { ...this.form.tutorialCleared }
+          ...updateData,
+          docId: oldMember.docId
         };
 
         this.selectedMember = updatedMember;
-
-        this.members = this.members.map(member =>
-          member.docId === oldMember.docId
-            ? updatedMember
-            : member
-        );
-
+        this.members = this.members.map(m => m.docId === oldMember.docId ? updatedMember : m);
         this.saveMessage = "会員情報を保存しました。";
       } catch (error) {
         console.error("会員情報保存エラー:", error);
-        this.saveMessage =
-          "保存できませんでした。Firestoreの書き込み権限やデータ構造を確認してください。";
+        this.saveMessage = `保存失敗: ${error.message}`;
       } finally {
         this.saving = false;
       }
@@ -801,6 +723,20 @@ th {
   font-size: 12px;
 }
 
+.intro-status {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #555;
+}
+.status-true {
+  color: #16a34a;
+  font-weight: bold;
+}
+.status-false {
+  color: #dc2626;
+  font-weight: bold;
+}
+
 .message {
   color: #285b3d;
   overflow-wrap: anywhere;
@@ -828,7 +764,6 @@ pre {
   overflow-wrap: anywhere;
 }
 
-
 .key-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -840,52 +775,10 @@ pre {
     grid-template-columns: 1fr;
   }
 }
-.map-rule-panel h3 {
-  margin-top: 24px;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #d8e0da;
-  font-size: 17px;
-  color: #286746;
-}
-.map-rule-panel table {
-  width: 100%;
-  margin: 10px 0 20px;
-  border-collapse: collapse;
-}
-.map-rule-panel th,
-.map-rule-panel td {
-  padding: 10px;
-  border: 1px solid #d8e0da;
-  text-align: left;
-  vertical-align: top;
-  overflow-wrap: anywhere;
-}
-.map-rule-panel th {
-  background: #edf4ef;
-}
-.map-rule-panel .rule-list {
-  padding-left: 24px;
-  line-height: 1.8;
-}
-.map-rule-panel .note {
-  line-height: 1.7;
-}
-@media (max-width: 600px) {
-  .map-rule-panel {
-    padding: 12px;
-  }
-
-  .map-rule-panel th,
-  .map-rule-panel td {
-    padding: 7px;
-    font-size: 12px;
-  }
-}
 
 button.danger-button {
-  background: #dc2626; /* 赤色 */
-  margin-left: auto;   :w /* 右側に寄せたい場合 */
+  background: #dc2626;
+  margin-left: auto;
 }
 button.danger-button:hover {
   background: #b91c1c;

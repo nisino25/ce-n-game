@@ -2,13 +2,22 @@
   <div class="card-admin">
     <h1>カードデータ管理</h1>
 
-    <!-- 検索・新規追加 -->
+    <!-- 検索・新規追加・地域フィルタリング -->
     <div class="search-area">
       <input
         v-model="searchText"
         type="text"
         placeholder="カード名で検索"
       />
+
+      <!-- 地域フィルター（未登録の抽出に対応） -->
+      <select v-model="selectedRegion" class="region-filter">
+        <option value="">すべての地域</option>
+        <option value="hokkaido">北海道</option>
+        <option value="kanagawa">神奈川</option>
+        <option value="kyoto">京都</option>
+        <option value="none">【未登録】（地域なし）</option>
+      </select>
 
       <button
         class="add-button"
@@ -22,7 +31,7 @@
 
       <!-- 左：カード一覧 -->
       <div class="card-list">
-        <h2>カード一覧（{{ filteredCards.length }}）</h2>
+        <h2>カード一覧（{{ filteredCards.length }}件）</h2>
 
         <div
           v-for="card in filteredCards"
@@ -45,7 +54,8 @@
             <div class="list-detail">
               Lv.{{ card.level }}
               ／ レア {{ card.rarity }}
-              ／ {{ card.published ? "公開" : "非公開" }}
+              ／ 地域: <span :class="{'unregistered-text': !card.region}">{{ card.region || "未登録" }}</span>
+              ／ 発見者: {{ card.owner || "なし" }}
             </div>
           </div>
         </div>
@@ -75,7 +85,7 @@
           カードIDは保存時に自動生成されます。
         </div>
 
-        <!-- 画像 -->
+        <!-- 画像プレビュー -->
         <div class="preview-area">
           <img
             v-if="editCard.image"
@@ -88,13 +98,30 @@
           </div>
         </div>
 
-        <!-- カード名 -->
+        <!-- 1. カード名 -->
         <label>
           カード名
           <input v-model="editCard.name" type="text" />
         </label>
 
-        <!-- 画像 -->
+        <!-- 2. カードフレーム -->
+        <label>
+          カードフレーム
+          <input v-model="editCard.frame" type="text" />
+        </label>
+
+        <!-- 3. ★位置を変更：地域 (tiiki / region) （カードフレームの次） -->
+        <label>
+          地域 (tiiki)
+          <select v-model="editCard.region">
+            <option value="">-- 未登録 --</option>
+            <option value="hokkaido">北海道</option>
+            <option value="kanagawa">神奈川</option>
+            <option value="kyoto">京都</option>
+          </select>
+        </label>
+
+        <!-- 4. カード画像を選択 -->
         <label>
           カード画像を選択
           <input
@@ -108,7 +135,7 @@
           保存ボタンを押すとカード情報と一緒に登録されます。
         </p>
 
-        <!-- 生態系レベル -->
+        <!-- 5. 生態系レベル -->
         <label>
           生態系レベル
           <select v-model.number="editCard.level">
@@ -119,7 +146,7 @@
           </select>
         </label>
 
-        <!-- レア度 -->
+        <!-- 6. レア度 -->
         <label>
           レア度
           <select v-model="editCard.rarity">
@@ -130,17 +157,7 @@
           </select>
         </label>
 
-        <!-- 地域 -->
-        <label>
-          地域
-          <select v-model="editCard.region">
-            <option value="hokkaido">北海道</option>
-            <option value="kanagawa">神奈川</option>
-            <option value="kyoto">京都</option>
-          </select>
-        </label>
-
-        <!-- すみか -->
+        <!-- 7. すみか -->
         <label>
           すみか
           <select v-model="editCard.habitat">
@@ -152,7 +169,7 @@
           </select>
         </label>
 
-        <!-- 陸・水辺 -->
+        <!-- 8. 地形（陸・水辺） -->
         <label>
           地形
           <select v-model="editCard.terrain">
@@ -161,13 +178,13 @@
           </select>
         </label>
 
-        <!-- フレーム -->
+        <!-- 9. 発見者 (owner) -->
         <label>
-          カードフレーム
-          <input v-model="editCard.frame" type="text" />
+          発見者 (owner)
+          <input v-model="editCard.owner" type="text" placeholder="例: 山田 太郎" />
         </label>
 
-        <!-- 公開 -->
+        <!-- 10. 公開 -->
         <label class="checkbox-label">
           <input
             v-model="editCard.published"
@@ -176,7 +193,7 @@
           公開する
         </label>
 
-        <!-- 食物連鎖 -->
+        <!-- 11. 食物連鎖 -->
         <label>
           食物連鎖（1行に1種類）
           <textarea
@@ -186,7 +203,7 @@
           ></textarea>
         </label>
 
-        <!-- 保存 -->
+        <!-- 保存ボタンエリア -->
         <div class="button-area">
 
           <!-- 新規追加 -->
@@ -251,13 +268,13 @@ export default {
     return {
       cards: [],
       searchText: "",
+      selectedRegion: "",
       selectedCard: null,
       editCard: null,
       foodText: "",
       saving: false,
       message: "",
 
-      // 新規カードかどうか
       isNewCard: false
     };
   },
@@ -266,14 +283,17 @@ export default {
     filteredCards() {
       const text = this.searchText.trim().toLowerCase();
 
-      if (!text) {
-        return this.cards;
-      }
-
       return this.cards.filter(card => {
-        return (card.name || "")
-          .toLowerCase()
-          .includes(text);
+        const matchName = !text || (card.name || "").toLowerCase().includes(text);
+
+        let matchRegion = true;
+        if (this.selectedRegion === "none") {
+          matchRegion = !card.region || card.region === "";
+        } else if (this.selectedRegion) {
+          matchRegion = card.region === this.selectedRegion;
+        }
+
+        return matchName && matchRegion;
       });
     }
   },
@@ -283,10 +303,6 @@ export default {
   },
 
   methods: {
-
-    // ----------------------------------------
-    // cards コレクションを読み込む
-    // ----------------------------------------
     async loadCards() {
       try {
         const snapshot = await db
@@ -308,19 +324,11 @@ export default {
       }
     },
 
-    // ----------------------------------------
-    // カード選択
-    // ----------------------------------------
     selectCard(card) {
       this.isNewCard = false;
-
       this.selectedCard = card;
+      this.editCard = { ...card };
 
-      this.editCard = {
-        ...card
-      };
-
-      // 食物連鎖を編集用テキストに変換
       if (Array.isArray(card.food)) {
         this.foodText = card.food.join("\n");
       } else {
@@ -330,52 +338,38 @@ export default {
       this.message = "";
     },
 
-  // ----------------------------------------
-  // 画像ファイルを選択し、生きものスキャンと同じ方式で圧縮
-  // ----------------------------------------
-  async handleImageSelect(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) {
-      return;
-    }
-    if (!file.type.startsWith("image/")) {
-      alert("画像ファイルを選択してください。");
-      event.target.value = "";
-      return;
-    }
-    try {
-      this.message = "画像を読み込んでいます...";
-      // 生きものスキャンと同じ画像圧縮処理
-      const compressed = await compressCardImage(file);
-      // 圧縮した画像データをカード情報に設定
-      this.editCard.image = compressed.dataUrl;
-      this.message =
-        "画像を読み込みました。保存ボタンを押してください。";
-    } catch (error) {
-      console.error("画像読み込みエラー:", error);
-      this.message =
-        "画像を読み込めませんでした。別の画像をお試しください。";
-    } finally {
-      // 同じ画像ファイルを再選択できるようにする
-      event.target.value = "";
-    }
-  },
+    async handleImageSelect(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        alert("画像ファイルを選択してください。");
+        event.target.value = "";
+        return;
+      }
+      try {
+        this.message = "画像を読み込んでいます...";
+        const compressed = await compressCardImage(file);
+        this.editCard.image = compressed.dataUrl;
+        this.message = "画像を読み込みました。保存ボタンを押してください。";
+      } catch (error) {
+        console.error("画像読み込みエラー:", error);
+        this.message = "画像を読み込めませんでした。";
+      } finally {
+        event.target.value = "";
+      }
+    },
 
-    // ----------------------------------------
-    // 新しいカードを追加する画面
-    // ----------------------------------------
     startNewCard() {
-
       this.isNewCard = true;
-
       this.selectedCard = null;
 
       this.editCard = {
         name: "",
+        owner: "",
         image: "",
         level: 1,
         rarity: "D",
-        region: "hokkaido",
+        region: "",
         habitat: "forest",
         terrain: "land",
         frame: "silver",
@@ -383,13 +377,9 @@ export default {
       };
 
       this.foodText = "";
-
       this.message = "";
     },
 
-    // ----------------------------------------
-    // 編集取り消し
-    // ----------------------------------------
     cancelEdit() {
       this.editCard = null;
       this.selectedCard = null;
@@ -398,15 +388,8 @@ export default {
       this.isNewCard = false;
     },
 
-    // ----------------------------------------
-    // 既存カードを保存
-    // ----------------------------------------
     async saveCard() {
-
-      if (!this.editCard) {
-        return;
-      }
-
+      if (!this.editCard) return;
       if (!this.editCard.name) {
         alert("カード名を入力してください。");
         return;
@@ -416,8 +399,6 @@ export default {
       this.message = "";
 
       try {
-
-        // 食物連鎖を配列に戻す
         const food = this.foodText
           .split("\n")
           .map(item => item.trim())
@@ -425,6 +406,7 @@ export default {
 
         const cardData = {
           name: this.editCard.name,
+          owner: this.editCard.owner || "",
           image: this.editCard.image || "",
           level: Number(this.editCard.level) || 1,
           rarity: this.editCard.rarity || "D",
@@ -442,48 +424,33 @@ export default {
           .set(cardData, { merge: true });
 
         this.message = "カード情報を保存しました。";
-
-        // 一覧も更新
         await this.loadCards();
 
-        // 保存後、同じカードを再選択
         const savedCard = this.cards.find(
           card => card.cardId === this.editCard.cardId
         );
         if (savedCard) {
           this.selectCard(savedCard);
         }
-
       } catch (error) {
-
         console.error("カード保存エラー:", error);
-
-        this.message =
-          "保存できませんでした。Firestoreの権限などを確認してください。";
-
+        this.message = "保存できませんでした。";
       } finally {
         this.saving = false;
       }
     },
 
-    // ----------------------------------------
-    // 新しいカードをFirestoreに追加
-    // ----------------------------------------
     async addCard() {
-
-      if (!this.editCard) {
-        return;
-      }
+      if (!this.editCard) return;
       if (!this.editCard.name) {
         alert("カード名を入力してください。");
         return;
       }
+
       this.saving = true;
       this.message = "";
 
       try {
-
-        // 食物連鎖を配列に戻す
         const food = this.foodText
           .split("\n")
           .map(item => item.trim())
@@ -491,6 +458,7 @@ export default {
 
         const cardData = {
           name: this.editCard.name,
+          owner: this.editCard.owner || "",
           image: this.editCard.image || "",
           level: Number(this.editCard.level) || 1,
           rarity: this.editCard.rarity || "D",
@@ -502,30 +470,19 @@ export default {
           food: food
         };
 
-        // FirestoreがカードIDを自動生成
-        const ref = await db
-          .collection("cards")
-          .add(cardData);
+        const ref = await db.collection("cards").add(cardData);
         this.message = "新しいカードを追加しました。";
-
-        // 一覧を更新
         await this.loadCards();
 
-        // 追加したカードを選択状態にする
         const newCard = this.cards.find(
           card => card.cardId === ref.id
         );
         if (newCard) {
           this.selectCard(newCard);
         }
-
       } catch (error) {
-
         console.error("カード追加エラー:", error);
-
-        this.message =
-          "カードを追加できませんでした。Firestoreの権限などを確認してください。";
-
+        this.message = "カードを追加できませんでした。";
       } finally {
         this.saving = false;
       }
@@ -559,12 +516,24 @@ h2 {
 }
 
 .search-area input {
-  width: 350px;
+  width: 280px;
   padding: 10px;
   font-size: 16px;
 }
 
-/* 新規追加ボタン */
+.region-filter {
+  padding: 10px;
+  font-size: 16px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.unregistered-text {
+  color: #e53935;
+  font-weight: bold;
+}
+
 .add-button {
   padding: 10px 18px;
   border: none;
@@ -585,9 +554,8 @@ h2 {
   align-items: flex-start;
 }
 
-/* 左側 */
 .card-list {
-  width: 420px;
+  width: 440px;
   background: white;
   border: 1px solid #ccc;
   padding: 15px;
@@ -634,7 +602,6 @@ h2 {
   color: #666;
 }
 
-/* 右側 */
 .edit-area {
   width: 550px;
   background: white;
@@ -684,8 +651,13 @@ h2 {
 
 .edit-area label {
   display: block;
-  margin-bottom: 15px;
+  margin-bottom: 18px;
+  padding: 12px;
+  border: 1px solid #b8c5d1;
+  border-radius: 6px;
+  background: #f9fbfd;
   font-weight: bold;
+  box-sizing: border-box;
 }
 
 .edit-area input[type="text"],
@@ -694,20 +666,45 @@ h2 {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  margin-top: 5px;
-  padding: 9px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #aab7c4;
+  border-radius: 4px;
+  background: #fff;
   font-size: 15px;
+  font-weight: normal;
 }
 
-.checkbox-label {
-  display: flex !important;
+.edit-area input[type="file"] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #aab7c4;
+  border-radius: 4px;
+  background: #fff;
+  font-weight: normal;
+}
+
+.edit-area input:focus,
+.edit-area select:focus,
+.edit-area textarea:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
+}
+
+.edit-area label.checkbox-label {
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .checkbox-label input {
   width: 18px;
   height: 18px;
+  margin: 0;
 }
 
 .button-area {
@@ -745,10 +742,6 @@ h2 {
   background: #ddd;
 }
 
-.cancel-button:disabled {
-  cursor: default;
-}
-
 .message {
   margin-top: 15px;
   padding: 10px;
@@ -769,74 +762,5 @@ h2 {
   margin-bottom: 18px;
   font-size: 13px;
   color: #666;
-}
-
-.edit-area input[type="file"] {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  margin-top: 8px;
-  padding: 8px;
-  font-size: 14px;
-}
-
-/* 入力項目を囲む枠 */
-.edit-area label {
-  display: block;
-  margin-bottom: 18px;
-  padding: 12px;
-  border: 1px solid #b8c5d1;
-  border-radius: 6px;
-  background: #f9fbfd;
-  font-weight: bold;
-  box-sizing: border-box;
-}
-
-/* ---テキスト入力・選択欄--- */
-.edit-area input[type="text"],
-.edit-area select,
-.edit-area textarea {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  margin-top: 8px;
-  padding: 10px;
-  border: 1px solid #aab7c4;
-  border-radius: 4px;
-  background: #fff;
-  font-size: 15px;
-  font-weight: normal;
-}
-/* 画像ファイル選択欄 */
-.edit-area input[type="file"] {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  margin-top: 8px;
-  padding: 10px;
-  border: 1px solid #aab7c4;
-  border-radius: 4px;
-  background: #fff;
-  font-weight: normal;
-}
-/* 入力欄を選択したとき */
-.edit-area input:focus,
-.edit-area select:focus,
-.edit-area textarea:focus {
-  outline: none;
-  border-color: #1976d2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
-}
-/* 公開チェック欄は通常の入力枠と分ける */
-.edit-area label.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-/* チェックボックスのサイズ */
-.checkbox-label input {
-  width: 18px;
-  height: 18px;
-  margin: 0;
 }
 </style>

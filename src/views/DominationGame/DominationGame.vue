@@ -21,7 +21,7 @@
                             @click="roomLabelText() ? null : copyRoomCode()"
                         >
                             <span class="text-slate-400">{{ roomLabelText() ? '📍' : '🔑ルーム' }}</span>
-                            <span class="truncate">{{ roomLabelText() || roomCode }}</span>
+                            <span class="whitespace-pre-line text-left leading-tight">{{ roomLabelText() || roomCode }}</span>
                             <span v-if="roomLabelText()"></span>
                             <span v-else-if="roomCodeCopied" class="text-emerald-600 font-sans font-normal">コピーしました！</span>
                             <span v-else class="text-slate-400 font-sans font-normal">📋</span>
@@ -154,7 +154,7 @@
                             <div class="flex items-center gap-2 mb-3">
                                 <div class="w-5 h-5 rounded-md flex-none" :style="{ background: currentPlayer?.color }"></div>
                                 <span class="font-bold text-sm">{{ currentPlayer?.name }}</span>
-                                <button v-if="testMode" class="test-card-button" @click="showTestCards = true">🧪 カードを えらぶ</button>
+                                <button v-if="testMode" class="test-card-button" @click="showTestCards = true">🧪 デモ</button>
                                 <span class="text-sm text-slate-500 ml-auto">{{ currentPlayer?.score }}点</span>
                             </div>
 
@@ -241,7 +241,8 @@
                 <div v-if="!spectator" class="dock-panel dock-hand-panel">
                     <div class="dock-panel-title">
                         <span>🃏 あなたのカード</span>
-                        <button v-if="testMode && !spectator" class="test-card-button" @click="showTestCards = true">🧪 カードを えらぶ</button>
+                        <button v-if="testMode && !spectator" class="test-card-button" @click="showTestCards = true">🧪 デモ</button>
+                        <button v-if="!spectator" class="cave-jump-button" @click="goToCave">⛏ 洞窟へ</button>
                         <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI && !aiOnlyMode" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</span>
                         <span v-else-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」→ きいろい マスに おけるよ</span>
                     </div>
@@ -566,6 +567,19 @@
             </div>
         </div>
 
+        <!-- ■洞窟へ行く前の確認（ブラウザの確認ダイアログの代わり）。外側を押すと、やめる -->
+        <div v-if="showCaveConfirm" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" @click.self="showCaveConfirm = false">
+            <div class="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-xl" role="dialog" aria-modal="true" aria-label="洞窟へ いきますか？">
+                <p class="text-3xl">⛏</p>
+                <p class="mt-2 text-base font-black text-slate-700">{{ caveTarget() ? caveTarget().name + 'の洞窟へ いきますか？' : '洞窟へ いきますか？' }}</p>
+                <p class="mt-1 text-xs font-bold text-slate-500">洞窟の ぼうけんに いくよ</p>
+                <div class="mt-4 flex gap-2">
+                    <button class="flex-1 rounded-xl border border-slate-300 bg-slate-100 py-2.5 font-black text-slate-600" @click="showCaveConfirm = false">やめる</button>
+                    <button class="flex-1 rounded-xl bg-amber-500 py-2.5 font-black text-white" @click="goCaveNow">いく</button>
+                </div>
+            </div>
+        </div>
+
         <!-- ■テストモード（手元の開発環境、または ?test=1）：カードを自由に手札へ足す。テラは もらえなくなる -->
         <div v-if="testMode && showTestCards" class="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-3 sm:items-center" @click.self="showTestCards = false">
             <div class="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white p-4 shadow-xl">
@@ -599,7 +613,7 @@
             <div class="relative w-full max-w-lg">
                 <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" aria-label="やめる" @click="cancelChallenge">✕</button>
                 <div class="max-h-[90vh] overflow-y-auto rounded-2xl bg-[#f4f1e8] shadow-xl">
-                    <ABGameProposalB embedded challenge :question-count="2" @start="challengeStarted = true" @finish="onChallengeFinish" />
+                    <ABGameProposalB embedded challenge :city="(loadPlace() && loadPlace().city) || 'hiratsuka'" :question-count="2" @start="challengeStarted = true" @finish="onChallengeFinish" />
                 </div>
             </div>
         </div>
@@ -660,6 +674,12 @@ import ABGameProposalB from '@/views/ABGame/ABGameProposalB.vue';
 import { getSession } from '@/utils/session.js';
 import { generateSpotBoard } from './habitatBoard.js';
 import { isFresh } from '@/utils/dominationSlots.js';
+
+// ■街ごとの洞窟（洞窟のエリアの id と、表示する名前）。「洞窟へ」ボタンの行き先に使う
+const CITY_CAVE = {
+    hiratsuka: { area: 'kanagawa', name: '神奈川' },
+    kushiro: { area: 'hokkaido', name: '北海道' },
+};
 import { sfx } from '@/utils/sfx.js';
 import { addPoints } from '@/utils/points.js';
 import { isTestMode } from '@/utils/env.js';
@@ -667,7 +687,7 @@ import {
     fetchCardLibrary,
     getCurrentUser,
     toDisplayCard,
-    fetchTeamCollectionInstances,
+    fetchMyCollectionInstances,
     placeCardInstance,
     markCardInstancesEaten,
     toDominationCard
@@ -689,6 +709,8 @@ const AB_CHALLENGE_POINTS = 2
 
 // ■地形の名前（チャレンジ成功でなおる地形の案内に使う）
 const AREA_NAMES = { town: '町', forest: '森', dirt: '土', river: '川', sea: '海' }
+// ■街（mapSpots の city）と、カードの region（洞窟のエリア）の対応
+const CITY_REGION = { hiratsuka: 'kanagawa', kushiro: 'hokkaido' }
 
 // ■地形のうっすらした模様（草・水など）。ゲームの見やすさをじゃましない、うすい線だけ。
 //   SVGを、そのままマスの背景にする（マスの大きさに合わせて拡大・縮小される）
@@ -782,6 +804,7 @@ export default {
         showTerritory: false, // ゲームのおわりに、じんち（チームごとのマス）を盤面で見る
         testMode: isTestMode(), // テストモード（カードを自由にえらべる）
         showTestCards: false,
+        showCaveConfirm: false, // 「洞窟へ」の確認パネル
         usedTestCards: false, // テストのカードをつかったゲームは、テラをもらえない
         testMessage: '',
         sfxMuted: sfx.isMuted(), // 効果音のミュート
@@ -1089,6 +1112,20 @@ export default {
             }
         },
 
+        // ■今の街の洞窟（平塚市→神奈川、釧路市→北海道）。街が決まらないときは null（どの洞窟かは指定しない）
+        caveTarget() {
+            return CITY_CAVE[this.loadPlace()?.city] || null
+        },
+        // ■洞窟へ行く。まず確認パネルを出し、「いく」を押したら、今の街の洞窟のゲーム画面へ
+        goToCave() {
+            this.showCaveConfirm = true
+        },
+        goCaveNow() {
+            const target = this.caveTarget()
+            this.showCaveConfirm = false
+            this.$router.push({ name: 'CaveGame', query: target ? { area: target.area } : {} })
+        },
+
         // ■最後に地図から入った場所（{city, cityName}）。ルームの「場所」として一緒に保存する
         loadPlace() {
             try {
@@ -1102,8 +1139,13 @@ export default {
         roomLabelText() {
             const place = this.loadPlace()
             if (!place) return ''
-            if (place.spotName && place.gameNo) return `${place.spotName} ゲーム${place.gameNo}`
-            return place.cityName || ''
+            // ■街の名前（平塚市・釧路市）を1行目、場所とゲーム番号を2行目にして、バッジの中で改行する
+            const city = place.cityName || ''
+            if (place.spotName && place.gameNo) {
+                const spot = `${place.spotName} ゲーム${place.gameNo}`
+                return city ? `${city}\n${spot}` : spot
+            }
+            return city
         },
 
         // ■カードを共通のカード表示（カードライブラリ・宝箱と同じ）で出すためのデータ。
@@ -1597,8 +1639,8 @@ export default {
                         return []
                     }),
                 this.loadSavedGame(),
-                fetchTeamCollectionInstances(team).catch(e => {
-                    console.error('チームの所持カードの読み込みに失敗しました', e)
+                this.fetchMyHandInstances().catch(e => {
+                    console.error('自分の所持カードの読み込みに失敗しました', e)
                     return []
                 }),
                 slot ? this.fetchSlotContext() : Promise.resolve(null)
@@ -2017,21 +2059,28 @@ export default {
             return arr;
         },
 
-        // ■人間チームの手札：チームのメンバー全員の、手元にある所持カード
-        // ■チームの所持カード（DBの cardInstances）から、人間チームの手札を作る
+        // ■人間の手札：自分が持っている、手元にある（盤面に置いていない）カード。図鑑の「もっている」と同じ持ち主
+        async fetchMyHandInstances() {
+            const user = await getCurrentUser().catch(() => null)
+            return fetchMyCollectionInstances(user ? user.uid : null)
+        },
+
+        // ■人間の手札（DBの cardInstances から作った、自分のカードのうち、今の街の地域のもの）
         handFromInstances(instances) {
             const libraryById = Object.fromEntries(this.cardLibrary.map(card => [card.cardId, card]))
+            // ■今いる街の地域（平塚市→神奈川、釧路市→北海道）のカードだけを手札にする。地域が決まらない（テスト等）ときは絞らない
+            const region = CITY_REGION[this.loadPlace()?.city]
             return instances
                 .filter(instance => libraryById[instance.cardId])
+                .filter(instance => !region || libraryById[instance.cardId].region === region)
                 .map(instance => toDominationCard(libraryById[instance.cardId], instance.instanceId))
         },
 
         async fetchHumanHand() {
-            const team = TEAM_NAME_BY_ID[this.humanPlayerId]
             try {
-                return this.handFromInstances(await fetchTeamCollectionInstances(team))
+                return this.handFromInstances(await this.fetchMyHandInstances())
             } catch (e) {
-                console.error('チームの所持カードの読み込みに失敗しました', e)
+                console.error('自分の所持カードの読み込みに失敗しました', e)
                 return []
             }
         },
@@ -3219,6 +3268,21 @@ export default {
       white-space: nowrap;
   }
   .test-card-button:active{ transform: scale(0.95); }
+
+  /* ■「洞窟へ」ボタン（「あなたのカード」の 右はし） */
+  .cave-jump-button{
+      flex: none;
+      margin-left: auto;
+      padding: 1px 10px;
+      border: 1.5px solid #f59e0b;
+      border-radius: 9999px;
+      background: #fffbeb;
+      color: #92400e;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+  }
+  .cave-jump-button:active{ transform: scale(0.95); }
 
   /* ■レベル4（★）の支配エリア：まわり8マスが、そのチームの色で、ゆっくり光る。★は、ゆっくり脈うつ */
   .tile-domain{
