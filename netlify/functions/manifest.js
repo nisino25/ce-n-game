@@ -21,7 +21,8 @@ exports.handler = async function (event) {
   const cenId = query || cookie;
   // 会員IDの形（英数字とハイフンだけ）以外は、入れない
   const safeId = /^[0-9A-Za-z-]{8,64}$/.test(cenId) ? cenId : "";
-  const startUrl = safeId ? `/loginPage?cenId=${encodeURIComponent(safeId)}` : "/loginPage";
+  // 開始URLは、クエリではなくパス（/loginPage/会員ID）にする
+  const startUrl = safeId ? `/loginPage/${safeId}` : "/loginPage";
 
   return {
     statusCode: 200,

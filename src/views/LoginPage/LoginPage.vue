@@ -34,7 +34,8 @@ export default {
         console.log("=== LoginPage mounted ===");
         console.log("現在のURL:", window.location.href);
         console.log("検索パラメータ:", window.location.search);
-        const cenId = new URLSearchParams(
+        // 会員IDは、パス（/loginPage/会員ID）かクエリ（?cenId=会員ID）のどちらでも受け取る
+        const cenId = this.$route.params.cenId || new URLSearchParams(
             window.location.search
         ).get("cenId");
         console.log("取得した cenId:", cenId);

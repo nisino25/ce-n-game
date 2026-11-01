@@ -54,7 +54,8 @@ const routes = [
     },
 
     {
-        path: "/loginPage",
+        // ■/loginPage/会員ID の形も使う（ホーム画面の開始URLを、クエリ（?cenId=）無しで会員IDつきにするため）
+        path: "/loginPage/:cenId?",
         name: "LoginPage",
         component: LoginPage
     },
