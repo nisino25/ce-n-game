@@ -5,7 +5,6 @@
                 <div class="loader mx-auto mb-6"></div>
                 <p class="text-gray-500">よみこみ中...</p>
             </template>
-
             <template v-else>
                 <p class="text-red-500 mb-6">{{ errorMessage }}</p>
                 <button
@@ -20,9 +19,7 @@
 </template>
 
 <script>
-import db from "@/firebase.js";
-import { setSession } from "@/utils/session.js";
-
+import { loginWithCenId } from "@/utils/login.js";
 // ■このアプリは基本的にce-n.org側の会員ページから ?cenId=... 付きのリンクで
 // アクセスされる前提のため、手入力フォームは廃止し、確認中はローディング表示のみにする。
 // cenIdが無い状態でこの画面に来た場合は、正しい入口であるce-n.orgへ案内する
@@ -45,123 +42,20 @@ export default {
             this.backToCeN();
             return;
         }
-
-    console.log("cenIdがあります。会員確認を開始します");
-    this.checkUser(cenId);
-
-    //    const cenId = new URLSearchParams(window.location.search).get("cenId");
-
-    //    if (!cenId) {
-    //        this.backToCeN();
-    //        return;
-    //    }
-
-    //    this.checkUser(cenId);
+        console.log("cenIdがあります。会員確認を開始します");
+        this.checkUser(cenId);
     },
     methods: {
         backToCeN() {
             window.location.href = "https://www.ce-n.org/";
         },
 
+        // ■ログインの処理は utils/login.js にまとめてある（BypassLoginPageと同じ処理を使う）
         async checkUser(cenId) {
             this.errorMessage = "";
-            console.log("Introへ渡す cenId:", cenId);
-            // 最大2回までリトライする仕組み（一時的な通信エラー対策）
-            let maxRetries = 2;
-            let findMeResult = null;
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const findMeUrl = `https://www.ce-n.org/_functions/findMe?id=${encodeURIComponent(cenId)}`;
-                    const findMeResponse = await fetch(findMeUrl);
-                    findMeResult = await findMeResponse.json();
-                    break; // 成功したらループを抜ける
-                } catch (fetchError) {
-                    console.warn(`findMe 通信リトライ (${i + 1}/${maxRetries}):`, fetchError);
-                    if (i === maxRetries - 1) {
-                        // 通信自体が完全に失敗した場合のフェイルセーフ（必要に応じてそのまま通すかエラーにするか）
-                        console.error("findMe APIへの接続に失敗しました。続行します。");
-                        findMeResult = null; // API確認スキップ扱いにすることも可能
-                    } else {
-                        await new Promise(r => setTimeout(r, 1000)); // 1秒待ってリトライ
-                    }
-                }
-            }
-
-            if (findMeResult.message) {
-                this.$router.push({ name: "Error" });
-                return;
-            }
-            try {
-                // Firestoreからのデータ取得にもリトライを挟むとさらに安全
-                let snapshot = null;
-                for (let i = 0; i < maxRetries; i++) {
-                 try {
-                    snapshot = await db
-                        .collection("users")
-                        .where("cenId", "==", cenId)
-                        .get();
-                    break;
-                    } catch (dbError) {
-                        if (i === maxRetries - 1) throw dbError;
-                        await new Promise(r => setTimeout(r, 1000));
-                    }
-                }
-
-                // ★ 検索結果を確認するログ
-                console.log("=== LoginPage 判定 ===");
-                console.log("受け取った cenId:", cenId);
-                console.log("users検索件数:", snapshot.size);
-                console.log(
-                    "検索結果:",
-                    snapshot.docs.map(doc => ({
-                        uid: doc.id,
-                        cenId: doc.data().cenId,
-                        team: doc.data().team
-                    }))
-                );
-
-                // if (!snapshot.empty) {
-                //     await this.initializeMemberGame(cenId);
-                //     setSession("loginCenId", cenId);
-                //     setSession("playerData", JSON.stringify(snapshot.docs[0].data()));
-                //     setSession("myTeam", snapshot.docs[0].data().team);
-                //     this.$router.push({ name: "Home" });
-                //     return;
-                // }
-
-                // this.$router.push({
-                //     name: "Intro",
-                //     query: { cenId }
-                // });
-                if (!snapshot.empty) {
-                    // 既存会員：保存済みのゲームを再開
-                    const userDoc = snapshot.docs[0];
-                    const userData = userDoc.data();
-                    // ★ ここで中身を丸ごとコンソールに出してみる
-                    console.log("【デバッグ】取得したuserDataの中身:", userData);
-                    console.log("【デバッグ】introCompletedの値:", userData.introCompleted, " (型:", typeof userData.introCompleted, ")");
-
-                    if (userData.introCompleted === true) {
-                        setSession("loginCenId", cenId);
-                        setSession("playerUid", userDoc.id);
-                        setSession("playerData", JSON.stringify(userData));
-                        setSession("myTeam", userData.team);
-                        this.$router.push({ name: "Home" });
-                        return;
-                    }
-                }
-                // usersにデータがない場合だけ、初回INTROへ
-                console.log("Introへ渡す cenId:", cenId);
-                this.$router.push({
-                    name: "Intro",
-                    query: { cenId }
-                });
-                
-            } catch (error) {
-                console.error("Failed to check user:", error);
-                this.errorMessage = "確認に失敗しました。通信状況を確認してください。";
-            }
+            this.errorMessage = await loginWithCenId(cenId, this.$router);
         },
+
         async initializeMemberGame(cenId) {
             // 会員ごとに初回アクセスを判定
             const initKey = `ceN_initialized_${cenId}`;

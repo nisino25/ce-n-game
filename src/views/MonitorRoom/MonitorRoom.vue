@@ -12,7 +12,7 @@
                 class="return-button"
                 @click="endGame"
             >
-                 退出ボタン
+                 {{ $t('退出ボタン', 'Exit') }}
             </button>
 
         <!-- Title -->
@@ -40,7 +40,7 @@
                     <div class="text-xs">
                         🌱{{ areaProgress.earth }}% 💧{{ areaProgress.water }}% 🌬{{ areaProgress.air }}%
                     </div>
-                    <div class="mt-0.5 text-[10px] opacity-70">平塚の かんりょうりつ</div>
+                    <div class="mt-0.5 text-[10px] opacity-70">{{ $t('平塚の かんりょうりつ', 'Hiratsuka completion') }}</div>
                 </div>
             </div>
 
@@ -49,7 +49,7 @@
                 class="monitor monitor-cave"
                 @click="changeMode('cave-adventure/cave-entrance')"
             >
-                洞窟探検
+                {{ $t('洞窟探検', 'Cave Exploration') }}
             </button>
 
             <!-- Repair -->
@@ -64,7 +64,7 @@
                 :class="{ offline: cardCountsLoaded && personalCards < minCardsForWild }"
                 @click="goWild"
             >
-                {{ wildChecking ? "確認中…" : "すみかにもどそう！" }}
+                {{ wildChecking ? $t("確認中…", "Checking…") : $t("すみかにもどそう！", "Back to our hideout!") }}
             </button>
 
             <!-- ■生き物スキャン：要件定義済み・実装済みだが、今回のデプロイでは一旦非表示
@@ -87,22 +87,22 @@
                     <div class="text-center">
 
                         <div class="font-bold">
-                            {{ currentPlayerName }}さん、<br>
-                            ようこそ、{{ teamName }}へ
+                            {{ $t(currentPlayerName + 'さん、', 'Hi, ' + currentPlayerName + '!') }}<br>
+                            {{ $t('ようこそ、' + teamName + 'へ', 'Welcome to ' + teamName) }}
                         </div>
 
                         <div class="text-sm mt-2">
-                            チーム人数：{{ teamMembers.length }}名
+                            {{ $t('チーム人数：', 'Team members: ') }}{{ teamMembers.length }}{{ $t('名', '') }}
                         </div>
 
                         <div class="text-sm">
-                            保有カード：{{ personalCards }}枚
+                            {{ $t('保有カード：', 'Cards: ') }}{{ personalCards }}{{ $t('枚', '') }}
                         </div>
 
                         <!-- ■自分のテラ（通貨）。アイコンは仮（ベッカさん作成中）で、差し替えは public/images/coin.png -->
                         <div class="text-sm font-bold flex items-center justify-center gap-1">
-                            {{ terra === null ? "-" : terra }}テラ
-                            <img src="/images/coin.png" alt="テラ" class="h-5 w-5 object-contain">
+                            {{ terra === null ? "-" : terra }}{{ $t('テラ', ' Terra') }}
+                            <img src="/images/coin.png" :alt="$t('テラ', 'Terra')" class="h-5 w-5 object-contain">
                         </div>
 
                     </div>
@@ -177,7 +177,7 @@
             @click.self="showWildChoice = false"
         >
             <div class="w-full max-w-sm rounded-2xl border-2 border-cyan-300 bg-[#10151c] p-5 text-center text-white shadow-[0_0_24px_rgba(0,255,255,.35)]">
-                <p class="mb-4 text-2xl font-black text-cyan-300">どっちであそぶ？</p>
+                <p class="mb-4 text-2xl font-black text-cyan-300">{{ $t('どっちであそぶ？', 'How do you want to play?') }}</p>
 
                 <div class="flex flex-col gap-3">
                     <button
@@ -185,8 +185,8 @@
                         @click="resumeWild"
                     >
                         <span class="block text-2xl">▶</span>
-                        <span class="block text-xl font-black">つづきから</span>
-                        <span class="block text-sm font-bold">{{ resumePlaceName }}の つづきだよ</span>
+                        <span class="block text-xl font-black">{{ $t('つづきから', 'Continue') }}</span>
+                        <span class="block text-sm font-bold">{{ $t(resumePlaceName + 'の つづきだよ', 'Continue at ' + resumePlaceName) }}</span>
                     </button>
 
                     <button
@@ -195,11 +195,11 @@
                         @click="goWildMap"
                     >
                         <span class="block text-2xl">🗺</span>
-                        <span class="block text-xl font-black">あたらしく はじめる</span>
-                        <span class="block text-sm font-bold">ちずから えらぶよ</span>
+                        <span class="block text-xl font-black">{{ $t('あたらしく はじめる', 'Start a new game') }}</span>
+                        <span class="block text-sm font-bold">{{ $t('ちずから えらぶよ', 'Pick a place on the map') }}</span>
                     </button>
                     <p v-if="cardsShort" class="text-sm font-bold text-amber-300">
-                        あたらしく はじめるには、カードが あと{{ minCardsForWild - personalCards }}まい いるよ
+                        {{ $t('あたらしく はじめるには、カードが あと' + cardsMissing + 'まい いるよ', 'To start a new game, you need ' + cardsMissing + ' more cards') }}
                     </p>
                 </div>
 
@@ -207,7 +207,7 @@
                     class="mt-4 w-full rounded-lg border border-slate-500 px-4 py-2 text-sm font-bold hover:bg-white/10"
                     @click="showWildChoice = false"
                 >
-                    やめる
+                    {{ $t('やめる', 'Cancel') }}
                 </button>
             </div>
         </div>
@@ -219,21 +219,21 @@
             @click.self="showCardShortage = false"
         >
             <div class="w-full max-w-sm rounded-2xl border-2 border-cyan-300 bg-[#10151c] p-6 text-center text-white shadow-[0_0_24px_rgba(0,255,255,.35)]">
-                <p class="mb-2 text-xl font-black text-cyan-300">カードが足りません</p>
-                <p class="mb-1 text-sm">「すみかにもどそう！」は、手元の生きものカードが<br><strong>{{ minCardsForWild }}枚以上</strong>ないと遊べません。</p>
-                <p class="mb-5 text-sm text-slate-300">いま {{ personalCards }}枚（あと{{ minCardsForWild - personalCards }}枚）</p>
+                <p class="mb-2 text-xl font-black text-cyan-300">{{ $t('カードが足りません', 'Not enough cards') }}</p>
+                <p class="mb-1 text-sm">{{ $t('「すみかにもどそう！」は、手元の生きものカードが', 'To play "Back to our hideout!", you need') }}<br><strong>{{ $t(minCardsForWild + '枚以上', minCardsForWild + ' or more cards') }}</strong>{{ $t('ないと遊べません。', '.') }}</p>
+                <p class="mb-5 text-sm text-slate-300">{{ $t('いま ', 'You have ') }}{{ personalCards }}{{ $t('枚（あと', ' (') }}{{ cardsMissing }}{{ $t('枚）', ' more needed)') }}</p>
                 <div class="flex flex-col gap-2">
                     <button
                         class="rounded-lg bg-cyan-500 px-4 py-2 font-bold text-slate-900 hover:bg-cyan-400"
                         @click="$router.push({ name: 'CardLibrary' })"
                     >
-                        カードライブラリを見る
+                        {{ $t('カードライブラリを見る', 'Open Card Library') }}
                     </button>
                     <button
                         class="rounded-lg border border-slate-500 px-4 py-2 font-bold hover:bg-white/10"
                         @click="showCardShortage = false"
                     >
-                        とじる
+                        {{ $t('とじる', 'Close') }}
                     </button>
                 </div>
             </div>
@@ -248,18 +248,18 @@
                 <div class="door-line absolute h-full w-[2px] left-0"></div>
             </div>
             <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center z-10 bg-gray-800 bg-opacity-80 px-4 py-2 rounded-lg shadow-lg room-accent-text text-lg font-bold">
-                <span class="">出動中</span>
+                <span class="">{{ $t('出動中', 'On mission') }}</span>
             </div>
 						
         </div>
 
         <!-- ■どんな画面であそばれているか、人数だけを数えていることのおしらせ（名前やIDは使わない） -->
-        <p class="privacy-note">どんな画面で あそばれているか、回数だけを かぞえています。名前や ID は つかいません。</p>
+        <p class="privacy-note">{{ $t('どんな画面で あそばれているか、回数だけを かぞえています。名前や ID は つかいません。', 'We only count how many times each screen is used. No names or IDs are used.') }}</p>
 
         <!-- ■アイコン：図鑑（カードライブラリ）と看板（お知らせ・みんなの声） -->
         <div class="room-icon-row">
-            <RoomIconButton kind="library" label="ずかん" @click="$router.push({ name: 'CardLibrary' })" />
-            <RoomIconButton kind="board" label="かんばん" @click="$router.push({ name: 'NoticeBoard' })" />
+            <RoomIconButton kind="library" :label="$t('ずかん', 'Library')" @click="$router.push({ name: 'CardLibrary' })" />
+            <RoomIconButton kind="board" :label="$t('かんばん', 'Board')" @click="$router.push({ name: 'NoticeBoard' })" />
         </div>
 
         <!-- ■3Dの机（「◯◯の部屋」のテーブル）。テーブルは1つだけ -->
@@ -301,27 +301,27 @@
 							>
 							<div class="bg-white rounded-xl shadow-xl p-6 w-[300px]">
 									<h2 class="text-xl font-bold text-center mb-5">
-											メニュー
+											{{ $t('メニュー', 'Menu') }}
 									</h2>
 
 									<button
 											class="w-full p-3 mb-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
 											@click="editProfile"
 									>
-											プロフィール編集
+											{{ $t('プロフィール編集', 'Edit profile') }}
 									</button>
 
 									<button
 											class="w-full p-3 mb-3 bg-red-500 hover:bg-red-600 text-white rounded-lg"
 											@click="endGame"
 									>
-											ゲームを終了する
+											{{ $t('ゲームを終了する', 'Quit game') }}
 									</button>
 									<button
 											class="w-full p-3 bg-gray-300 hover:bg-gray-400 rounded-lg"
 											@click="showProfileModal = false"
 									>
-											閉じる
+											{{ $t('閉じる', 'Close') }}
 									</button>
                             
                             </div>
@@ -457,17 +457,21 @@ export default {
             return this.personalCards < this.minCardsForWild;
         },
 
+        cardsMissing() {
+            return this.minCardsForWild - this.personalCards;
+        },
+
 
         teamName() {
             switch (this.myTeam) {
                 case "earth":
-                    return "土の部屋";
+                    return this.$t("土の部屋", "Earth Room");
 
                 case "water":
-                    return "水の部屋";
+                    return this.$t("水の部屋", "Water Room");
 
                 case "air":
-                    return "風の部屋";
+                    return this.$t("風の部屋", "Air Room");
 
                 default:
                     return "";
@@ -649,14 +653,14 @@ export default {
                     return game.tierTeam && game.tierTeam[4] && teams.size >= 3 && Array.isArray(game.moves) && game.moves.length && game.slot && game.slot.habitat;
                 });
                 if (!doc) {
-                    this.demoMessage = "レベル4が出て、3チームすべてが置いた試合は、まだないよ";
+                    this.demoMessage = this.$t("レベル4が出て、3チームすべてが置いた試合は、まだないよ", "No match yet where a Level 4 card came out and all 3 teams placed cards");
                     return;
                 }
                 localStorage.setItem("dominationViewResult", doc.id);
                 this.$router.push("/dominationGame");
             } catch (e) {
                 console.error("デモの試合を読めませんでした", e);
-                this.demoMessage = "デモの試合を読めませんでした";
+                this.demoMessage = this.$t("デモの試合を読めませんでした", "Could not load the demo match");
             }
         },
 
@@ -668,10 +672,10 @@ export default {
                 const user = await getCurrentUser();
                 if (!user) throw new Error("ユーザーが見つかりません");
                 await db.collection("users").doc(user.uid).update({ tutorialCleared: {} });
-                this.tutorialResetMessage = "消しました。次に地図で地域を選ぶと動画が流れます";
+                this.tutorialResetMessage = this.$t("消しました。次に地図で地域を選ぶと動画が流れます", "Cleared. The tutorial video will play next time you pick a region on the map");
             } catch (error) {
                 console.error("チュートリアルフラグの削除に失敗しました:", error);
-                this.tutorialResetMessage = "消せませんでした。通信状況を確認してください";
+                this.tutorialResetMessage = this.$t("消せませんでした。通信状況を確認してください", "Could not clear it. Please check your connection");
             } finally {
                 this.tutorialResetting = false;
             }
@@ -712,7 +716,7 @@ export default {
                 let local = null;
                 try { local = JSON.parse(localStorage.getItem("dominationPlace")); } catch (e) { local = null; }
                 const place = local || data.place;
-                this.resumePlaceName = (place && (place.spotName || place.cityName)) || "前回の陣取りゲーム";
+                this.resumePlaceName = (place && (place.spotName || place.cityName)) || this.$t("前回の陣取りゲーム", "your last game");
 
                 this.resumeRoom = roomCode;
             } catch (error) {
@@ -775,7 +779,7 @@ export default {
                     this.wildChecking = false;
                 }
                 if (!this.cardCountsLoaded) {
-                    this.showNotice("カードの枚数を確認できませんでした。通信状況を確認して、もう一度押してください");
+                    this.showNotice(this.$t("カードの枚数を確認できませんでした。通信状況を確認して、もう一度押してください", "Could not check your card count. Please check your connection and press again"));
                     return;
                 }
             }
