@@ -10,7 +10,7 @@ module.exports = defineConfig({
   pwa: {
     // ■ホーム画面に追加できるPWAとしての設定
     // 起動先は本番のハブサイト（shineki-game）が「洞窟ゲーム」リンクで使っているのと同じ
-    // /loginPage?cenId=... 形式にしている。cenIdをURLに埋め込むことで、iOSのstandalone
+    // /loginPage/会員ID の形にしている（manifest関数が会員ごとに返す）。cenIdをURLに埋め込むことで、iOSのstandalone
     // モードでlocalStorage/Cookieが引き継がれない場合でも、毎回このIDでログインし直せる
     // （LoginPage自体はログイン済みでも安全に再訪できるようrouter側を調整済み）
     name: 'ちきゅうたんけん隊',
