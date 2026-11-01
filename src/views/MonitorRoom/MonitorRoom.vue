@@ -253,9 +253,6 @@
 						
         </div>
 
-        <!-- ■どんな画面であそばれているか、人数だけを数えていることのおしらせ（名前やIDは使わない） -->
-        <p class="privacy-note">{{ $t('どんな画面で あそばれているか、回数だけを かぞえています。名前や ID は つかいません。', 'We only count how many times each screen is used. No names or IDs are used.') }}</p>
-
         <!-- ■アイコン：図鑑（カードライブラリ）と看板（お知らせ・みんなの声） -->
         <div class="room-icon-row">
             <RoomIconButton kind="library" :label="$t('ずかん', 'Library')" @click="$router.push({ name: 'CardLibrary' })" />
@@ -1261,17 +1258,6 @@ export default {
   .monitor-cave{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #ffb347); }
   .monitor-wild{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #5ee08a); }
 
-  /* ■端末の統計についてのおしらせ（目立たないように、小さく） */
-  .privacy-note{
-      margin: 0 auto 8px;
-      padding: 0 12px;
-      max-width: 420px;
-      font-size: 10px;
-      line-height: 1.5;
-      text-align: center;
-      color: var(--team-accent, #0ff);
-      opacity: 0.55;
-  }
 
   /* =========================
      3D Floor

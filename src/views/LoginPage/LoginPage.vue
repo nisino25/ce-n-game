@@ -20,6 +20,7 @@
 
 <script>
 import { loginWithCenId } from "@/utils/login.js";
+import { getSession } from "@/utils/session.js";
 // ■このアプリは基本的にce-n.org側の会員ページから ?cenId=... 付きのリンクで
 // アクセスされる前提のため、手入力フォームは廃止し、確認中はローディング表示のみにする。
 // cenIdが無い状態でこの画面に来た場合は、正しい入口であるce-n.orgへ案内する
@@ -38,8 +39,9 @@ export default {
         ).get("cenId");
         console.log("取得した cenId:", cenId);
         if (!cenId) {
-            console.log("cenIdがありません。ce-n.orgへ移動します");
-            this.backToCeN();
+            // cenIdが無いときは、ce-n.orgへ飛ばさない。ログイン中ならホーム、そうでなければ会員IDの入力画面へ
+            const loggedIn = getSession("loginCenId");
+            this.$router.replace({ name: loggedIn ? "Home" : "BypassLogin" });
             return;
         }
         console.log("cenIdがあります。会員確認を開始します");
