@@ -25,6 +25,7 @@ module.exports = defineConfig({
       short_name: 'ちきゅうたんけん',
       background_color: '#0b1220',
       display: 'standalone',
+      scope: '/',
       start_url: '/loginPage'
     },
 

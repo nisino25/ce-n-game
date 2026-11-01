@@ -36,6 +36,8 @@ exports.handler = async function (event) {
       theme_color: "#0b1220",
       background_color: "#0b1220",
       display: "standalone",
+      // 範囲は必ず / にする（start_url が /loginPage/会員ID だと、既定の範囲が /loginPage/ になり、ログイン後の / がアプリの外扱いになるため）
+      scope: "/",
       start_url: startUrl,
       icons: ICONS,
     }),
