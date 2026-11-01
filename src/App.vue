@@ -6,7 +6,6 @@
 
 <script>
 import { isLocalEnv } from "@/utils/env.js";
-import { getSession } from "@/utils/session.js";
 
 // 2回続けてタップしたら、拡大につながる動きを止める（入力欄などは、そのまま使える）
 function preventDoubleTapZoom(event) {
@@ -27,27 +26,11 @@ export default {
   },
   mounted() {
     document.addEventListener("touchend", preventDoubleTapZoom, { passive: false });
-    this.usePersonalManifest();
     this.onResize = () => {
       this.viewport = { w: window.innerWidth, h: window.innerHeight };
     };
     window.addEventListener("resize", this.onResize);
   },
-  methods: {
-    // ログイン中は、この会員のIDを開始URLに入れたマニフェストに切り替える（ホーム画面に入れるとき用）
-    usePersonalManifest() {
-      const cenId = getSession("loginCenId");
-      if (!cenId || isLocalEnv()) return;
-      let link = document.querySelector('link[rel="manifest"]');
-      if (!link) {
-        link = document.createElement("link");
-        link.rel = "manifest";
-        document.head.appendChild(link);
-      }
-      link.href = `/.netlify/functions/manifest?cenId=${encodeURIComponent(cenId)}`;
-    },
-  },
-
   beforeUnmount() {
     document.removeEventListener("touchend", preventDoubleTapZoom);
     window.removeEventListener("resize", this.onResize);
