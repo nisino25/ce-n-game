@@ -13,9 +13,7 @@
       <!-- 地域フィルター（未登録の抽出に対応） -->
       <select v-model="selectedRegion" class="region-filter">
         <option value="">すべての地域</option>
-        <option value="hokkaido">北海道</option>
-        <option value="kanagawa">神奈川</option>
-        <option value="kyoto">京都</option>
+        <option v-for="(label, key) in regionLabels" :key="key" :value="key">{{ label }}</option>
         <option value="none">【未登録】（地域なし）</option>
       </select>
 
@@ -54,7 +52,7 @@
             <div class="list-detail">
               Lv.{{ card.level }}
               ／ レア {{ card.rarity }}
-              ／ 地域: <span :class="{'unregistered-text': !card.region}">{{ card.region || "未登録" }}</span>
+              ／ 地域: <span :class="{'unregistered-text': !hasRegion(card)}">{{ regionNames(card) || "未登録" }}</span>
               ／ 発見者: {{ card.owner || "なし" }}
             </div>
           </div>
@@ -110,16 +108,14 @@
           <input v-model="editCard.frame" type="text" />
         </label>
 
-        <!-- 3. ★位置を変更：地域 (tiiki / region) （カードフレームの次） -->
-        <label>
-          地域 (tiiki)
-          <select v-model="editCard.region">
-            <option value="">-- 未登録 --</option>
-            <option value="hokkaido">北海道</option>
-            <option value="kanagawa">神奈川</option>
-            <option value="kyoto">京都</option>
-          </select>
-        </label>
+        <!-- 3. ★位置を変更：地域 (tiiki / regions) （カードフレームの次）。複数選べる -->
+        <fieldset class="region-checks">
+          <legend>地域（複数選べます）</legend>
+          <label v-for="(label, key) in regionLabels" :key="key">
+            <input type="checkbox" :value="key" v-model="editCard.regions">
+            {{ label }}
+          </label>
+        </fieldset>
 
         <!-- 4. カード画像を選択 -->
         <label>
@@ -260,6 +256,7 @@
 <script>
 import db from "@/firebase.js";
 import { compressCardImage } from "@/utils/creatureCard.js";
+import { cardRegions, REGION_LABELS } from "@/utils/cards.js";
 
 export default {
   name: "CardAdmin",
@@ -269,6 +266,7 @@ export default {
       cards: [],
       searchText: "",
       selectedRegion: "",
+      regionLabels: REGION_LABELS,
       selectedCard: null,
       editCard: null,
       foodText: "",
@@ -288,9 +286,9 @@ export default {
 
         let matchRegion = true;
         if (this.selectedRegion === "none") {
-          matchRegion = !card.region || card.region === "";
+          matchRegion = !this.hasRegion(card);
         } else if (this.selectedRegion) {
-          matchRegion = card.region === this.selectedRegion;
+          matchRegion = cardRegions(card).includes(this.selectedRegion);
         }
 
         return matchName && matchRegion;
@@ -303,6 +301,15 @@ export default {
   },
 
   methods: {
+    // 地域の名前を「・」でつないで出す（生き物カードは複数の地域を持つ）
+    regionNames(card) {
+      return cardRegions(card).map(key => this.regionLabels[key] || key).join("・");
+    },
+
+    hasRegion(card) {
+      return cardRegions(card).length > 0;
+    },
+
     async loadCards() {
       try {
         const snapshot = await db
@@ -327,7 +334,7 @@ export default {
     selectCard(card) {
       this.isNewCard = false;
       this.selectedCard = card;
-      this.editCard = { ...card };
+      this.editCard = { ...card, regions: cardRegions(card) };
 
       if (Array.isArray(card.food)) {
         this.foodText = card.food.join("\n");
@@ -369,7 +376,7 @@ export default {
         image: "",
         level: 1,
         rarity: "D",
-        region: "",
+        regions: [],
         habitat: "forest",
         terrain: "land",
         frame: "silver",
@@ -410,7 +417,7 @@ export default {
           image: this.editCard.image || "",
           level: Number(this.editCard.level) || 1,
           rarity: this.editCard.rarity || "D",
-          region: this.editCard.region || "",
+          regions: this.editCard.regions || [],
           habitat: this.editCard.habitat || "",
           terrain: this.editCard.terrain || "land",
           frame: this.editCard.frame || "silver",
@@ -462,7 +469,7 @@ export default {
           image: this.editCard.image || "",
           level: Number(this.editCard.level) || 1,
           rarity: this.editCard.rarity || "D",
-          region: this.editCard.region || "",
+          regions: this.editCard.regions || [],
           habitat: this.editCard.habitat || "",
           terrain: this.editCard.terrain || "land",
           frame: this.editCard.frame || "silver",
@@ -519,6 +526,26 @@ h2 {
   width: 280px;
   padding: 10px;
   font-size: 16px;
+}
+
+.region-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 8px 0;
+}
+
+.region-checks legend {
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+.region-checks label {
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .region-filter {

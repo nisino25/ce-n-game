@@ -147,6 +147,7 @@ import {
     MIN_CARDS_FOR_DOMINATION,
     toDisplayCard,
     REGION_LABELS,
+    cardRegions,
     TERRAIN_LABELS,
     getCurrentUser,
     fetchCardLibrary,
@@ -216,7 +217,7 @@ export default {
             return this.cards.filter(card =>
                 this.matchesTab(card)
                 && (this.tab !== "all" || this.matchesOwnedFilter(card))
-                && (this.regionFilter === "all" || card.region === this.regionFilter)
+                && (this.regionFilter === "all" || cardRegions(card).includes(this.regionFilter))
             );
         },
 

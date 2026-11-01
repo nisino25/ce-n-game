@@ -10,7 +10,31 @@ export const MIN_CARDS_FOR_DOMINATION = 10;
 
 export const TEAM_LABELS = { earth: "土", water: "水", air: "風" };
 
-export const REGION_LABELS = { hokkaido: "北海道", kanagawa: "神奈川", kyoto: "京都" };
+// 地域（地方）の名前。生き物カードは、生息する地方を複数持てる（API の distribution と同じ9地方）
+export const REGION_LABELS = {
+    hokkaido: "北海道エリア",
+    tohoku: "東北エリア",
+    kanto: "関東エリア",
+    chubu: "中部エリア",
+    kinki: "近畿エリア",
+    chugoku: "中国エリア",
+    shikoku: "四国エリア",
+    kyushu: "九州エリア",
+    okinawa: "沖縄エリア"
+};
+
+// 以前の地域名（神奈川・京都）は、いまの地方に読み替える
+const LEGACY_REGION_ALIASES = { kanagawa: "kanto", kyoto: "kinki" };
+
+export function normalizeRegion(region) {
+    return LEGACY_REGION_ALIASES[region] || region;
+}
+
+// カードが属する地域の一覧。生き物カードは regions（複数）、それ以外は region（ひとつ）
+export function cardRegions(card) {
+    const list = Array.isArray(card.regions) ? card.regions : [card.region];
+    return list.filter(Boolean).map(normalizeRegion);
+}
 
 export const TERRAIN_LABELS = { land: "陸", water: "水辺" };
 
@@ -93,7 +117,8 @@ export async function countCollectionCards(where) {
 // ■宝箱から出すカードを選ぶ：そのエリアのカードから、レア度の重みで抽選。
 // そのエリアのカードが無ければ、全カードから選ぶ
 export function drawCard(library, region) {
-    const regionCards = library.filter(card => card.region === region);
+    const target = normalizeRegion(region);
+    const regionCards = library.filter(card => cardRegions(card).includes(target));
 
     const silverCards = library.filter(card => card.frame === "silver" && card.published === true && card.source !== "scan");
     // 指定地域かつ銀フレームのカードに絞り込む
