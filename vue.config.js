@@ -25,7 +25,7 @@ module.exports = defineConfig({
       short_name: 'ちきゅうたんけん',
       background_color: '#0b1220',
       display: 'standalone',
-      start_url: '/loginPage?cenId=33d85b19-663f-4849-87ae-a7232ff33fda'
+      start_url: '/loginPage'
     },
 
     workboxPluginMode: 'GenerateSW',

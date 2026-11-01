@@ -5,40 +5,43 @@
 
             <header class="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 class="text-2xl font-black tracking-wide text-cyan-300">カードライブラリ</h1>
-                    <p class="text-sm text-slate-400">登録されている生きものカードと、あなたが持っている枚数</p>
+                    <h1 class="text-2xl font-black tracking-wide text-cyan-300">{{ $t('カードライブラリ', 'Card book') }}</h1>
+                    <p class="text-sm text-slate-400">{{ $t('登録されている生きものカードと、あなたが持っている枚数', 'All creature cards, and how many you have') }}</p>
                 </div>
                 <button
                     class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-bold hover:bg-white/10"
                     @click="$router.back()"
                 >
-                    もどる
+                    {{ $t('もどる', 'Back') }}
                 </button>
                 <!-- クリック修正前：@click="$router.push({ name: 'Home' })" -->
 
             </header>
 
-            <div v-if="loading" class="py-20 text-center text-slate-400">よみこみ中…</div>
+            <div v-if="loading" class="loading-box">
+                <div class="loading-cards"><span></span><span></span><span></span></div>
+                <p>{{ $t('よみこみ中…', 'Loading…') }}</p>
+            </div>
             <div v-else-if="loadError" class="py-20 text-center text-red-400">{{ loadError }}</div>
 
             <template v-else>
                 <!-- まとめ -->
-                <section class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <section class="mb-5 grid grid-cols-4 gap-2 text-center">
                     <div class="summary-box">
-                        <div class="summary-label">登録カード</div>
-                        <div class="summary-value">{{ library.length }}<small>種類</small></div>
+                        <div class="summary-label">{{ $t('登録カード', 'Cards in book') }}</div>
+                        <div class="summary-value">{{ library.length }}<small>{{ $t('種類', 'kinds') }}</small></div>
                     </div>
                     <div class="summary-box">
-                        <div class="summary-label">持っている種類</div>
-                        <div class="summary-value">{{ ownedKinds }}<small>種類</small></div>
+                        <div class="summary-label">{{ $t('持っている種類', 'Kinds you have') }}</div>
+                        <div class="summary-value">{{ ownedKinds }}<small>{{ $t('種類', 'kinds') }}</small></div>
                     </div>
                     <div class="summary-box">
-                        <div class="summary-label">手元のカード</div>
-                        <div class="summary-value">{{ collectionTotal }}<small>枚</small></div>
+                        <div class="summary-label">{{ $t('手元のカード', 'Cards you have') }}</div>
+                        <div class="summary-value">{{ collectionTotal }}<small>{{ $t('枚', 'cards') }}</small></div>
                     </div>
                     <div class="summary-box">
-                        <div class="summary-label">盤面に置いたカード</div>
-                        <div class="summary-value">{{ placedTotal }}<small>枚</small></div>
+                        <div class="summary-label">{{ $t('使用中のカード', 'Cards in use') }}</div>
+                        <div class="summary-value">{{ placedTotal }}<small>{{ $t('枚', 'cards') }}</small></div>
                     </div>
                 </section>
 
@@ -47,13 +50,14 @@
                     :class="collectionTotal >= minCards ? 'bg-emerald-900/60 text-emerald-200' : 'bg-amber-900/50 text-amber-200'"
                 >
                     <template v-if="collectionTotal >= minCards">
-                        ✅ 手元のカードが{{ minCards }}枚以上あるので「すみかにもどそう！」で遊べます
+                        ✅ {{ $t(`手元のカードが${minCards}枚以上あるので「すみかにもどそう！」で遊べます`, `You have ${minCards}+ cards, so you can play "Back to our hideout!"`) }}
                     </template>
                     <template v-else>
-                        🔒 「すみかにもどそう！」は手元のカードが{{ minCards }}枚以上で遊べます（あと{{ minCards - collectionTotal }}枚）
+                        🔒 {{ $t(`「すみかにもどそう！」は手元のカードが${minCards}枚以上で遊べます（あと${minCards - collectionTotal}枚）`, `"Back to our hideout!" needs ${minCards}+ cards (${minCards - collectionTotal} more)`) }}
                     </template>
                 </p>
 
+                <div class="sticky-bar">
                 <!-- タブ：ぜんぶ／じぶんがとった／ほかの人がとった（タブを選ぶと、下の「もっている」などの絞り込みは使わない） -->
                 <div class="mb-2 flex flex-wrap gap-2">
                     <button
@@ -63,90 +67,158 @@
                         :class="{ active: tab === option.value }"
                         @click="tab = option.value"
                     >
-                        {{ option.label }}
+                        {{ $t(option.label, option.labelEn) }}
                     </button>
                 </div>
 
-                <!-- 絞り込み：1段目＝持っているかどうか（最初は「もっている」）、2段目＝ロケーション（タブが「ぜんぶ」のときだけ） -->
-                <div v-if="tab === 'all'" class="mb-2 flex flex-wrap gap-2">
-                    <button
-                        v-for="option in ownedOptions"
-                        :key="option.value"
-                        class="filter-button"
-                        :class="{ active: ownedFilter === option.value }"
-                        @click="ownedFilter = option.value"
-                    >
-                        {{ option.label }}
+                <!-- 絞り込み：ボタンを押すと、モーダルで持ち主・持っているか・場所・作られた日を選ぶ -->
+                <div class="mb-4 flex flex-wrap items-center gap-3">
+                    <button class="filter-button" :class="{ active: activeFilterCount > 0 }" @click="filterOpen = true">
+                        🔍 {{ $t('絞りこみ', 'Filter') }}<span v-if="activeFilterCount" class="ml-1">（{{ activeFilterCount }}）</span>
                     </button>
-                </div>
-                <div class="mb-4 flex flex-wrap gap-2">
-                    <button
-                        v-for="option in regionOptions"
-                        :key="option.value"
-                        class="filter-button"
-                        :class="{ active: regionFilter === option.value }"
-                        @click="regionFilter = option.value"
-                    >
-                        {{ option.label }}
-                    </button>
+                    <span class="text-xs text-slate-400">{{ filterSummary }}</span>
                 </div>
 
+                </div>
                 <!-- カード一覧 -->
                 <div v-if="!filteredCards.length" class="py-10 text-center text-slate-400">
-                    該当するカードがありません
+                    {{ $t('該当するカードがありません', 'No cards match') }}
                 </div>
                 <!-- ■宝箱・獲得カード一覧と同じカードデザイン（CollectionCard）で表示 -->
-                <div class="library-grid">
+                <div ref="grid" class="library-grid" :class="{ 'three-up': threeUp }">
                     <!-- ■タップするとカードを拡大して見られる -->
                     <button
-                        v-for="(card, index) in filteredCards"
+                        v-for="(card, index) in pagedCards"
                         :key="card.cardId"
                         class="library-item"
-                        :class="{ unowned: !card.owned }"
-                        :aria-label="card.name + 'を拡大して見る'"
-                        @click="focusCard(index)"
+                        :class="{ unowned: !card.owned, compact: threeUp }"
+                        :style="itemStyle"
+                        :aria-label="$t(card.name + 'を拡大して見る', 'Zoom in on ' + card.name)"
+                        @click="focusCard(pageStart + index, $event)"
                     >
                         <CollectionCard :card="displayCard(card)" />
-                        <span v-if="isMine(card)" class="mine-badge">📷 じぶん</span>
+                        <span v-if="isMine(card)" class="mine-badge">📷 {{ $t('じぶん', 'Mine') }}</span>
                         <span v-if="card.collectionCount" class="count-badge">×{{ card.collectionCount }}</span>
-                        <span v-else-if="card.placedCount" class="count-badge placed">盤面 ×{{ card.placedCount }}</span>
-                        <span v-else class="lock-badge">もっていない</span>
+                        <span v-else-if="card.placedCount" class="count-badge placed">{{ $t('使用中', 'In use') }} ×{{ card.placedCount }}</span>
                     </button>
                 </div>
+                <nav v-if="pageCount > 1" class="pager">
+                    <button class="filter-button" :disabled="page === 1" @click="goPage(page - 1)">◀</button>
+                    <button
+                        v-for="n in pageCount"
+                        :key="n"
+                        class="filter-button"
+                        :class="{ active: n === page }"
+                        @click="goPage(n)"
+                    >
+                        {{ n }}
+                    </button>
+                    <button class="filter-button" :disabled="page === pageCount" @click="goPage(page + 1)">▶</button>
+                </nav>
             </template>
 
         </div>
 
-        <!-- ■カードの拡大表示（宝箱の獲得カード一覧と同じ操作感） -->
-        <div v-if="focusedCard" class="focus-modal" @click.self="closeFocus">
-            <button class="focus-close" aria-label="閉じる" @click="closeFocus">✕</button>
-            <button class="focus-nav focus-prev" aria-label="前のカード" :disabled="focusedIndex === 0" @click.stop="moveFocus(-1)">◀</button>
+        <!-- ■絞りこみのモーダル（下から出る） -->
+        <div v-if="filterOpen" class="filter-modal" @click.self="filterOpen = false">
+            <div class="filter-panel">
+                <div class="filter-head">
+                    <h2>{{ $t('絞りこみ', 'Filter') }}</h2>
+                    <div class="flex gap-2">
+                        <button class="filter-button" @click="resetFilters">{{ $t('リセット', 'Reset') }}</button>
+                        <button class="filter-button active" @click="filterOpen = false">{{ $t('閉じる', 'Close') }}</button>
+                    </div>
+                </div>
 
-            <div :key="focusedCard.cardId" class="focus-card" :style="{ '--s': focusScale }">
+                <section v-if="tab === 'all'">
+                    <h3>{{ $t('持っているか', 'Owned or not') }}</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="option in ownedOptions"
+                            :key="option.value"
+                            class="filter-button"
+                            :class="{ active: ownedFilter === option.value }"
+                            @click="ownedFilter = option.value"
+                        >
+                            {{ $t(option.label, option.labelEn) }}
+                        </button>
+                    </div>
+                </section>
+
+                <section>
+                    <h3>{{ $t('場所', 'Place') }}</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="option in regionOptions"
+                            :key="option.value"
+                            class="filter-button"
+                            :class="{ active: regionFilter === option.value }"
+                            @click="regionFilter = option.value"
+                        >
+                            {{ $t(option.label, option.labelEn) }}
+                        </button>
+                    </div>
+                </section>
+
+                <section>
+                    <h3>{{ $t('作られた日', 'Created') }}</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-for="option in dateOptions"
+                            :key="option.value"
+                            class="filter-button"
+                            :class="{ active: dateFilter === option.value }"
+                            @click="dateFilter = option.value"
+                        >
+                            {{ $t(option.label, option.labelEn) }}
+                        </button>
+                    </div>
+                    <div v-if="dateFilter === 'custom'" class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                        <input v-model="dateFrom" type="date" class="date-input">
+                        <span>〜</span>
+                        <input v-model="dateTo" type="date" class="date-input">
+                    </div>
+                    <p class="mt-2 text-xs text-slate-500">{{ $t('作られた日が分からないカードは、作られた日で絞ったときは出ません', 'Cards with no creation date are hidden when filtering by date') }}</p>
+                </section>
+            </div>
+        </div>
+
+        <!-- ■カードの拡大表示（宝箱の獲得カード一覧と同じ操作感） -->
+        <transition name="focus-fade">
+        <div v-if="focusedCard" class="focus-modal" @click.self="closeFocus">
+            <button class="focus-close" :aria-label="$t('閉じる', 'Close')" @click="closeFocus">✕</button>
+            <button class="focus-nav focus-prev" :aria-label="$t('前のカード', 'Previous card')" :disabled="focusedIndex === 0" @click.stop="moveFocus(-1)">◀</button>
+
+            <div
+                :key="focusedCard.cardId"
+                class="focus-card"
+                :style="{ '--s': focusScale, '--ox': focusOrigin.x + 'px', '--oy': focusOrigin.y + 'px', '--os': focusOrigin.s }"
+            >
                 <CollectionCard :card="displayCard(focusedCard)" />
             </div>
 
-            <button class="focus-nav focus-next" aria-label="次のカード" :disabled="focusedIndex === filteredCards.length - 1" @click.stop="moveFocus(1)">▶</button>
+            <button class="focus-nav focus-next" :aria-label="$t('次のカード', 'Next card')" :disabled="focusedIndex === filteredCards.length - 1" @click.stop="moveFocus(1)">▶</button>
             <p class="focus-count">
                 {{ focusedIndex + 1 }} / {{ filteredCards.length }}
                 <span class="focus-owned">
-                    <template v-if="isMine(focusedCard)">&emsp;📷 じぶんがとった</template>
-                    <template v-if="focusedCard.collectionCount">&emsp;もっている ×{{ focusedCard.collectionCount }}</template>
-                    <template v-if="focusedCard.placedCount">&emsp;盤面 ×{{ focusedCard.placedCount }}</template>
-                    <template v-if="!focusedCard.owned">&emsp;もっていない</template>
+                    <template v-if="isMine(focusedCard)">&emsp;📷 {{ $t('じぶんがとった', 'Caught by me') }}</template>
+                    <template v-if="focusedCard.collectionCount">&emsp;{{ $t('もっている', 'Owned') }} ×{{ focusedCard.collectionCount }}</template>
+                    <template v-if="focusedCard.placedCount">&emsp;{{ $t('使用中', 'In use') }} ×{{ focusedCard.placedCount }}</template>
                 </span>
             </p>
         </div>
+        </transition>
     </div>
 </template>
 
 <script>
 import CollectionCard from "@/views/CaveAdventure/CollectionCard.vue";
 import { getSession } from "@/utils/session.js";
+import { REGION_TILES } from "@/utils/creatureCardMapping.js";
+import { t } from "@/utils/lang.js";
 import {
     MIN_CARDS_FOR_DOMINATION,
     toDisplayCard,
-    REGION_LABELS,
     cardRegions,
     TERRAIN_LABELS,
     getCurrentUser,
@@ -162,37 +234,77 @@ export default {
     data() {
         return {
             loading: true,
+            gridWidth: 0,
+            filterOpen: false,
+            page: 1,
+            pageSize: 15,
+            dateFilter: "all",
+            dateFrom: "",
+            dateTo: "",
+            dateOptions: [
+                { value: "all", label: "すべて", labelEn: "All" },
+                { value: "today", label: "今日", labelEn: "Today" },
+                { value: "week", label: "1週間以内", labelEn: "Within 1 week" },
+                { value: "month", label: "1か月以内", labelEn: "Within 1 month" },
+                { value: "custom", label: "期間を指定", labelEn: "Custom range" }
+            ],
             loadError: "",
             library: [],
             instances: [],
             tab: "all", // all（ぜんぶ）／mine（じぶんがとった）／others（ほかの人がとった）
             tabOptions: [
-                { value: "all", label: "ぜんぶ" },
-                { value: "mine", label: "📷 じぶんがとった" },
-                { value: "others", label: "👥 ほかの人がとった" }
+                { value: "all", label: "ぜんぶ", labelEn: "All" },
+                { value: "mine", label: "📷 じぶんがとった", labelEn: "📷 Caught by me" },
+                { value: "others", label: "👥 ほかの人がとった", labelEn: "👥 Caught by others" }
             ],
-            ownedFilter: "owned", // 最初は持っているカードだけ表示する
+            ownedFilter: "all", // 最初は全部表示する（「もっている」は絞りこみで選ぶ）
             regionFilter: "all",
             ownedOptions: [
-                { value: "all", label: "すべて" },
-                { value: "owned", label: "もっている" },
-                { value: "unowned", label: "もっていない" }
+                { value: "all", label: "すべて", labelEn: "All" },
+                { value: "owned", label: "もっている", labelEn: "Owned" }
             ],
+            // 地域の絞り込みは「北海道」「東北」のように短い名前で出す
             regionOptions: [
-                { value: "all", label: "すべての場所" },
-                ...Object.entries(REGION_LABELS).map(([value, label]) => ({ value, label }))
+                { value: "all", label: "すべての場所", labelEn: "All places" },
+                ...REGION_TILES.map(tile => ({ value: tile.key, label: tile.label, labelEn: tile.labelEn }))
             ],
             playerName: "",
             myUid: "",
             focusedIndex: null,
             focusScale: 2,
+            focusOrigin: { x: 0, y: 0, s: 1 },
             minCards: MIN_CARDS_FOR_DOMINATION,
-            regionLabels: REGION_LABELS,
             terrainLabels: TERRAIN_LABELS
         };
     },
 
+    watch: {
+        // 絞りこみが変わったら、1ページ目に戻す
+        filterKey() {
+            this.page = 1;
+        },
+    },
+    created() {
+        window.addEventListener("resize", this.measureGrid);
+    },
+    updated() {
+        this.measureGrid();
+    },
+    beforeUnmount() {
+        window.removeEventListener("resize", this.measureGrid);
+    },
     computed: {
+        // スマホ幅（グリッドが480px未満）のときは、1行に3枚を横幅いっぱいに均等に並べる
+        threeUp() {
+            return this.gridWidth > 0 && this.gridWidth < 480;
+        },
+        // カードの元の幅は150px。3列の幅に合わせて縮める
+        cardScale() {
+            return (this.gridWidth - 16) / 3 / 150;
+        },
+        itemStyle() {
+            return this.threeUp ? { "--card-scale": this.cardScale } : {};
+        },
         // カードライブラリの各カードに、自分の所持枚数をつける
         cards() {
             const counts = {};
@@ -218,7 +330,42 @@ export default {
                 this.matchesTab(card)
                 && (this.tab !== "all" || this.matchesOwnedFilter(card))
                 && (this.regionFilter === "all" || cardRegions(card).includes(this.regionFilter))
+                && this.matchesDate(card)
             );
+        },
+
+        filterKey() {
+            return [this.tab, this.ownedFilter, this.regionFilter, this.dateFilter].join("|");
+        },
+        pageCount() {
+            return Math.max(1, Math.ceil(this.filteredCards.length / this.pageSize));
+        },
+        pageStart() {
+            return (this.page - 1) * this.pageSize;
+        },
+        pagedCards() {
+            return this.filteredCards.slice(this.pageStart, this.pageStart + this.pageSize);
+        },
+
+        // 絞りこみで、初期値（もっているカードだけ）から変えた数
+        activeFilterCount() {
+            return (this.tab === "all" && this.ownedFilter !== "all" ? 1 : 0)
+                + (this.regionFilter !== "all" ? 1 : 0)
+                + (this.dateFilter !== "all" ? 1 : 0);
+        },
+
+        // 画面の下に出す、いま選んでいる絞りこみの内容
+        filterSummary() {
+            const parts = [];
+            if (this.tab === "all") {
+                const owned = this.ownedOptions.find(o => o.value === this.ownedFilter);
+                if (owned) parts.push(t(owned.label, owned.labelEn));
+            }
+            const region = this.regionOptions.find(o => o.value === this.regionFilter);
+            if (region && region.value !== "all") parts.push(t(region.label, region.labelEn));
+            const date = this.dateOptions.find(o => o.value === this.dateFilter);
+            if (date && date.value !== "all") parts.push(t(date.label, date.labelEn));
+            return parts.join(" ・ ");
         },
 
         focusedCard() {
@@ -239,6 +386,18 @@ export default {
     },
 
     methods: {
+        goPage(n) {
+            this.page = n;
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        },
+
+        measureGrid() {
+            const el = this.$refs.grid;
+            if (el && el.clientWidth !== this.gridWidth) {
+                this.gridWidth = el.clientWidth;
+            }
+        },
+
         // ■宝箱と同じ表示用データに変換（所持カードにはチームカラーと自分の名前を付ける）
         displayCard(card) {
             // 持っていないカードでも、スキャンで登録されたものは「発見者」を出す
@@ -256,6 +415,33 @@ export default {
             return Boolean(card.ownerUid) && card.ownerUid === this.myUid;
         },
 
+        // 作られた日で絞る（作られた日が無いカードは、日付で絞ったときは出ない）
+        matchesDate(card) {
+            if (this.dateFilter === "all") return true;
+            const created = card.createdAt && card.createdAt.toDate ? card.createdAt.toDate() : null;
+            if (!created) return false;
+            if (this.dateFilter === "today") {
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+                return created >= startOfToday;
+            }
+            if (this.dateFilter === "week") return Date.now() - created.getTime() <= 7 * 86400000;
+            if (this.dateFilter === "month") return Date.now() - created.getTime() <= 30 * 86400000;
+            const from = this.dateFrom ? new Date(this.dateFrom + "T00:00:00") : null;
+            const to = this.dateTo ? new Date(this.dateTo + "T23:59:59") : null;
+            if (from && created < from) return false;
+            if (to && created > to) return false;
+            return true;
+        },
+
+        resetFilters() {
+            this.ownedFilter = "all";
+            this.regionFilter = "all";
+            this.dateFilter = "all";
+            this.dateFrom = "";
+            this.dateTo = "";
+        },
+
         matchesOwnedFilter(card) {
             if (this.ownedFilter === "all") return true;
             return (this.ownedFilter === "owned") === card.owned;
@@ -269,10 +455,19 @@ export default {
         },
 
         // ■画面に収まる最大2.2倍まで拡大して表示
-        focusCard(index) {
+        focusCard(index, event) {
             const maxByHeight = (window.innerHeight * 0.78) / 220;
             const maxByWidth = (window.innerWidth * 0.86) / 150;
             this.focusScale = Math.max(1, Math.min(2.2, maxByHeight, maxByWidth));
+            // タップしたカードの場所と大きさを覚えて、そこから真ん中へ動かす
+            const rect = event && event.currentTarget ? event.currentTarget.getBoundingClientRect() : null;
+            if (rect) {
+                this.focusOrigin = {
+                    x: rect.left + rect.width / 2 - window.innerWidth / 2,
+                    y: rect.top + rect.height / 2 - window.innerHeight / 2,
+                    s: rect.width / (150 * this.focusScale),
+                };
+            }
             this.focusedIndex = index;
         },
 
@@ -315,6 +510,13 @@ export default {
 .summary-label{font-size:12px;color:#94a3b8;font-weight:bold}
 .summary-value{font-size:26px;font-weight:900;line-height:1.2}
 .summary-value small{font-size:12px;margin-left:2px;color:#94a3b8}
+/* スマホ幅：4つの箱を1行に並べるため、文字を小さくする */
+@media (max-width:480px){
+    .summary-box{padding:8px 4px}
+    .summary-label{font-size:10px}
+    .summary-value{font-size:18px}
+    .summary-value small{font-size:10px}
+}
 
 .filter-button{
     border:1px solid #475569;border-radius:999px;
@@ -322,10 +524,75 @@ export default {
 }
 .filter-button.active{background:#22d3ee;border-color:#22d3ee;color:#0f172a}
 
+.filter-sep{
+    border:0;border-top:1px solid #334155;margin:12px 0;
+}
 .library-grid{
     display:grid;
     grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
     gap:16px 12px;justify-items:center;
+}
+/* 読み込み中：カードが順に跳ねる */
+.loading-box{display:flex;flex-direction:column;align-items:center;gap:16px;padding:80px 0;color:#94a3b8}
+.loading-cards{display:flex;gap:8px}
+.loading-cards span{
+    width:26px;height:36px;border-radius:6px;
+    background:linear-gradient(160deg,#67e8f9,#0ea5e9);
+    animation:card-bounce 1s ease-in-out infinite;
+}
+.loading-cards span:nth-child(2){animation-delay:.15s}
+.loading-cards span:nth-child(3){animation-delay:.3s}
+@keyframes card-bounce{
+    0%,100%{transform:translateY(0) rotate(-6deg);opacity:.5}
+    50%{transform:translateY(-12px) rotate(4deg);opacity:1}
+}
+
+/* 絞りこみの行は、スクロールしても上に残す */
+.sticky-bar{
+    position:sticky;top:0;z-index:30;background:#10151c;padding:8px 0 6px;
+}
+
+/* ページ送り */
+.pager{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:20px 0 8px}
+.pager .filter-button:disabled{opacity:.3;cursor:default}
+
+/* 拡大表示：ふわっと開いて、ゆっくり閉じる */
+.focus-fade-enter-active,.focus-fade-leave-active{transition:opacity .4s ease}
+.focus-fade-enter-from,.focus-fade-leave-to{opacity:0}
+.focus-fade-enter-active .focus-card,.focus-fade-leave-active .focus-card{
+    transition:transform .6s cubic-bezier(.22,.8,.3,1),opacity .5s ease;
+}
+.focus-fade-enter-from .focus-card,.focus-fade-leave-to .focus-card{
+    transform:translate(var(--ox,0),var(--oy,0)) scale(var(--os,.5));opacity:0;
+}
+
+/* 絞りこみのモーダル（下から出る） */
+.filter-modal{
+    position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);
+    display:flex;align-items:flex-end;justify-content:center;
+}
+.filter-panel{
+    width:100%;max-width:480px;max-height:80vh;overflow-y:auto;
+    background:#1e293b;border-radius:16px 16px 0 0;padding:16px;text-align:left;
+}
+.filter-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.filter-head h2{font-size:16px;font-weight:bold;color:#e2e8f0}
+.filter-panel section{margin-top:14px}
+.filter-panel h3{font-size:12px;font-weight:bold;color:#94a3b8;margin-bottom:6px}
+.date-input{
+    background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:8px;padding:4px 8px;
+}
+
+/* スマホ幅：1行に3枚を横幅いっぱいに均等に並べる（カードは --card-scale で縮める） */
+.library-grid.three-up{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px 8px;justify-items:stretch;
+}
+.library-item.compact{
+    width:auto;height:auto;aspect-ratio:150 / 220;
+}
+.library-item.compact > :first-child{
+    zoom:var(--card-scale,1);
 }
 .library-item{
     position:relative;display:block;width:150px;height:220px;padding:0;
@@ -365,9 +632,7 @@ export default {
     line-height:0;
     transform:scale(var(--s,2));
     filter:drop-shadow(0 18px 30px rgba(0,0,0,.6));
-    animation:focus-pop .28s cubic-bezier(.2,1.2,.4,1);
 }
-@keyframes focus-pop{from{transform:scale(calc(var(--s,2) * .6));opacity:0}to{transform:scale(var(--s,2));opacity:1}}
 .focus-close,.focus-nav{
     position:absolute;margin:0;padding:0;border-radius:50%;
     background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
@@ -386,6 +651,7 @@ export default {
 .focus-owned{color:#67e8f9;letter-spacing:0}
 
 @media (prefers-reduced-motion: reduce){
-    .focus-card{animation:none !important}
+    .focus-fade-enter-active,.focus-fade-leave-active,
+    .focus-fade-enter-active .focus-card,.focus-fade-leave-active .focus-card{transition:none !important}
 }
 </style>

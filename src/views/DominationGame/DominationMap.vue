@@ -1,5 +1,5 @@
 <template>
-    <div class="relative h-screen w-full">
+    <div class="domination-map-root relative h-screen w-full">
 
         <div id="returnGate" @click="returnHome">
             <span class="gate-core"></span>
@@ -926,6 +926,10 @@ L.tileLayer(
 </script>
 
 <style scoped>
+.domination-map-root {
+    touch-action: manipulation; /* スマホでダブルタップして拡大しないように */
+}
+
 
 
 :deep(.spot-label) {

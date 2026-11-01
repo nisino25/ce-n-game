@@ -2877,6 +2877,10 @@ export default {
 </script>
 
 <style scoped>
+.domination-app {
+    touch-action: manipulation; /* スマホでダブルタップして拡大しないように */
+}
+
 /* ■黒いマスをなおしたばかりのマス：ピコンと光らせる（番がうつったら消える） */
 .fixed-tile-pulse{ animation: fixed-tile-pulse 1.2s ease-in-out infinite; }
 @keyframes fixed-tile-pulse {

@@ -2,23 +2,24 @@
     <div class="min-h-screen bg-gradient-to-b from-emerald-50 to-emerald-100 flex justify-center px-4 py-6">
         <div class="w-full max-w-xl">
 
-            <header class="flex items-center justify-between mb-5">
-                <h1 class="text-xl font-bold text-emerald-900 flex items-center gap-2">
+            <header class="mb-5">
+                <h1 class="text-xl font-bold text-emerald-900 flex items-center gap-2 mb-3">
                     <span>🔎</span><span>{{ $t('生き物スキャン', 'Creature Scan') }}</span>
                 </h1>
-                <button
-                    class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm transition flex items-center gap-1"
-                    @click="goLibrary"
-                >
-                    <span>📚</span><span>{{ $t('図鑑をみる', 'Card book') }}</span>
-                </button>
-
-                <button
-                    class="text-sm text-emerald-700 hover:text-emerald-900 underline"
-                    @click="goHome"
-                >
-                    🏠 {{ $t('ホームにもどる', 'Back to home') }}
-                </button>
+                <div class="flex items-center justify-between gap-2">
+                    <button
+                        class="text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg shadow-sm transition flex items-center gap-1 whitespace-nowrap"
+                        @click="goLibrary"
+                    >
+                        <span>📚</span><span>{{ $t('図鑑をみる', 'Card book') }}</span>
+                    </button>
+                    <button
+                        class="text-sm text-emerald-700 hover:text-emerald-900 underline whitespace-nowrap px-2 py-2"
+                        @click="goHome"
+                    >
+                        🏠 {{ $t('ホームにもどる', 'Back to home') }}
+                    </button>
+                </div>
             </header>
 
             <!-- 撮影・アップロードエリア -->
@@ -92,14 +93,14 @@
                     :disabled="!selectedFile"
                     @click="identify"
                 >
-                    {{ $t('はんていする', 'Identify') }}
+                    {{ $t('はんていする', 'What is it?') }}
                 </button>
             </div>
 
             <!-- 判定中 -->
             <div v-else-if="phase === 'loading'" class="bg-white rounded-2xl shadow-sm p-10 text-center">
                 <div class="text-5xl mb-4 animate-bounce">🔬</div>
-                <p class="text-emerald-800 font-bold">{{ $t('AIが はんてい中…', 'AI is identifying…') }}</p>
+                <p class="text-emerald-800 font-bold">{{ $t('AIが はんてい中…', 'Checking your photo…') }}</p>
                 <p class="text-emerald-500 text-sm mt-1">{{ $t('2〜7秒くらい かかります', 'This takes about 2 to 7 seconds') }}</p>
             </div>
 
@@ -215,7 +216,7 @@
                             :disabled="!canRegister"
                             @click="registerCard"
                         >
-                            {{ draftStatus === 'saving' ? $t('とうろく中…', 'Saving…') : $t('カードを登録する', 'Register card') }}
+                            {{ draftStatus === 'saving' ? $t('とうろく中…', 'Saving…') : $t('カードを登録する', 'Add to my card book') }}
                         </button>
                     </div>
 
