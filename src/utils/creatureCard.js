@@ -53,24 +53,6 @@ export async function compressCardImage(file) {
     }
 }
 
-// ■顔が写っているかを、ブラウザの FaceDetector で調べる
-// 戻り値: true（顔あり）/ false（顔なし）/ null（この端末では調べられない・失敗）
-export async function detectFace(file) {
-    if (typeof window.FaceDetector !== "function") return null;
-
-    const bitmap = await createImageBitmap(file);
-    try {
-        const detector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
-        const faces = await detector.detect(bitmap);
-        return faces.length > 0;
-    } catch (error) {
-        console.error("顔の検出に失敗しました:", error);
-        return null;
-    } finally {
-        bitmap.close();
-    }
-}
-
 // ■同じ学名のカードが、もう何枚あるか（登録は止めない。プレビューで知らせるだけ）
 export async function countSameSpecies(scientificName) {
     if (!scientificName) return 0;
@@ -92,7 +74,6 @@ export async function registerScannedCard({ draft, imageDataUrl, user }) {
         image: imageDataUrl,
         level: draft.level,
         rarity: draft.rarity,
-        region: draft.region,
         habitat: draft.habitat,
         terrain: draft.terrain,
         frame: draft.frame,
@@ -112,11 +93,18 @@ export async function registerScannedCard({ draft, imageDataUrl, user }) {
         diet: draft.diet,
         trophicLevel: draft.trophicLevel,
         habitatText: draft.habitatText,
+        habitatTextEn: draft.habitatTextEn,
         description: draft.description,
+        descriptionEn: draft.descriptionEn,
         isDangerous: draft.isDangerous,
         dangerNote: draft.dangerNote,
+        dangerNoteEn: draft.dangerNoteEn,
         rarityValue: draft.rarityValue,
         rarityReason: draft.rarityReason,
+        rarityReasonEn: draft.rarityReasonEn,
+        rarityTierLabelEn: draft.rarityTierLabelEn,
+        distribution: draft.distribution,
+        regions: draft.regions,
         confidence: draft.confidence,
 
         createdAt: now,

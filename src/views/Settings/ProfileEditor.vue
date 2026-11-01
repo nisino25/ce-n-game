@@ -6,17 +6,25 @@
     <div v-else class="min-h-screen bg-gray-100 py-10">
 
         <div class="max-w-6xl mx-auto">
+            <!-- ■表示言語の切り替え（日本語／English）。選んだ言語はモニタールームにも反映される -->
+            <div class="flex justify-end mb-4">
+                <div class="inline-flex rounded-lg overflow-hidden border border-gray-400 bg-white text-sm font-bold" role="group" aria-label="表示言語 / Language">
+                    <button type="button" class="px-4 py-2" :class="lang === 'ja' ? 'bg-sky-600 text-white' : 'text-gray-700 hover:bg-gray-100'" @click="changeLang('ja')">日本語</button>
+                    <button type="button" class="px-4 py-2" :class="lang === 'en' ? 'bg-sky-600 text-white' : 'text-gray-700 hover:bg-gray-100'" @click="changeLang('en')">English</button>
+                </div>
+            </div>
             <div class="grid lg:grid-cols-[350px_1fr] gap-8">
                 <!-- Left Panel -->
                 <div class="bg-white rounded-xl shadow p-6 flex gap-2 items-center">
                     <div class="w-40 aspect-square mx-auto" v-html="avatarSvg"></div>
                     <div>
-                        <input type="text" placeholder="ぼうけんしゃの名前" class="border-gray-800 w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-400" v-model="playerName">
-                        <p v-if="nameError" class="text-red-600 text-sm mt-1">名前を入力してください</p>
-                        <button class="my-3 p-3 bg-sky-600 text-white rounded-lg mr-2" @click="randomAll">🎲 シャッフル</button>
+                        <input type="text" :placeholder="$t('ぼうけんしゃの名前', 'Adventurer name')" class="border-gray-800 w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-400" v-model="playerName">
+                        <p v-if="nameError" class="text-red-600 text-sm mt-1">{{ $t('名前を入力してください', 'Please enter your name') }}</p>
+                        <p v-if="hasInitialized && !currentUser" class="text-red-600 text-sm mt-1">{{ $t('会員情報が見つからないため、保存できません。ログインし直してください', 'Your member record was not found, so changes cannot be saved. Please log in again.') }}</p>
+                        <button class="my-3 p-3 bg-sky-600 text-white rounded-lg mr-2" @click="randomAll">🎲 {{ $t('シャッフル', 'Shuffle') }}</button>
                         <div class="flex gap-2 mt-2">
-                            <button @click="goNext()" class="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg">保存して進む</button>
-                            <button @click="skipSave()" class="p-3 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">保存しないで進む</button>
+                            <button @click="goNext()" class="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg">{{ $t('保存して進む', 'Save & continue') }}</button>
+                            <button @click="skipSave()" class="p-3 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">{{ $t('保存しないで進む', 'Continue without saving') }}</button>
                         </div>
                     </div>
                 </div>
@@ -25,7 +33,7 @@
                 <div class="bg-white rounded-xl shadow p-6 grid grid-cols-2 gap-4">
                     <div v-for="part in parts" :key="part.key" class="mb-2">
                         <div class="flex items-center gap-3">
-                            <span class="font-semibold w-[70px] text-left">{{ part.label }}</span>
+                            <span class="font-semibold w-[70px] text-left">{{ $t(part.ja, part.en) }}</span>
                             <button class="p-1 bg-gray-200 rounded" @click="change(part.key,-1)">◀</button>
                             <input type="range" min="0" max="47" v-model.number="avatar[part.key]" @input="avatarSvg = $buildAvatar(avatar)" class="flex-1">
                             <button class="p-1 bg-gray-200 rounded" @click="change(part.key,1)">▶</button>
@@ -42,8 +50,8 @@
             <div class="bg-white rounded-xl p-6 max-w-sm w-full text-center shadow-xl">
                 <p class="mb-5 whitespace-pre-line">{{ pendingAction.message }}</p>
                 <div class="flex gap-3 justify-center">
-                    <button @click="confirmPendingAction" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">はい</button>
-                    <button @click="pendingAction = null" class="px-5 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">キャンセル</button>
+                    <button @click="confirmPendingAction" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">{{ $t('はい', 'Yes') }}</button>
+                    <button @click="pendingAction = null" class="px-5 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">{{ $t('キャンセル', 'Cancel') }}</button>
                 </div>
             </div>
         </div>
@@ -55,6 +63,7 @@
 import db from './../../firebase.js';
 import { getSession, setSession } from '@/utils/session.js';
 import { resetCurrentUserCache } from '@/utils/cards.js';
+import { getLang, setLang } from '@/utils/lang.js';
 export default {
 
     data(){
@@ -69,12 +78,12 @@ export default {
                 top:0
             },
             parts:[
-                { key:"env", label:"はいけい" },
-                { key:"clo", label:"ふく" },
-                { key:"head", label:"はだの色" },
-                { key:"mouth", label:"口" },
-                { key:"eyes", label:"目" },
-                { key:"top", label:"かみ" }
+                { key:"env", ja:"はいけい", en:"Background" },
+                { key:"clo", ja:"ふく", en:"Outfit" },
+                { key:"head", ja:"はだの色", en:"Skin" },
+                { key:"mouth", ja:"口", en:"Mouth" },
+                { key:"eyes", ja:"目", en:"Eyes" },
+                { key:"top", ja:"かみ", en:"Hair" }
             ],
             playerName:"",
             nameError: false,
@@ -88,6 +97,12 @@ export default {
         }
     },
 
+    computed:{
+        lang(){
+            return getLang();
+        }
+    },
+
     mounted(){
         console.clear()
         this.loginCenId = getSession("loginCenId");
@@ -96,6 +111,9 @@ export default {
     },
 
     methods:{
+        changeLang(lang){
+            setLang(lang);
+        },
         randomAll(){
             Object.keys(this.avatar).forEach(key=>{
                 this.avatar[key] = Math.floor(Math.random()*48);
@@ -118,6 +136,9 @@ export default {
             this.avatarSvg = this.$buildAvatar(this.avatar);
         },
         goNext(){
+            // ■会員情報（users）が無いと保存先がないので、保存せずに止める
+            if(!this.currentUser) return;
+
             if(this.playerName.trim() === ""){
                 this.nameError = true;
                 return;
@@ -125,7 +146,7 @@ export default {
             this.nameError = false;
 
             this.pendingAction = {
-                message: "この内容を保存してモニタールームに進みますか？",
+                message: this.$t("この内容を保存してモニタールームに進みますか？", "Save these changes and go to the Monitor Room?"),
                 run: () => this.saveAndGoHome()
             };
         },
@@ -147,7 +168,7 @@ export default {
         // ■変更を保存せずにモニタールームへ戻る（名前・アバターの編集内容は破棄）
         skipSave(){
             this.pendingAction = {
-                message: "保存せずにモニタールームへ戻りますか？\n名前・アバターの変更内容は破棄されます。",
+                message: this.$t("保存せずにモニタールームへ戻りますか？\n名前・アバターの変更内容は破棄されます。", "Go back to the Monitor Room without saving?\nYour name and avatar changes will be discarded."),
                 run: () => this.$router.push({ name: "Home" })
             };
         },

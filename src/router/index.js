@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import LoginPage from "@/views/LoginPage/LoginPage.vue";
+import BypassLoginPage from "@/views/LoginPage/BypassLoginPage.vue";
 import ScanLogin from "@/views/LoginPage/ScanLogin.vue";
 
 import Intro from "@/views/IntroView/IntroView.vue";
@@ -38,6 +39,7 @@ import ResultCompare from "@/views/DominationGame/ResultCompare.vue";
 import SoundTest from "@/views/DominationGame/SoundTest.vue";
 import EatenCompare from "@/views/DominationGame/EatenCompare.vue";
 import DeviceStats from "@/views/Admin/DeviceStats.vue";
+import ClothesLab from "@/views/ClothesLab/ClothesLab.vue";
 
 
 const routes = [
@@ -55,6 +57,13 @@ const routes = [
         path: "/loginPage",
         name: "LoginPage",
         component: LoginPage
+    },
+
+    // ■手元の確認用（本番では画面側で Error に飛ばす）。正規のログインと同じ処理を使う
+    {
+        path: "/bypass-login",
+        name: "BypassLogin",
+        component: BypassLoginPage
     },
 
     {
@@ -217,6 +226,13 @@ const routes = [
         path: "/ab-game-demo",
         name: "ABGameDemo",
         component: ABGameDemo
+    },
+
+    // ■ふくのラボ：ふく0〜47ごとに番号（id）と組み合わせを確認して、直す所を伝えるための画面（開発用）
+    {
+        path: "/clothes-lab",
+        name: "ClothesLab",
+        component: ClothesLab
     },
 
     {

@@ -11,13 +11,6 @@ const RARITY_BY_TIER = {
     common: "D"
 };
 
-// 撮影場所のヒント（自由入力）→ 洞窟の地域（cards の region）
-const REGION_RULES = [
-    { region: "hokkaido", pattern: /北海道|札幌|函館|旭川/ },
-    { region: "kanagawa", pattern: /神奈川|横浜|鎌倉|川崎|藤沢|茅ヶ崎|平塚|相模/ },
-    { region: "kyoto", pattern: /京都/ }
-];
-
 // すみかの文字（API の habitat は自由文）→ cards の habitat / terrain。上から順に当てはめる
 const HABITAT_RULES = [
     { habitat: "sea", terrain: "water", pattern: /海|磯|浜|干潟|沿岸/ },
@@ -30,25 +23,25 @@ const DEFAULT_HABITAT = { habitat: "forest", terrain: "land" };
 export const CARD_NAME_MAX_LENGTH = 20;
 
 export const RARITY_OPTIONS = [
-    { value: "A", label: "A（さいこう）" },
-    { value: "B", label: "B（とても）" },
-    { value: "C", label: "C（めずらしい）" },
-    { value: "D", label: "D（ふつう）" }
+    { value: "A", label: "A（さいこう）", labelEn: "A (Rarest)" },
+    { value: "B", label: "B（とても）", labelEn: "B (Very rare)" },
+    { value: "C", label: "C（めずらしい）", labelEn: "C (Rare)" },
+    { value: "D", label: "D（ふつう）", labelEn: "D (Common)" }
 ];
 
 export const LEVEL_OPTIONS = [
-    { value: 1, label: "Lv1" },
-    { value: 2, label: "Lv2" },
-    { value: 3, label: "Lv3" },
-    { value: 4, label: "Lv4" }
+    { value: 1, label: "Lv1", labelEn: "Lv1" },
+    { value: 2, label: "Lv2", labelEn: "Lv2" },
+    { value: 3, label: "Lv3", labelEn: "Lv3" },
+    { value: 4, label: "Lv4", labelEn: "Lv4" }
 ];
 
 export const HABITAT_OPTIONS = [
-    { value: "forest", label: "もり" },
-    { value: "sea", label: "うみ" },
-    { value: "river", label: "かわ・いけ" },
-    { value: "town", label: "まち・にわ" },
-    { value: "soil", label: "つち" }
+    { value: "forest", label: "もり", labelEn: "Forest" },
+    { value: "sea", label: "うみ", labelEn: "Sea" },
+    { value: "river", label: "かわ・いけ", labelEn: "River / pond" },
+    { value: "town", label: "まち・にわ", labelEn: "Town / garden" },
+    { value: "soil", label: "つち", labelEn: "Soil" }
 ];
 
 export function habitatFromText(text = "") {
@@ -56,18 +49,32 @@ export function habitatFromText(text = "") {
     return rule ? { habitat: rule.habitat, terrain: rule.terrain } : DEFAULT_HABITAT;
 }
 
-export function regionFromHint(hint = "") {
-    const rule = REGION_RULES.find(item => item.pattern.test(hint));
-    return rule ? rule.region : "";
-}
-
 // 栄養段階は API が 1〜5、カードの生態系レベルは 1〜4（5 は 4 にまとめる）
 export function levelFromTrophicLevel(trophicLevel) {
     return Math.min(4, Math.max(1, Number(trophicLevel) || 1));
 }
 
+// 日本の9地方（API の distribution のキーと同じ。表示名と並び順）
+export const REGION_TILES = [
+    { key: "hokkaido", label: "北海道", labelEn: "Hokkaido" },
+    { key: "tohoku", label: "東北", labelEn: "Tohoku" },
+    { key: "kanto", label: "関東", labelEn: "Kanto" },
+    { key: "chubu", label: "中部", labelEn: "Chubu" },
+    { key: "kinki", label: "近畿", labelEn: "Kinki" },
+    { key: "chugoku", label: "中国", labelEn: "Chugoku" },
+    { key: "shikoku", label: "四国", labelEn: "Shikoku" },
+    { key: "kyushu", label: "九州", labelEn: "Kyushu" },
+    { key: "okinawa", label: "沖縄", labelEn: "Okinawa" }
+];
+
+// distribution（{ hokkaido: true, ... }）のうち、生息するとされた地方のキーの一覧
+export function regionsFromDistribution(distribution) {
+    if (!distribution) return [];
+    return REGION_TILES.filter(tile => distribution[tile.key]).map(tile => tile.key);
+}
+
 // 候補1件 → カードの下書き。プレビュー画面で名前・レア度などを直してから登録する
-export function candidateToCardDraft(candidate, hint = "") {
+export function candidateToCardDraft(candidate) {
     const habitatInfo = habitatFromText(candidate.habitat);
     const rarity = candidate.rarity || {};
 
@@ -77,7 +84,6 @@ export function candidateToCardDraft(candidate, hint = "") {
         rarity: RARITY_BY_TIER[rarity.tier] || "D",
         habitat: habitatInfo.habitat,
         terrain: habitatInfo.terrain,
-        region: regionFromHint(hint),
         // スキャンでとったカードは、ゴールドカード
         frame: "gold",
         food: [],
@@ -90,11 +96,19 @@ export function candidateToCardDraft(candidate, hint = "") {
         diet: candidate.diet || "",
         trophicLevel: Number(candidate.trophic_level) || null,
         habitatText: candidate.habitat || "",
+        habitatTextEn: candidate.habitat_en || "",
         description: candidate.description_for_kids || "",
+        descriptionEn: candidate.description_for_kids_en || "",
         isDangerous: Boolean(candidate.is_dangerous),
         dangerNote: candidate.danger_note || "",
+        dangerNoteEn: candidate.danger_note_en || "",
         rarityValue: typeof rarity.value === "number" ? rarity.value : null,
         rarityReason: rarity.reason || "",
+        rarityReasonEn: rarity.reason_en || "",
+        rarityTierLabelEn: rarity.tier_label_en || "",
+        // 9地方それぞれに生息するか（{ hokkaido: true, ... }）
+        distribution: candidate.distribution || null,
+        regions: regionsFromDistribution(candidate.distribution),
         confidence: typeof candidate.confidence === "number" ? candidate.confidence : null
     };
 }
@@ -102,7 +116,9 @@ export function candidateToCardDraft(candidate, hint = "") {
 // 登録前の入力チェック。問題があれば、画面に出す文章を返す（問題が無ければ空文字）
 export function validateCardDraft(draft) {
     const name = (draft.name || "").trim();
-    if (!name) return "なまえを入れてね";
-    if (name.length > CARD_NAME_MAX_LENGTH) return `なまえは${CARD_NAME_MAX_LENGTH}もじまでだよ`;
-    return "";
+    if (!name) return { ja: "なまえを入れてね", en: "Please enter a name" };
+    if (name.length > CARD_NAME_MAX_LENGTH) {
+        return { ja: `なまえは${CARD_NAME_MAX_LENGTH}もじまでだよ`, en: `The name can be up to ${CARD_NAME_MAX_LENGTH} characters` };
+    }
+    return null;
 }

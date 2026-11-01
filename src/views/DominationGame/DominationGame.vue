@@ -677,8 +677,8 @@ import { isFresh } from '@/utils/dominationSlots.js';
 
 // ■街ごとの洞窟（洞窟のエリアの id と、表示する名前）。「洞窟へ」ボタンの行き先に使う
 const CITY_CAVE = {
-    hiratsuka: { area: 'kanagawa', name: '神奈川' },
-    kushiro: { area: 'hokkaido', name: '北海道' },
+    hiratsuka: { area: 'kanagawa', name: '関東エリア' },
+    kushiro: { area: 'hokkaido', name: '北海道エリア' },
 };
 import { sfx } from '@/utils/sfx.js';
 import { addPoints } from '@/utils/points.js';
@@ -686,6 +686,7 @@ import { isTestMode } from '@/utils/env.js';
 import {
     fetchCardLibrary,
     getCurrentUser,
+    cardRegions,
     toDisplayCard,
     fetchMyCollectionInstances,
     placeCardInstance,
@@ -710,7 +711,7 @@ const AB_CHALLENGE_POINTS = 2
 // ■地形の名前（チャレンジ成功でなおる地形の案内に使う）
 const AREA_NAMES = { town: '町', forest: '森', dirt: '土', river: '川', sea: '海' }
 // ■街（mapSpots の city）と、カードの region（洞窟のエリア）の対応
-const CITY_REGION = { hiratsuka: 'kanagawa', kushiro: 'hokkaido' }
+const CITY_REGION = { hiratsuka: 'kanto', kushiro: 'hokkaido' }
 
 // ■地形のうっすらした模様（草・水など）。ゲームの見やすさをじゃましない、うすい線だけ。
 //   SVGを、そのままマスの背景にする（マスの大きさに合わせて拡大・縮小される）
@@ -1112,7 +1113,7 @@ export default {
             }
         },
 
-        // ■今の街の洞窟（平塚市→神奈川、釧路市→北海道）。街が決まらないときは null（どの洞窟かは指定しない）
+        // ■今の街の洞窟（平塚市・釧路市）。街が決まらないときは null（どの洞窟かは指定しない）
         caveTarget() {
             return CITY_CAVE[this.loadPlace()?.city] || null
         },
@@ -2068,11 +2069,11 @@ export default {
         // ■人間の手札（DBの cardInstances から作った、自分のカードのうち、今の街の地域のもの）
         handFromInstances(instances) {
             const libraryById = Object.fromEntries(this.cardLibrary.map(card => [card.cardId, card]))
-            // ■今いる街の地域（平塚市→神奈川、釧路市→北海道）のカードだけを手札にする。地域が決まらない（テスト等）ときは絞らない
+            // ■今いる街のエリア（平塚市→関東エリア、釧路市→北海道エリア）のカードだけを手札にする。エリアが決まらない（テスト等）ときは絞らない
             const region = CITY_REGION[this.loadPlace()?.city]
             return instances
                 .filter(instance => libraryById[instance.cardId])
-                .filter(instance => !region || libraryById[instance.cardId].region === region)
+                .filter(instance => !region || cardRegions(libraryById[instance.cardId]).includes(region))
                 .map(instance => toDominationCard(libraryById[instance.cardId], instance.instanceId))
         },
 
