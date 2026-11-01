@@ -1,5 +1,7 @@
 // ■会員ごとのマニフェスト（ホーム画面に入れたときの開始URLに、会員IDを入れる）
-// 呼び方: /.netlify/functions/manifest?cenId=…（ログイン中のページから、link rel="manifest" で読み込む）
+// /manifest.json へのアクセスは、この関数に回している（public/_redirects）。
+// iPhoneはホーム画面に入れた時点で読んだマニフェストの開始URLを使うため、
+// ページを読み込んだときのCookie（loginCenId）から、会員IDを入れたマニフェストを返す。
 const ICONS = [
   { src: "/img/icons/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
   { src: "/img/icons/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
@@ -7,8 +9,16 @@ const ICONS = [
   { src: "/img/icons/android-chrome-maskable-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
 ];
 
+// Cookieの値（loginCenId=...）を取り出す。無ければ空文字
+function cenIdFromCookie(cookieHeader) {
+  const match = (cookieHeader || "").match(/(?:^|;\s*)loginCenId=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
 exports.handler = async function (event) {
-  const cenId = (event.queryStringParameters && event.queryStringParameters.cenId) || "";
+  const query = (event.queryStringParameters && event.queryStringParameters.cenId) || "";
+  const cookie = cenIdFromCookie(event.headers && event.headers.cookie);
+  const cenId = query || cookie;
   // 会員IDの形（英数字とハイフンだけ）以外は、入れない
   const safeId = /^[0-9A-Za-z-]{8,64}$/.test(cenId) ? cenId : "";
   const startUrl = safeId ? `/loginPage?cenId=${encodeURIComponent(safeId)}` : "/loginPage";

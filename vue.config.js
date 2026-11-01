@@ -30,6 +30,8 @@ module.exports = defineConfig({
 
     workboxPluginMode: 'GenerateSW',
     workboxOptions: {
+      // ■/manifest.json は、Service Worker に保存させない（会員ごとの内容を、関数から返すため）
+      exclude: [/\.map$/, /manifest\.json$/],
       // ■アプリ本体の更新をすぐ反映させたいので、常に最新のnetwork優先＋古いキャッシュは自動破棄
       skipWaiting: true,
       clientsClaim: true,
