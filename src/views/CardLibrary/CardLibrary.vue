@@ -59,7 +59,7 @@
 
                 <div class="sticky-bar">
                 <!-- タブ：ぜんぶ／じぶんがとった／ほかの人がとった（タブを選ぶと、下の「もっている」などの絞り込みは使わない） -->
-                <div class="mb-2 flex flex-wrap gap-2">
+                <div class="tab-row mb-2 flex flex-wrap gap-2">
                     <button
                         v-for="option in tabOptions"
                         :key="option.value"
@@ -545,6 +545,12 @@ export default {
 @keyframes card-bounce{
     0%,100%{transform:translateY(0) rotate(-6deg);opacity:.5}
     50%{transform:translateY(-12px) rotate(4deg);opacity:1}
+}
+
+/* スマホ幅：タブは1行に収める */
+@media (max-width:480px){
+    .tab-row{flex-wrap:nowrap;gap:6px}
+    .tab-row .filter-button{padding:6px 9px;font-size:12px;white-space:nowrap}
 }
 
 /* 絞りこみの行は、スクロールしても上に残す */

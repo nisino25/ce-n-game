@@ -29,7 +29,7 @@ export default {
 
 <style>
 /* ダブルタップで拡大しないように（アプリ全体） */
-html, body, #app {
+html, body, #app, * {
   touch-action: manipulation;
 }
 

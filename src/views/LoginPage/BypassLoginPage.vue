@@ -1,9 +1,9 @@
 <template>
     <div class="min-h-screen bg-gray-100 flex items-center justify-center px-4">
         <div class="bg-white rounded-xl shadow p-6 w-full max-w-sm">
-            <h1 class="text-lg font-bold mb-2">ログイン（手元の確認用）</h1>
+            <h1 class="text-lg font-bold mb-2">ログイン</h1>
             <p class="text-xs text-gray-500 mb-4">
-                ce-n.orgを通さず、正規のログインと同じ処理を行います。手元の開発環境でだけ使えます。
+                会員ID（cenId）を入れると、ログインします。ホーム画面のアプリで開けないときに使ってください。
             </p>
             <form @submit.prevent="submit">
                 <input
@@ -26,7 +26,6 @@
 </template>
 
 <script>
-import { isLocalEnv } from "@/utils/env.js";
 import { loginWithCenId } from "@/utils/login.js";
 
 export default {
@@ -36,12 +35,6 @@ export default {
             errorMessage: "",
             loading: false
         };
-    },
-    mounted() {
-        // ■手元の開発環境以外（本番）では使えないようにする
-        if (!isLocalEnv()) {
-            this.$router.replace({ name: "Error" });
-        }
     },
     methods: {
         async submit() {

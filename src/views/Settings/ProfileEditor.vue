@@ -3,46 +3,58 @@
         <div class="loader"></div>
     </div>
 
-    <div v-else class="min-h-screen bg-gray-100 py-10">
-
-        <div class="max-w-6xl mx-auto">
-            <!-- ■表示言語の切り替え（日本語／English）。選んだ言語はモニタールームにも反映される -->
-            <div class="flex justify-end mb-4">
-                <div class="inline-flex rounded-lg overflow-hidden border border-gray-400 bg-white text-sm font-bold" role="group" aria-label="表示言語 / Language">
-                    <button type="button" class="px-4 py-2" :class="lang === 'ja' ? 'bg-sky-600 text-white' : 'text-gray-700 hover:bg-gray-100'" @click="changeLang('ja')">日本語</button>
-                    <button type="button" class="px-4 py-2" :class="lang === 'en' ? 'bg-sky-600 text-white' : 'text-gray-700 hover:bg-gray-100'" @click="changeLang('en')">English</button>
+    <div v-else class="min-h-screen bg-gray-100">
+        <!-- ■上にそろえたアバター（スクロールしても見える） -->
+        <div class="sticky top-0 z-40 bg-white shadow">
+            <div class="max-w-3xl mx-auto px-3 py-2 flex gap-3 items-start">
+                <div class="flex flex-col items-center gap-2 shrink-0">
+                    <div class="w-20" v-html="avatarSvg"></div>
+                    <button class="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-sm whitespace-nowrap" @click="randomAll">🎲 {{ $t('シャッフル', 'Shuffle') }}</button>
                 </div>
-            </div>
-            <div class="grid lg:grid-cols-[350px_1fr] gap-8">
-                <!-- Left Panel -->
-                <div class="bg-white rounded-xl shadow p-6 flex gap-2 items-center">
-                    <div class="w-40 aspect-square mx-auto" v-html="avatarSvg"></div>
-                    <div>
-                        <input type="text" :placeholder="$t('ぼうけんしゃの名前', 'Adventurer name')" class="border-gray-800 w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-sky-400" v-model="playerName">
-                        <p v-if="nameError" class="text-red-600 text-sm mt-1">{{ $t('名前を入力してください', 'Please enter your name') }}</p>
-                        <p v-if="hasInitialized && !currentUser" class="text-red-600 text-sm mt-1">{{ $t('会員情報が見つからないため、保存できません。ログインし直してください', 'Your member record was not found, so changes cannot be saved. Please log in again.') }}</p>
-                        <button class="my-3 p-3 bg-sky-600 text-white rounded-lg mr-2" @click="randomAll">🎲 {{ $t('シャッフル', 'Shuffle') }}</button>
-                        <div class="flex gap-2 mt-2">
-                            <button @click="goNext()" class="p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg">{{ $t('保存して進む', 'Save & continue') }}</button>
-                            <button @click="skipSave()" class="p-3 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">{{ $t('保存しないで進む', 'Continue without saving') }}</button>
+                <div class="flex-1 min-w-0 flex flex-col gap-2">
+                    <div class="flex justify-end">
+                        <div class="inline-flex rounded-lg overflow-hidden border border-gray-400 bg-white text-xs font-bold" role="group" aria-label="表示言語 / Language">
+                            <button type="button" class="px-2.5 py-1" :class="lang === 'ja' ? 'bg-sky-600 text-white' : 'text-gray-700 hover:bg-gray-100'" @click="changeLang('ja')">日本語</button>
+                            <button type="button" class="px-2.5 py-1" :class="lang === 'en' ? 'bg-sky-600 text-white' : 'text-gray-700 hover:bg-gray-100'" @click="changeLang('en')">English</button>
                         </div>
                     </div>
-                </div>
-
-                <!-- Right Panel -->
-                <div class="bg-white rounded-xl shadow p-6 grid grid-cols-2 gap-4">
-                    <div v-for="part in parts" :key="part.key" class="mb-2">
-                        <div class="flex items-center gap-3">
-                            <span class="font-semibold w-[70px] text-left">{{ $t(part.ja, part.en) }}</span>
-                            <button class="p-1 bg-gray-200 rounded" @click="change(part.key,-1)">◀</button>
-                            <input type="range" min="0" max="47" v-model.number="avatar[part.key]" @input="avatarSvg = $buildAvatar(avatar)" class="flex-1">
-                            <button class="p-1 bg-gray-200 rounded" @click="change(part.key,1)">▶</button>
-                            <span class="w-[15px] text-left">{{ avatar[part.key] + 1 }}</span>
-                            <button class="py-2 px-2 bg-blue-500 text-white rounded" @click="randomPart(part.key)">🎲</button>
-                        </div>
+                    <input type="text" :placeholder="$t('ぼうけんしゃの名前', 'Adventurer name')" class="w-full border-gray-800 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400" v-model="playerName">
+                    <div class="flex gap-2">
+                        <button @click="goNext()" class="flex-1 min-w-0 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg">{{ $t('保存', 'Save') }}</button>
+                        <button @click="skipSave()" class="flex-1 min-w-0 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg">{{ $t('スキップ', 'Skip') }}</button>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="max-w-3xl mx-auto px-3 py-3">
+
+            <p v-if="nameError" class="text-red-600 text-sm mb-2">{{ $t('名前を入力してください', 'Please enter your name') }}</p>
+            <p v-if="hasInitialized && !currentUser" class="text-red-600 text-sm mb-2">{{ $t('会員情報が見つからないため、保存できません。ログインし直してください', 'Your member record was not found, so changes cannot be saved. Please log in again.') }}</p>
+
+            <!-- ■部品ごとに1行：左にラベル、真ん中はサムネイルを横にスライド、右はその部品のシャッフル -->
+            <div class="bg-white rounded-xl shadow p-2 pr-0">
+                <div v-for="part in rows" :key="part.key" class="flex items-center gap-2 py-2 border-b border-gray-200 last:border-b-0">
+                    <div class="w-14 shrink-0 flex flex-col items-center">
+                        <span class="text-xs font-bold text-gray-700 leading-tight">{{ $t(part.ja, part.en) }}</span>
+                        <button class="px-1.5 py-0.5 bg-blue-500 text-white rounded text-xs leading-tight" @click="randomPart(part.key)">🎲</button>
+                    </div>
+                    <div :data-strip="part.key" class="thumb-strip flex-1 min-w-0 flex gap-2 overflow-x-auto scroll-smooth py-1 pr-3">
+                        <button
+                            v-for="thumb in part.thumbs"
+                            :key="thumb.index"
+                            type="button"
+                            :data-index="thumb.index"
+                            class="thumb shrink-0 w-[72px] rounded-xl border-2 p-1 bg-sky-50 transition"
+                            :class="avatar[part.key] === thumb.index ? 'border-sky-600' : 'border-transparent'"
+                            @click="pick(part.key, thumb.index)"
+                        >
+                            <div class="aspect-square w-full" v-html="thumb.svg"></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <!-- ■確認ダイアログ：ネイティブのconfirm()は環境によって動作しないため、画面内モーダルで代用する -->
@@ -78,7 +90,7 @@ export default {
                 top:0
             },
             parts:[
-                { key:"env", ja:"はいけい", en:"Background" },
+                { key:"env", ja:"はいけい", en:"BG" },
                 { key:"clo", ja:"ふく", en:"Outfit" },
                 { key:"head", ja:"はだの色", en:"Skin" },
                 { key:"mouth", ja:"口", en:"Mouth" },
@@ -94,16 +106,28 @@ export default {
             uid: null,
 
             currentUser: null,
+
         }
     },
 
     computed:{
         lang(){
             return getLang();
-        }
+        },
+        // 部品ごとの行（48種類のサムネイル）。ほかの部品は、いまの組み合わせのまま
+        rows(){
+            return this.parts.map(part => ({
+                ...part,
+                thumbs: Array.from({ length: 48 }, (_, index) => ({
+                    index,
+                    svg: this.$buildAvatar({ ...this.avatar, [part.key]: index }),
+                })),
+            }));
+        },
     },
 
     mounted(){
+        this.$nextTick(() => this.parts.forEach(part => this.showSelectedThumb(part.key, false)));
         console.clear()
         this.loginCenId = getSession("loginCenId");
         this.initialCheck()
@@ -120,21 +144,30 @@ export default {
             });
             this.avatarSvg = this.$buildAvatar(this.avatar);
         },
+        // サムネイルを選んだら、その部品を変える
+        pick(key, index){
+            this.avatar[key] = index;
+            this.avatarSvg = this.$buildAvatar(this.avatar);
+            this.$nextTick(() => this.showSelectedThumb(key, true));
+        },
+
+        // 選んでいるサムネイルを、その行の真ん中に出す（横だけ動かす）
+        showSelectedThumb(key, smooth){
+            const strip = this.$el.querySelector(`[data-strip="${key}"]`);
+            const el = strip && strip.querySelector(`[data-index="${this.avatar[key]}"]`);
+            if (!el) return;
+            strip.scrollTo({
+                left: el.offsetLeft - strip.clientWidth / 2 + el.clientWidth / 2,
+                behavior: smooth ? "smooth" : "auto",
+            });
+        },
+
         randomPart(key){
             this.avatar[key] = Math.floor(Math.random()*48);
             this.avatarSvg = this.$buildAvatar(this.avatar);
+            this.$nextTick(() => this.showSelectedThumb(key, true));
         },
-        change(key,value){
-            this.avatar[key] += value;
 
-            if(this.avatar[key] < 0)
-                this.avatar[key] = 47;
-
-            if(this.avatar[key] > 47)
-                this.avatar[key] = 0;
-
-            this.avatarSvg = this.$buildAvatar(this.avatar);
-        },
         goNext(){
             // ■会員情報（users）が無いと保存先がないので、保存せずに止める
             if(!this.currentUser) return;
@@ -263,4 +296,9 @@ export default {
     66%  {background-position: 0   100%,100% 0   }
     100% {background-position: 50% 100%,50%  0   }
     }
+</style>
+
+<style scoped>
+.thumb-strip { scrollbar-width: none; }
+.thumb-strip::-webkit-scrollbar { display: none; }
 </style>

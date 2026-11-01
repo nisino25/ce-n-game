@@ -317,12 +317,6 @@
 									>
 											{{ $t('ゲームを終了する', 'Quit game') }}
 									</button>
-																		<button
-										class="w-full p-3 mb-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
-										@click="openHomeLink"
-									>
-										{{ $t('ホーム画面のアプリにする', 'Add to home screen') }}
-									</button>
 <button
 											class="w-full p-3 bg-gray-300 hover:bg-gray-400 rounded-lg"
 											@click="showProfileModal = false"
@@ -332,39 +326,6 @@
                             
                             </div>
                         </div>
-
-            <!-- ホーム画面のアプリ用の、あなた専用のリンク -->
-            <div
-                v-if="showHomeLinkModal"
-                class="fixed inset-0 z-[600] flex items-center justify-center bg-black/50 p-4"
-                @click.self="showHomeLinkModal = false"
-            >
-                <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-[360px] text-left">
-                    <h2 class="text-lg font-bold mb-3">{{ $t('ホーム画面のアプリにする', 'Add to home screen') }}</h2>
-                    <ol class="text-sm list-decimal pl-5 space-y-1 mb-3">
-                        <li>{{ $t('下のリンクをコピーする', 'Copy the link below') }}</li>
-                        <li>{{ $t('Safari（iPhone）か Chrome（Android）で開く', 'Open it in Safari (iPhone) or Chrome (Android)') }}</li>
-                        <li>{{ $t('共有 → 「ホーム画面に追加」', 'Share → "Add to Home Screen"') }}</li>
-                    </ol>
-                    <textarea
-                        readonly
-                        rows="3"
-                        class="w-full text-xs border rounded-lg p-2 mb-2 bg-gray-50"
-                        :value="homeScreenLink"
-                        @focus="$event.target.select()"
-                    ></textarea>
-                    <button
-                        class="w-full p-3 mb-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
-                        @click="copyHomeLink"
-                    >
-                        {{ homeLinkCopied ? $t('コピーしました', 'Copied') : $t('リンクをコピー', 'Copy link') }}
-                    </button>
-                    <p class="text-xs text-red-600 mb-3">{{ $t('このリンクは、あなた専用です。ほかの人に教えないでください。', 'This link is only for you. Do not share it with anyone.') }}</p>
-                    <button class="w-full p-3 bg-gray-300 hover:bg-gray-400 rounded-lg" @click="showHomeLinkModal = false">
-                        {{ $t('閉じる', 'Close') }}
-                    </button>
-                </div>
-            </div>
 
             <!-- Workers -->
             <div class="absolute inset-x-[4%] top-[34%] bottom-[6%] pointer-events-none">
@@ -474,18 +435,10 @@ export default {
 				teamMembers: [],
 
 				showProfileModal: false,
-				showHomeLinkModal: false,
-				homeLinkCopied: false,
 			};
     },
 
     computed: {
-        // ホーム画面のアプリ用のリンク（ログイン中の会員IDを入れる。ログインしていなければ空）
-        homeScreenLink() {
-            const cenId = getSession("loginCenId");
-            if (!cenId) return "";
-            return `${window.location.origin}/loginPage?cenId=${encodeURIComponent(cenId)}`;
-        },
 
         // ■仮リンクは管理者だけに見せる（users/{uid}.isAdmin が true のとき）
         isAdmin() {
@@ -681,21 +634,6 @@ export default {
     },
 
     methods: {
-        openHomeLink() {
-            this.homeLinkCopied = false;
-            this.showProfileModal = false;
-            this.showHomeLinkModal = true;
-        },
-
-        async copyHomeLink() {
-            try {
-                await navigator.clipboard.writeText(this.homeScreenLink);
-                this.homeLinkCopied = true;
-            } catch (error) {
-                console.error("リンクのコピーに失敗しました", error);
-            }
-        },
-
         // ■仮リンクのパネルが開いているとき、そのパネルの外側を押したら閉じる
         closeDevLinksOnOutsideClick(event) {
             const panel = this.$refs.devLinks;
