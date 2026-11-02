@@ -177,9 +177,10 @@
 
 <script>
 import db from "@/firebase.js";
+import { KYOTO_QUESTIONS } from "./kyotoQuestions.js";
 
 // ■画面に出す街の名前（「ひらつか」「くしろ」）
-const CITY_LABELS = { hiratsuka: "ひらつか", kushiro: "くしろ" };
+const CITY_LABELS = { hiratsuka: "ひらつか", kushiro: "くしろ", kyoto: "きょうと" };
 
 // ■街ごとの選択肢の名前（A・C）。平塚は海ごみ対策・里山再生、釧路はエネルギー・ごみのポイ捨て対策
 const SIDE_TEXT = {
@@ -202,6 +203,25 @@ const SIDE_TEXT = {
             help: {
                 title: "ポイ捨てしないで！",
                 body: "湿原の中にごみをポイ捨てする人があとをたたないよ。観光客やトラックの運転手など、遠くから来た人たちが、湿原に住むいきものや地域に住む人をくるしめているよ。日本で一番大きな、自然豊かな湿原を守るためには、みんなの行動が一番大切だよ。",
+            },
+        },
+    },
+    // 京都：海ごみ（A）と、里山（C）。説明は、画面の？ボタンで出す
+    kyoto: {
+        A: {
+            meter: "🏖️ 海ごみ対策", choice: "海ごみ対策", result: "海ごみ対策",
+            img: "/images/ABGames/kyoto/env1.jpg",
+            help: {
+                title: "京都の海にごみが流れつくよ",
+                body: "京都の海は日本海に面しているため、風の強い冬にたくさんの海ごみが打ち上げられるんだ。プラスチックごみや発泡スチロールなど、海外のごみまで流れきて困っているよ。どうすれば海ごみをへらすことができる？",
+            },
+        },
+        C: {
+            meter: "⛰️ 里山再生", choice: "里山再生", result: "里山再生",
+            img: "/images/ABGames/kyoto/env2.jpg",
+            help: {
+                title: "五山送り火と里山を守ろう",
+                body: "京都の夏のおまつり「五山送り火」は、山にたいまつで大きな文字や絵を描くのだけれど、山があれてきて、たいまつに使う「あかまつ」という木がかれ、草ぼうぼうになってしまい、毎年つづけていくのが大変になっているよ。里山の自然を守るためにどうすればいい？",
             },
         },
     },
@@ -276,18 +296,23 @@ export default {
 
     async mounted() {
         try {
-            let snapshot = await db.collection("abGameQuestions")
-                .where("location", "==", this.city)
-                .get();
-            // ■その街の問題がまだ無いときは、平塚の問題を使う（今までどおり）
-            if (snapshot.empty && this.city !== "hiratsuka") {
-                snapshot = await db.collection("abGameQuestions")
-                    .where("location", "==", "hiratsuka")
+            // ■京都の問題は、コードの中にある（kyotoQuestions.js）。ほかの街は、Firestoreから読む
+            if (this.city === "kyoto") {
+                this.questions = KYOTO_QUESTIONS.slice().sort((a, b) => a.order - b.order);
+            } else {
+                let snapshot = await db.collection("abGameQuestions")
+                    .where("location", "==", this.city)
                     .get();
+                // ■その街の問題がまだ無いときは、平塚の問題を使う（今までどおり）
+                if (snapshot.empty && this.city !== "hiratsuka") {
+                    snapshot = await db.collection("abGameQuestions")
+                        .where("location", "==", "hiratsuka")
+                        .get();
+                }
+                this.questions = snapshot.docs
+                    .map(doc => doc.data())
+                    .sort((a, b) => a.order - b.order);
             }
-            this.questions = snapshot.docs
-                .map(doc => doc.data())
-                .sort((a, b) => a.order - b.order);
 
             // ■チャレンジのときは、問題をランダムに questionCount 問だけえらぶ
             if (this.challenge) {
@@ -319,7 +344,7 @@ export default {
         },
         // ■？ボタンで開く説明。釧路の説明はまだないので、選択肢の名前だけ出す
         helpText() {
-            if (this.city === "kushiro") {
+            if (this.city === "kushiro" || this.city === "kyoto") {
                 const side = this.sideText[this.helpSide] || {};
                 return side.help || { title: side.choice || "", body: "（この選択肢の説明は、まだ用意していません）" };
             }

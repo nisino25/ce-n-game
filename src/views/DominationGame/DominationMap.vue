@@ -190,7 +190,8 @@ const TEAM_NAMES_EN = { water: "Water", air: "Air", earth: "Earth" };
 // ■地域ごとのチュートリアル動画（YouTubeの動画ID）
 const TUTORIAL_VIDEOS = {
     hiratsuka: "LkptvoPEU9c", // https://youtu.be/LkptvoPEU9c 平塚紹介動画
-    kushiro: "scAUVlCOpsY" // https://youtu.be/scAUVlCOpsY 釧路紹介動画
+    kushiro: "scAUVlCOpsY", // https://youtu.be/scAUVlCOpsY 釧路紹介動画
+    kyoto: "KoAofndgngw" // https://youtu.be/KoAofndgngw 京都紹介動画
 };
 
 let youtubeApiPromise = null;
@@ -242,7 +243,7 @@ export default {
             teamColors: TEAM_COLORS,
             teamNames: TEAM_NAMES,
             teamNamesEn: TEAM_NAMES_EN,
-            tutorialCityEn: { hiratsuka: "Hiratsuka", kushiro: "Kushiro" },
+            tutorialCityEn: { hiratsuka: "Hiratsuka", kushiro: "Kushiro", kyoto: "Kyoto" },
             notice: "",
             spotShapes: {}, // 場所ID → 地図に描いたひし形（塗り直し用）
             spotSheet: null, // 3つのゲームを選ぶ画面を開いている場所
@@ -934,8 +935,8 @@ L.tileLayer(
                 // ■初回だけ、六角形の前にチュートリアル（動画→ABゲーム）。終わってから六角形を出す
                 const city = this.currentPlace;
                 if (!city) return;
-                // 京都は、まだ紹介動画が無いので、チュートリアルは出さない（動画を決めたら、ここに入れる）
-                const skipTutorial = city.city === "aitest" || city.city === "kyoto";
+                // テスト用の街（AIテスト）だけは、チュートリアルを出さない
+                const skipTutorial = city.city === "aitest";
                 const tutorialArea = skipTutorial ? (location, name, done) => done() : this.withTutorial;
                 tutorialArea.call(this, city.city, cityName, () => {
                     // チュートリアル中に「もどる」などで街を離れていたら、六角形は出さない
