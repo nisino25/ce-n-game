@@ -550,9 +550,10 @@ export default {
     .tab-row .filter-button{padding:6px 9px;font-size:12px;white-space:nowrap}
 }
 
-/* 絞りこみの行は、スクロールしても上に残す */
+/* 絞りこみの行は、スクロールしても上に残す。
+   背景は画面の端（ページの左右の余白＝px-4 の分）まで広げ、スクロールするカードが横からはみ出さないようにする */
 .sticky-bar{
-    position:sticky;top:0;z-index:30;background:#10151c;padding:8px 0 6px;
+    position:sticky;top:0;z-index:30;background:#10151c;padding:8px 16px 6px;margin:0 -16px;
 }
 
 /* ページ送り */
