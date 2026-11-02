@@ -320,7 +320,7 @@ export default {
                 return option ? t(option.label, option.labelEn) : "";
             };
             return [
-                { label: t("なまえ", "Name"), value: this.draftCard.name },
+                { label: t("なまえ", "Name"), value: t(this.draftCard.name, this.draftCard.nameEn || this.draftCard.name) },
                 { label: t("レア度", "Rarity"), value: labelOf(RARITY_OPTIONS, this.draftCard.rarity) },
                 { label: t("生態系レベル", "Level"), value: labelOf(LEVEL_OPTIONS, this.draftCard.level) },
                 { label: t("すみか", "Habitat"), value: labelOf(HABITAT_OPTIONS, this.draftCard.habitat) }
@@ -334,6 +334,7 @@ export default {
                 {
                     cardId: "preview",
                     name: this.draftCard.name || "なまえ未定",
+                    nameEn: this.draftCard.nameEn || "",
                     image: this.draftImage ? this.draftImage.dataUrl : "",
                     level: this.draftCard.level,
                     rarity: this.draftCard.rarity,

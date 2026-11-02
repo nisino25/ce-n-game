@@ -266,7 +266,8 @@ export default {
             // 地域の絞り込みは「北海道」「東北」のように短い名前で出す
             regionOptions: [
                 { value: "all", label: "すべての場所", labelEn: "All places" },
-                ...REGION_TILES.map(tile => ({ value: tile.key, label: tile.label, labelEn: tile.labelEn }))
+                // いまのゲームで使う地方（関東・北海道・近畿）だけを選べるようにする（データは9地方のまま）
+                ...REGION_TILES.filter(tile => ["kanto", "hokkaido", "kinki"].includes(tile.key)).map(tile => ({ value: tile.key, label: tile.label, labelEn: tile.labelEn }))
             ],
             playerName: "",
             myUid: "",
