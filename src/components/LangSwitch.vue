@@ -6,15 +6,19 @@
             class="flex items-center gap-1 px-2.5 py-1"
             :class="lang === 'ja' ? 'bg-slate-200 text-slate-900' : 'text-slate-300 hover:bg-white/10'"
             :aria-pressed="lang === 'ja' ? 'true' : 'false'"
+            title="日本語"
+            aria-label="日本語"
             @click="changeLang('ja')"
-        >🇯🇵 日本語</button>
+        >🇯🇵</button>
         <button
             type="button"
             class="flex items-center gap-1 px-2.5 py-1"
             :class="lang === 'en' ? 'bg-slate-200 text-slate-900' : 'text-slate-300 hover:bg-white/10'"
             :aria-pressed="lang === 'en' ? 'true' : 'false'"
+            title="English"
+            aria-label="English"
             @click="changeLang('en')"
-        >🇬🇧 English</button>
+        >🇬🇧</button>
     </div>
 </template>
 
