@@ -680,6 +680,7 @@ import { isFresh } from '@/utils/dominationSlots.js';
 const CITY_CAVE = {
     hiratsuka: { area: 'kanagawa', name: '関東エリア', nameEn: 'Kanto area' },
     kushiro: { area: 'hokkaido', name: '北海道エリア', nameEn: 'Hokkaido area' },
+    kyoto: { area: 'kyoto', name: '京都エリア', nameEn: 'Kyoto area' },
 };
 import { sfx } from '@/utils/sfx.js';
 import { addPoints } from '@/utils/points.js';
@@ -713,7 +714,7 @@ const AB_CHALLENGE_POINTS = 2
 const AREA_NAMES = { town: '町', forest: '森', dirt: '土', river: '川', sea: '海' }
 const AREA_NAMES_EN = { town: 'town', forest: 'forest', dirt: 'soil', river: 'river', sea: 'sea' }
 // ■街（mapSpots の city）と、カードの region（洞窟のエリア）の対応
-const CITY_REGION = { hiratsuka: 'kanto', kushiro: 'hokkaido' }
+const CITY_REGION = { hiratsuka: 'kanto', kushiro: 'hokkaido', kyoto: 'kinki' }
 
 // ■地形のうっすらした模様（草・水など）。ゲームの見やすさをじゃましない、うすい線だけ。
 //   SVGを、そのままマスの背景にする（マスの大きさに合わせて拡大・縮小される）

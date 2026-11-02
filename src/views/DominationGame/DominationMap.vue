@@ -91,8 +91,8 @@
                     class="mb-3 rounded-xl border border-yellow-300/60 bg-yellow-300/10 p-3 text-sm font-bold text-yellow-100"
                 >
                     {{ $t(
-                        (spotSheet.city === 'hiratsuka' ? '平塚市' : '釧路市') + 'では、いま「' + myActiveSlots[spotSheet.city].spotName + ' ゲーム' + myActiveSlots[spotSheet.city].gameNo + '」を あそび中だよ。おわらせると、ほかの ゲームが あそべるよ。',
-                        'You are playing ' + myActiveSlots[spotSheet.city].spotName + ' Game ' + myActiveSlots[spotSheet.city].gameNo + ' in ' + (spotSheet.city === 'hiratsuka' ? 'Hiratsuka' : 'Kushiro') + '. Finish it to play another game.'
+                        cityLabel(spotSheet.city) + 'では、いま「' + myActiveSlots[spotSheet.city].spotName + ' ゲーム' + myActiveSlots[spotSheet.city].gameNo + '」を あそび中だよ。おわらせると、ほかの ゲームが あそべるよ。',
+                        'You are playing ' + myActiveSlots[spotSheet.city].spotName + ' Game ' + myActiveSlots[spotSheet.city].gameNo + ' in ' + cityLabel(spotSheet.city) + '. Finish it to play another game.'
                     ) }}
                     <button class="mt-2 w-full rounded-lg bg-yellow-300 px-3 py-2 font-black text-slate-900" @click="goToMyActiveSlot(spotSheet.city)">
                         ▶ {{ $t('そこへ いく', 'Go there') }}
@@ -229,6 +229,7 @@ export default {
             hiratsukaMarker: null,
 
             kushiroMarker: null,
+            kyotoMarker: null,
             testMarker: null,
             // ■追加：エリア表示
             honeycombLayers: [],
@@ -482,6 +483,7 @@ L.tileLayer(
 
             if (this.hiratsukaMarker) this.map.removeLayer(this.hiratsukaMarker);
             if (this.kushiroMarker) this.map.removeLayer(this.kushiroMarker);
+            if (this.kyotoMarker) this.map.removeLayer(this.kyotoMarker);
             if (this.testMarker) this.map.removeLayer(this.testMarker);
             this.createStartMarkers();
 
@@ -509,6 +511,7 @@ L.tileLayer(
 
             this.hiratsukaMarker = cityMarker([35.3150, 139.3497], t("平塚市", "Hiratsuka"), () => this.startHiratsuka());
             this.kushiroMarker = cityMarker([42.9849, 144.3814], t("釧路市", "Kushiro"), () => this.startKushiro());
+            this.kyotoMarker = cityMarker([35.0116, 135.7681], t("京都市", "Kyoto"), () => this.startKyoto());
             // ■AIテストエリア（テストモードのときだけ）：平塚・釧路とは別に、AIとの試しのゲームを、何回でも遊べる
             if (isTestMode()) this.testMarker = cityMarker([37.5, 134.5], t("🧪 AIテスト", "🧪 AI test"), () => this.startAiTest());
         },
@@ -624,6 +627,16 @@ L.tileLayer(
         startKushiro() {
             this.currentPlace = { city: "kushiro", cityName: "釧路市" };
             this.startZoom(t("釧路市", "Kushiro"), [42.9849, 144.3814], 13);
+        },
+
+        startKyoto() {
+            this.currentPlace = { city: "kyoto", cityName: "京都市" };
+            this.startZoom(t("京都市", "Kyoto"), [35.0116, 135.7681], 13);
+        },
+
+        // 街の名前（画面に出す）
+        cityLabel(city) {
+            return { hiratsuka: t("平塚市", "Hiratsuka"), kushiro: t("釧路市", "Kushiro"), kyoto: t("京都市", "Kyoto") }[city] || "";
         },
 
         // ■その街の「場所」を、ハチの巣のように並べた六角形で表示する（4・3・4・3・4個の5段で18か所）。
@@ -899,6 +912,9 @@ L.tileLayer(
             if (this.kushiroMarker) {
                 this.map.removeLayer(this.kushiroMarker);
             }
+            if (this.kyotoMarker) {
+                this.map.removeLayer(this.kyotoMarker);
+            }
             if (this.testMarker) {
                 this.map.removeLayer(this.testMarker);
             }
@@ -918,7 +934,9 @@ L.tileLayer(
                 // ■初回だけ、六角形の前にチュートリアル（動画→ABゲーム）。終わってから六角形を出す
                 const city = this.currentPlace;
                 if (!city) return;
-                const tutorialArea = city.city === "aitest" ? (location, name, done) => done() : this.withTutorial;
+                // 京都は、まだ紹介動画が無いので、チュートリアルは出さない（動画を決めたら、ここに入れる）
+                const skipTutorial = city.city === "aitest" || city.city === "kyoto";
+                const tutorialArea = skipTutorial ? (location, name, done) => done() : this.withTutorial;
                 tutorialArea.call(this, city.city, cityName, () => {
                     // チュートリアル中に「もどる」などで街を離れていたら、六角形は出さない
                     if (this.currentPlace && this.currentPlace.city === city.city && this.showTitle) this.createHoneycomb(cityPos);
