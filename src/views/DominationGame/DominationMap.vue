@@ -9,7 +9,7 @@
         <!-- Start Message -->
         <div
             v-if="showStartScreen"
-            class="map-hint absolute bottom-12 left-1/2 z-[1000] -translate-x-1/2"
+            class="map-hint absolute bottom-12 left-1/2 z-[1000] -translate-x-1/2 whitespace-nowrap"
         >
             {{ $t('まちを タップしてね', 'Tap a town') }}
         </div>
