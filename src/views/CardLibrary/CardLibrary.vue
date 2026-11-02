@@ -257,7 +257,7 @@ export default {
                 { value: "mine", label: "📷 じぶんがとった", labelEn: "📷 Caught by me" },
                 { value: "others", label: "👥 ほかの人がとった", labelEn: "👥 Caught by others" }
             ],
-            ownedFilter: "all", // 最初は全部表示する（「もっている」は絞りこみで選ぶ）
+            ownedFilter: "owned", // 最初は「もっている」カードだけ表示する（「すべて」は絞りこみで選ぶ）
             regionFilter: "all",
             ownedOptions: [
                 { value: "all", label: "すべて", labelEn: "All" },
@@ -350,7 +350,7 @@ export default {
 
         // 絞りこみで、初期値（もっているカードだけ）から変えた数
         activeFilterCount() {
-            return (this.tab === "all" && this.ownedFilter !== "all" ? 1 : 0)
+            return (this.tab === "all" && this.ownedFilter !== "owned" ? 1 : 0)
                 + (this.regionFilter !== "all" ? 1 : 0)
                 + (this.dateFilter !== "all" ? 1 : 0);
         },
@@ -436,7 +436,7 @@ export default {
         },
 
         resetFilters() {
-            this.ownedFilter = "all";
+            this.ownedFilter = "owned";
             this.regionFilter = "all";
             this.dateFilter = "all";
             this.dateFrom = "";
