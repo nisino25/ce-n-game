@@ -2,7 +2,7 @@
     <!-- ■追加：帰還ゲート表示 -->
     <div id="returnGate" @click="returnHome">
         ◉
-        <div>帰還ゲート</div>
+        <div>{{ $t('帰還ゲート', 'Return gate') }}</div>
     </div>
     <!-- ■追加：ワープ演出 -->
     <div id="warpEffect"></div>
@@ -28,7 +28,7 @@
         <!-- ■どのダンジョンに入るかを選ぶ（入口の画像をクリックすると表示） -->
         <div v-if="showAreaSelect" id="areaSelectBackdrop" @click.self="showAreaSelect = false">
         <div id="areaSelect">
-            <p class="area-select-title">どのダンジョンに入る？</p>
+            <p class="area-select-title">{{ $t('どのダンジョンに入る？', 'Which dungeon will you enter?') }}</p>
             <div class="area-select-buttons">
                 <button
                     v-for="(info, id) in areas"
@@ -38,7 +38,7 @@
                     @click="startGame(id)"
                 >
                     <img :src="info.emblem" :alt="info.name" class="area-select-emblem">
-                    <span>{{ info.name }}ダンジョン</span>
+                    <span>{{ $t(info.name + 'ダンジョン', info.nameEn + ' dungeon') }}</span>
                 </button>
             </div>
         </div>
@@ -48,7 +48,7 @@
     <!-- ■追加：ダンジョン転送中表示 -->
     <div v-if="showLoading" id="loadingScreen">
         <div id="loadingText">
-            {{ selectedAreaName }}ダンジョン転送中・・・
+            {{ $t(selectedAreaName + 'ダンジョン転送中・・・', 'Warping to the ' + selectedAreaNameEn + ' dungeon...') }}
         </div>
     </div>
 
@@ -66,7 +66,8 @@ export default {
             showLoading: false,
             areas: CAVE_AREAS,
             showAreaSelect: false,
-            selectedAreaName: ""
+            selectedAreaName: "",
+            selectedAreaNameEn: ""
         };
     },
 
@@ -90,6 +91,7 @@ export default {
         startGame(areaId) {
             saveNextCaveArea(areaId);
             this.selectedAreaName = CAVE_AREAS[areaId].name;
+            this.selectedAreaNameEn = CAVE_AREAS[areaId].nameEn;
         // 開始ボタン後の演出
             this.showStart = false;
             this.showLoading = true;

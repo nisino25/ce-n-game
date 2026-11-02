@@ -3,18 +3,18 @@
     <!-- ■追加：出口ゲート -->
     <div id="returnGate" @click="returnHome">
         ◉
-        <div>ダンジョン出口</div>
+        <div>{{ $t('ダンジョン出口', 'Dungeon exit') }}</div>
     </div>
     <!-- ■追加：他洞窟へのワープ -->
     <div id="forestWarpGate" @click="warpToNextDungeon">
         ◉
-        <div>他洞窟への<br>ワープ</div>
+        <div>{{ $t('他洞窟への', 'Warp to') }}<br>{{ $t('ワープ', 'another cave') }}</div>
     </div>
   </div>
 
     <div v-if="areaInfo" class="keyCount absolute top-4 right-4 text-white text-lg font-bold z-10">
       <span class="key-badge" :style="{ background: areaInfo.keyColor }">🔑</span>
-      {{ areaInfo.name }}のカギ：<span :key="keyBumpId" class="key-count-num" :class="{ bump: keyBumpId > 0, lose: keyBumpLose }">{{ keyCount }}</span>本
+      {{ $t(areaInfo.name + 'のカギ：', areaInfo.nameEn + ' keys: ') }}<span :key="keyBumpId" class="key-count-num" :class="{ bump: keyBumpId > 0, lose: keyBumpLose }">{{ keyCount }}</span>{{ $t('本', '') }}
 
         <!-- ■洞窟エンブレム（エリアに応じて固定） -->
         <img
@@ -76,6 +76,7 @@ import {
     takeNextCaveArea
 } from "./caveAreas.js";
 import { getSession } from "@/utils/session.js";
+import { t } from "@/utils/lang.js";
 
 // ■敵の動き
 const ENEMY_DIRS = [[0, 1], [1, 0], [0, -1], [-1, 0]];
@@ -187,7 +188,7 @@ export default {
             })
             .catch((error) => {
                 console.error("カギ情報の読み込みに失敗しました:", error);
-                alert("カギ情報を読み込めませんでした。再ログインして確認してください。");
+                alert(t("カギ情報を読み込めませんでした。再ログインして確認してください。", "Could not load your keys. Please log in again and check."));
             });
         // --end
 
@@ -1103,7 +1104,7 @@ export default {
                     "カギ更新エラー：loginCenIdが取得できません",
                     cenId
                 );
-                alert("会員IDを取得できません。再ログインしてください。");
+                alert(t("会員IDを取得できません。再ログインしてください。", "Could not get your member ID. Please log in again."));
                 return;
             }
 
@@ -1123,7 +1124,7 @@ export default {
                 this.caveKeys = { ...this.caveKeys, [areaId]: nextCount };
             } catch (error) {
                 console.error("カギの更新に失敗しました:", error);
-                alert("カギを更新できませんでした。通信状態を確認してください。");
+                alert(t("カギを更新できませんでした。通信状態を確認してください。", "Could not update your keys. Please check your connection."));
             }
         },
     },
@@ -1140,11 +1141,11 @@ export default {
         legendItems() {
             if (!this.areaInfo) return [];
             return [
-                { icon: "🔑", label: `カギ（${this.areaInfo.name}）` },
-                { icon: "🎃", label: "てき" },
-                { icon: (this.stageData[this.stage] || this.stageData.cave).gateIcon, label: "ワープ" },
-                { icon: "🔒", label: "ゴール（カギを取ると🎁）" },
-                { icon: "🏛️", label: "出口" }
+                { icon: "🔑", label: t(`カギ（${this.areaInfo.name}）`, `Key (${this.areaInfo.nameEn})`) },
+                { icon: "🎃", label: t("てき", "Enemy") },
+                { icon: (this.stageData[this.stage] || this.stageData.cave).gateIcon, label: t("ワープ", "Warp") },
+                { icon: "🔒", label: t("ゴール（カギを取ると🎁）", "Goal (get the key for 🎁)") },
+                { icon: "🏛️", label: t("出口", "Exit") }
             ];
         }
     },

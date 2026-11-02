@@ -6,18 +6,21 @@ import db, { firebase } from "@/firebase.js";
 export const CAVE_AREAS = {
     kanagawa: {
         name: "神奈川",
+        nameEn: "Kanagawa",
         emblem: "/images/cave/kanagawaEmblem.png",
         stage: "forest",
         keyColor: "#1f7a1f"
     },
     hokkaido: {
         name: "北海道",
+        nameEn: "Hokkaido",
         emblem: "/images/cave/hokkaidoEnblem.png",
         stage: "water",
         keyColor: "#0d4fa0"
     },
     kyoto: {
         name: "京都",
+        nameEn: "Kyoto",
         emblem: "/images/cave/kyotoEmblem.png",
         stage: "cave",
         keyColor: "#d4af37"

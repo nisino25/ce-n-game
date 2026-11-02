@@ -5,19 +5,19 @@
         <!-- ■訂正：ダンジョン出口 -->
         <div id="returnGate" @click="activateGate">
             ◉
-            <div>ダンジョン出口</div>
+            <div>{{ $t('ダンジョン出口', 'Dungeon exit') }}</div>
         </div>
     
         <!-- ■追加：他洞窟へのワープ -->
         <div id="forestWarpGate" @click="warpDungeon">
             ◉
-            <div>他洞窟へのワープ</div>
+            <div>{{ $t('他洞窟へのワープ', 'Warp to another cave') }}</div>
         </div>
     </div>
 
     <div ref="warp" class="warpEffect" id="warpEffect"></div>
 
-    <div id="result">{{ selectedAreaInfo.name }}のカギ：{{ remainKeys }}本</div>
+    <div id="result">{{ $t(selectedAreaInfo.name + 'のカギ：' + remainKeys + '本', selectedAreaInfo.nameEn + ' keys: ' + remainKeys) }}</div>
 
     <!-- ■どのエリアのカギで宝箱を開けるか（初期値は最後に遊んだ洞窟のエリア） -->
     <div class="area-tabs">
@@ -31,13 +31,13 @@
             @click="selectedArea = id"
         >
             <span class="area-key">🔑</span>
-            {{ info.name }} {{ caveKeys[id] }}本
+            {{ $t(info.name, info.nameEn) }} {{ caveKeys[id] }}{{ $t('本', ' keys') }}
         </button>
     </div>
 
     <!-- ■宝箱：タップで開くことが伝わりにくかったので、開く前だけヒントを出す -->
     <div v-if="chestPhase === 'idle'" class="tap-hint">
-        👆 タップしてあけよう！
+        👆 {{ $t('タップしてあけよう！', 'Tap to open!') }}
     </div>
 
     <!-- ■宝箱：カギを差す → 回す → 錠前が外れる → フタが開いて光があふれる → カード登場 -->
@@ -67,7 +67,7 @@
     </div>
 
     <div class="flex gap-2 mt-4">
-        <button @click="showCollection" class="px-3 py-1 bg-gray-200 rounded">カード一式</button>
+        <button @click="showCollection" class="px-3 py-1 bg-gray-200 rounded">{{ $t('カード一式', 'All cards') }}</button>
     </div>
 
     <!-- Card -->
@@ -80,7 +80,7 @@
                 <img v-else-if="currentCard.group === '風'" src="/images/card/チームカラー（風・ライトグリーン）.png" class="team-color-bg" alt="風">
 
                 <img :src="currentCard.level" alt="生態系レベル">
-                <span>生態系レベル</span>
+                <span>{{ $t('生態系レベル', 'Ecosystem level') }}</span>
             </div>
 
             <!-- ■上段 -->
@@ -88,12 +88,12 @@
             <div class="card-top-right">
                 <!-- ■レア度 -->
                 <div class="rarity">
-                    <span>レア度</span>
+                    <span>{{ $t('レア度', 'Rarity') }}</span>
                     <strong>{{ currentCard.rare }}</strong>
                 </div>
                 <!-- ■すみか -->
                 <div class="habitat">
-                    <span>すみか</span>
+                    <span>{{ $t('すみか', 'Habitat') }}</span>
                     <img :src="currentCard.area2" alt="すみか">
                 </div>
             </div>
@@ -102,17 +102,17 @@
             <!-- ■生きもの画像 -->
             <div class="card-image">
                 <img v-if="currentCard.icon" :src="currentCard.icon" :alt="currentCard.name">
-                <div v-else class="no-image">🐾<span>画像じゅんび中</span></div>
+                <div v-else class="no-image">🐾<span>{{ $t('画像じゅんび中', 'Preparing image') }}</span></div>
             </div>
 
             <!-- ■生きものの名前 -->
             <h2 class="card-name">{{ currentCard.name }}</h2>
 
             <!-- ■発見者 -->
-            <div class="discoverer">発見者 {{ currentCard.owner }}</div>
+            <div class="discoverer">{{ $t('発見者', 'Found by') }} {{ currentCard.owner }}</div>
 
             <!-- ■閉じるボタン（class="close-btn" を付与） -->
-            <button class="close-btn" @click.stop="closeCard">閉じる</button>
+            <button class="close-btn" @click.stop="closeCard">{{ $t('閉じる', 'Close') }}</button>
         </div>    
     </div>
 
@@ -121,29 +121,29 @@
         <div class="collection-sheet">
             <header class="collection-head">
                 <div>
-                    <h2>獲得カード一覧</h2>
-                    <p v-if="!collectionLoading">{{ filteredCollection.length }} / {{ collection.length }}枚 あつめたよ</p>
+                    <h2>{{ $t('獲得カード一覧', 'Card collection') }}</h2>
+                    <p v-if="!collectionLoading">{{ filteredCollection.length }} / {{ collection.length }} {{ $t('枚 あつめたよ', 'collected') }}</p>
                 </div>
-                <button class="collection-close" aria-label="閉じる" @click="closeCollection">✕</button>
+                <button class="collection-close" :aria-label="$t('閉じる', 'Close')" @click="closeCollection">✕</button>
             </header>
 
             <!-- ★追加：フィルタコントロールエリア -->
             <div class="collection-filters">
                 <!-- 盤面使用状況フィルタ -->
                 <div class="filter-group">
-                    <label>使用状況：</label>
+                    <label>{{ $t('使用状況：', 'Status:') }}</label>
                     <select v-model="filterStatus">
-                        <option value="all">すべて</option>
-                        <option value="unused">使っていない</option>
-                        <option value="used">使っている</option>
+                        <option value="all">{{ $t('すべて', 'All') }}</option>
+                        <option value="unused">{{ $t('使っていない', 'Not in use') }}</option>
+                        <option value="used">{{ $t('使っている', 'In use') }}</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label>地域：</label>
+                    <label>{{ $t('地域：', 'Area:') }}</label>
                     <select v-model="filterArea">
-                        <option value="all">すべての地域</option>
+                        <option value="all">{{ $t('すべての地域', 'All areas') }}</option>
                         <option v-for="(info, id) in areas" :key="id" :value="id">
-                            {{ info.name }}
+                            {{ $t(info.name, info.nameEn) }}
                         </option>
                     </select>
                 </div>
@@ -158,14 +158,14 @@
 
                 <div v-else-if="collection.length === 0" class="collection-empty">
                     <div class="empty-icon">🎁</div>
-                    <p>まだカードがありません</p>
-                    <p class="sub">宝箱をあけて、カードをあつめよう！</p>
+                    <p>{{ $t('まだカードがありません', 'No cards yet') }}</p>
+                    <p class="sub">{{ $t('宝箱をあけて、カードをあつめよう！', 'Open chests to collect cards!') }}</p>
                 </div>
                 <!-- ★追加: フィルタ結果が0件の場合 -->
                 <div v-else-if="filteredCollection.length === 0" class="collection-empty">
                     <div class="empty-icon">🔍</div>
-                    <p>条件に合うカードがありません</p>
-                    <p class="sub">フィルタの条件を変えてみてください</p>
+                    <p>{{ $t('条件に合うカードがありません', 'No cards match') }}</p>
+                    <p class="sub">{{ $t('フィルタの条件を変えてみてください', 'Try changing the filters') }}</p>
                 </div>
 
                 <div v-else class="collection-grid">
@@ -174,7 +174,7 @@
                         v-for="(card, index) in filteredCollection"
                         :key="card.instanceId"
                         class="collection-item"
-                        :aria-label="card.name + 'を拡大して見る'"
+                        :aria-label="$t(card.name + 'を拡大して見る', 'Zoom in on ' + card.name)"
                         @click="focusCard(index)"
                     >
                         <CollectionCard :card="card" />
@@ -188,24 +188,24 @@
 
     <!-- ■カードの拡大表示（一覧のカードをタップ） -->
     <div v-if="focusedCard" class="focus-modal" @click.self="closeFocus">
-        <button class="focus-close" aria-label="閉じる" @click="closeFocus">✕</button>
-        <button class="focus-nav focus-prev" aria-label="前のカード" :disabled="focusedIndex === 0" @click.stop="moveFocus(-1)">◀</button>
+        <button class="focus-close" :aria-label="$t('閉じる', 'Close')" @click="closeFocus">✕</button>
+        <button class="focus-nav focus-prev" :aria-label="$t('前のカード', 'Previous card')" :disabled="focusedIndex === 0" @click.stop="moveFocus(-1)">◀</button>
 
         <div :key="focusedCard.instanceId" class="focus-card" :style="{ '--s': focusScale }">
             <CollectionCard :card="focusedCard" />
         </div>
 
-        <button class="focus-nav focus-next" aria-label="次のカード" :disabled="focusedIndex === filteredCollection.length - 1" @click.stop="moveFocus(1)">▶</button>
+        <button class="focus-nav focus-next" :aria-label="$t('次のカード', 'Next card')" :disabled="focusedIndex === filteredCollection.length - 1" @click.stop="moveFocus(1)">▶</button>
         <p class="focus-count">{{ focusedIndex + 1 }} / {{ filteredCollection.length }}</p>
     </div>
 
     <!-- ■確認ダイアログ（ネイティブのconfirmは環境によって動かないため画面内で出す） -->
     <div v-if="confirmReset" class="confirm-modal">
         <div class="confirm-box">
-            <p>獲得したカードをすべて消去してもよろしいですか？</p>
+            <p>{{ $t('獲得したカードをすべて消去してもよろしいですか？', 'Clear all collected cards?') }}</p>
             <div class="confirm-actions">
-                <button class="confirm-yes" @click="resetCollection">消去する</button>
-                <button class="confirm-no" @click="confirmReset = false">キャンセル</button>
+                <button class="confirm-yes" @click="resetCollection">{{ $t('消去する', 'Clear') }}</button>
+                <button class="confirm-no" @click="confirmReset = false">{{ $t('キャンセル', 'Cancel') }}</button>
             </div>
         </div>
     </div>
@@ -222,6 +222,7 @@ import {
 } from "./caveAreas.js";
 import { getSession } from "@/utils/session.js";
 import db from "@/firebase.js";
+import { t } from "@/utils/lang.js";
 import CollectionCard from "./CollectionCard.vue";
 import {
     getCurrentUser,
@@ -314,7 +315,7 @@ export default {
         console.log("CaveEnd 会員ID:", cenId);
         if (!cenId) {
             console.error("CaveEndで会員IDを取得できません");
-            alert("会員IDを取得できません。再ログインしてください。");
+            alert(t("会員IDを取得できません。再ログインしてください。", "Could not get your member ID. Please log in again."));
             return;
         }
         // ■データベースからカギ情報を読み込む
@@ -323,7 +324,7 @@ export default {
             console.log("CaveEnd カギ情報:", this.caveKeys);
         } catch (error) {
             console.error("カギ情報の読み込みに失敗しました:", error);
-            alert("カギ情報を読み込めませんでした。");
+            alert(t("カギ情報を読み込めませんでした。", "Could not load your keys."));
             return;
         }
 
@@ -351,18 +352,18 @@ export default {
         async openChest() {
             if (this.isOpening || this.chestPhase !== "idle") return;
             if (!this.library.length || !this.user) {
-                alert("カード情報を読み込み中です。少し待ってからもう一度開けてください。");
+                alert(t("カード情報を読み込み中です。少し待ってからもう一度開けてください。", "Card data is still loading. Please wait a moment and try again."));
                 return;
             }
             const cenId = getSession("loginCenId");
             const areaId = this.selectedArea;
-            if (!cenId) { alert("会員IDを取得できません。再ログインしてください。");
+            if (!cenId) { alert(t("会員IDを取得できません。再ログインしてください。", "Could not get your member ID. Please log in again."));
                 return;
             }
             // ★追加：カギが0本なら宝箱を開かない
             const currentKeys = Number(this.caveKeys[areaId] || 0);
             if (currentKeys <= 0) {
-                alert(`${this.areas[areaId].name}のカギがありません。`);
+                alert(t(`${this.areas[areaId].name}のカギがありません。`, `No ${this.areas[areaId].nameEn} keys left.`));
                 return;
             }
 
@@ -438,8 +439,8 @@ export default {
                 }
                 this.chestPhase = "idle";
                 alert(
-                    "宝箱を開けられませんでした。\n" +
-                    (error.message || "通信状態を確認してください。")
+                    t("宝箱を開けられませんでした。\n", "Could not open the chest.\n") +
+                    (error.message || t("通信状態を確認してください。", "Please check your connection."))
                 );
             }
         },
@@ -575,7 +576,7 @@ export default {
         // ■テスト用：カード一括クリア（確認は画面内ダイアログで行う）
         askResetCollection() {
             if (this.collection.length === 0) {
-                this.collectionNotice = "クリアするカードがありません。";
+                this.collectionNotice = t("クリアするカードがありません。", "There are no cards to clear.");
                 return;
             }
             this.collectionNotice = "";
@@ -593,11 +594,11 @@ export default {
                 .then(() => {
                     this.collection = [];
                     this.focusedIndex = null;
-                    this.collectionNotice = "図鑑をリセットしました。";
+                    this.collectionNotice = t("図鑑をリセットしました。", "The card book was reset.");
                 })
                 .catch(error => {
                     console.error("カードの削除に失敗しました:", error);
-                    this.collectionNotice = "カードを削除できませんでした。";
+                    this.collectionNotice = t("カードを削除できませんでした。", "Could not delete the cards.");
                 });
         },
 
