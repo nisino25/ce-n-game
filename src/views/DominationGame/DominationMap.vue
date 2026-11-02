@@ -498,13 +498,15 @@ L.tileLayer(
 
         createStartMarkers() {
             // ■平塚市・釧路市は同じデザインのマーカーにそろえる（光る緑の地域の上に、タップできる街として出す）
-            const cityMarker = (position, name, onClick) => L.marker(position, {
+            // labelShift：ふだを左にずらす量（px）。京都と平塚が近くて、ふだが重なるときに使う
+            // labelLift：ふだを上にずらす量（px）。開発用のAIテストは、ほかの街と重ならないように上に出す
+            const cityMarker = (position, name, onClick, labelShift = 0, labelLift = 0) => L.marker(position, {
                 icon: L.divIcon({
                     className: "",
                     // 名前のふだだけ。街の場所（緑の地域）が隠れないよう、ふだは地点の少し下に置く。
                     html: `<div class="city-marker">${name}</div>`,
                     iconSize: [160, 34],
-                    iconAnchor: [80, -22]
+                    iconAnchor: [80 + labelShift, -22 + labelLift]
                 })
             })
                 .addTo(this.map)
@@ -512,9 +514,11 @@ L.tileLayer(
 
             this.hiratsukaMarker = cityMarker([35.3150, 139.3497], t("平塚市", "Hiratsuka"), () => this.startHiratsuka());
             this.kushiroMarker = cityMarker([42.9849, 144.3814], t("釧路市", "Kushiro"), () => this.startKushiro());
-            this.kyotoMarker = cityMarker([35.0116, 135.7681], t("京都市", "Kyoto"), () => this.startKyoto());
+            // 京都のふだは、平塚のふだと重ならないように左へずらす
+            this.kyotoMarker = cityMarker([35.0116, 135.7681], t("京都市", "Kyoto"), () => this.startKyoto(), 64);
             // ■AIテストエリア（テストモードのときだけ）：平塚・釧路とは別に、AIとの試しのゲームを、何回でも遊べる
-            if (isTestMode()) this.testMarker = cityMarker([37.5, 134.5], t("🧪 AIテスト", "🧪 AI test"), () => this.startAiTest());
+            // 開発用のAIテストのふだは、ほかの街と重ならないように、ずっと上に出す
+            if (isTestMode()) this.testMarker = cityMarker([37.5, 134.5], t("🧪 AIテスト", "🧪 AI test"), () => this.startAiTest(), 0, 300);
         },
 
 
