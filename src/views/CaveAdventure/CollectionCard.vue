@@ -116,17 +116,18 @@ export default {
 .habitat span{font-size:8px;color:#000;white-space:nowrap}
 .habitat img{width:28px;height:28px;object-fit:contain}
 
+/* 写真は、植物のカードと同じ大きさ・位置（左右いっぱいに、下の名前の上まで） */
 .image{
-    position:absolute;top:50px;left:50%;transform:translateX(-50%);
-    width:120px;height:120px;
+    position:absolute;top:63px;left:6px;
+    width:138px;height:123px;
     display:flex;align-items:center;justify-content:center;
 }
-.image img{width:100%;height:100%;object-fit:contain}
+.image img{width:100%;height:100%;object-fit:cover}
 .no-image{font-size:28px;display:flex;align-items:center;justify-content:center}
 
 .name{
-    position:absolute;top:165px;left:0;width:100%;
-    font-size:13px;font-weight:bold;color:#000;padding:0 4px;
+    position:absolute;top:190px;left:0;width:100%;
+    font-size:14px;font-weight:bold;color:#000;padding:0 4px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 
@@ -143,5 +144,5 @@ export default {
 .mini-card.plant .image img{object-fit:cover}
 .mini-card.plant .name{top:190px;font-size:15px}
 .mini-card.plant .owner{position:absolute;top:210px;left:0;width:100%;font-size:9px;color:#000}
-.owner{position:absolute;top:186px;left:0;width:100%;font-size:10px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;box-sizing:border-box}
+.owner{position:absolute;top:210px;left:0;width:100%;font-size:9px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;box-sizing:border-box}
 </style>

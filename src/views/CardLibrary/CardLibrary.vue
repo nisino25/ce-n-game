@@ -324,13 +324,17 @@ export default {
             });
         },
 
+        // 新しいカードほど上に出す（作られた日が無いカードは、いちばん下）
         filteredCards() {
-            return this.cards.filter(card =>
-                this.matchesTab(card)
-                && (this.tab !== "all" || this.matchesOwnedFilter(card))
-                && (this.regionFilter === "all" || cardRegions(card).includes(this.regionFilter))
-                && this.matchesDate(card)
-            );
+            const createdTime = card => (card.createdAt && card.createdAt.toMillis ? card.createdAt.toMillis() : 0);
+            return this.cards
+                .filter(card =>
+                    this.matchesTab(card)
+                    && (this.tab !== "all" || this.matchesOwnedFilter(card))
+                    && (this.regionFilter === "all" || cardRegions(card).includes(this.regionFilter))
+                    && this.matchesDate(card)
+                )
+                .sort((a, b) => createdTime(b) - createdTime(a));
         },
 
         filterKey() {
