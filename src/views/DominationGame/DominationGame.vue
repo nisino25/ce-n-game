@@ -461,31 +461,36 @@
             </div>
         </div>
 
-        <!-- ■あそびかた（はてなボタンから開く。1ページずつ「つぎ」「まえ」で進む） -->
+        <!-- ■あそびかた（はてなボタンから開く。「つぎ」「まえ」で1ページずつ進む。言語は、この画面だけ切り替えられる） -->
         <div
             v-if="isShowingTuorial"
             class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
             @click.self="closeTutorial"
         >
             <div class="relative w-full max-w-sm">
-                <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" :aria-label="$t('とじる', 'Close')" @click="closeTutorial">✕</button>
+                <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" :aria-label="tt('とじる', 'Close')" @click="closeTutorial">✕</button>
                 <div class="flex max-h-[85vh] flex-col rounded-2xl bg-white p-5 shadow-xl">
-                    <p class="text-center text-xs font-bold text-slate-400">{{ tutorialPage + 1 }} / {{ tutorialPages.length }}</p>
-                    <p class="mt-1 text-center text-lg font-black text-slate-700">{{ tutorialPages[tutorialPage].title }}</p>
+                    <!-- この画面だけの言語の切り替え -->
+                    <div class="mb-2 flex justify-center" role="group" aria-label="表示言語">
+                        <div class="flex overflow-hidden rounded-full border border-slate-300 text-xs font-bold">
+                            <button type="button" class="px-3 py-1" :class="effTutorialLang === 'ja' ? 'bg-slate-700 text-white' : 'text-slate-600'" @click="tutorialLang = 'ja'">日本語</button>
+                            <button type="button" class="px-3 py-1" :class="effTutorialLang === 'en' ? 'bg-slate-700 text-white' : 'text-slate-600'" @click="tutorialLang = 'en'">English</button>
+                        </div>
+                    </div>
 
-                    <div class="mt-3 flex-1 space-y-2 overflow-y-auto text-left text-[14px] leading-relaxed text-slate-700">
-                        <p v-for="(line, index) in tutorialPages[tutorialPage].lines" :key="index" class="flex gap-2">
-                            <span v-if="tutorialPages[tutorialPage].lines.length > 1" class="mt-0.5 flex-none text-slate-400">•</span>
-                            <span>{{ line }}</span>
-                        </p>
+                    <p class="text-center text-xs font-bold text-slate-400">{{ tutorialPage + 1 }} / {{ tutorialPages.length }}</p>
+                    <p class="mt-1 text-center text-xl font-black text-slate-700">{{ tutorialPages[tutorialPage].title }}</p>
+
+                    <div class="mt-4 flex-1 space-y-3 overflow-y-auto text-left text-base leading-relaxed text-slate-700">
+                        <p v-for="(line, index) in tutorialPages[tutorialPage].lines" :key="index">{{ line }}</p>
 
                         <!-- ちけい（すむ ばしょ）：盤面と同じ色・もようの見本 -->
                         <div v-if="tutorialPages[tutorialPage].legend === 'terrain'" class="grid grid-cols-2 gap-2 pt-2">
                             <div v-for="item in terrainList" :key="item.key" class="legend-terrain">
                                 <span class="legend-swatch" :style="terrainSwatchStyle(item.key)"></span>
                                 <span class="text-left leading-tight">
-                                    <b class="block text-[13px] text-slate-700">{{ $t(item.label, item.labelEn) }}</b>
-                                    <small class="block text-[10px] font-bold text-slate-500">{{ $t(item.hint, item.hintEn) }}</small>
+                                    <b class="block text-[13px] text-slate-700">{{ tt(item.label, item.labelEn) }}</b>
+                                    <small class="block text-[10px] font-bold text-slate-500">{{ tt(item.hint, item.hintEn) }}</small>
                                 </span>
                             </div>
                         </div>
@@ -500,19 +505,18 @@
                                     <polygon v-else points="12,1.5 14.9,8.4 22.4,9 16.7,13.9 18.5,21.3 12,17.4 5.5,21.3 7.3,13.9 1.6,9 9.1,8.4" />
                                 </svg>
                                 <b class="text-[13px] text-slate-700">Lv{{ tier }}</b>
-                                <span class="legend-points">{{ getScoreForTile(tier) }}{{ $t('点', ' pts') }}</span>
-                                <small class="text-[9px] font-bold leading-tight text-slate-500">{{ tier === 1 ? $t('どこでも', 'Anywhere') : $t(`まわりに Lv${tier - 1}が 2こ`, `2 × Lv${tier - 1} around`) }}</small>
+                                <span class="legend-points">{{ getScoreForTile(tier) }}{{ tt('点', ' pts') }}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-4 flex items-center justify-between gap-2">
+                    <div class="mt-5 flex items-center justify-between gap-2">
                         <button
                             type="button"
                             class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-30"
                             :disabled="tutorialPage === 0"
                             @click="tutorialPage--"
-                        >◀ {{ $t('まえ', 'Back') }}</button>
+                        >◀ {{ tt('まえ', 'Back') }}</button>
                         <div class="flex gap-1">
                             <span
                                 v-for="(page, index) in tutorialPages"
@@ -526,13 +530,13 @@
                             type="button"
                             class="rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600"
                             @click="tutorialPage++"
-                        >{{ $t('つぎ', 'Next') }} ▶</button>
+                        >{{ tt('つぎ', 'Next') }} ▶</button>
                         <button
                             v-else
                             type="button"
                             class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-600"
                             @click="closeTutorial"
-                        >{{ $t('とじる', 'Close') }}</button>
+                        >{{ tt('とじる', 'Close') }}</button>
                     </div>
                 </div>
             </div>
@@ -668,7 +672,7 @@ import GameResultSummary from './GameResultSummary.vue';
 import ABGameProposalB from '@/views/ABGame/ABGameProposalB.vue';
 import { getSession } from '@/utils/session.js';
 import { teamShortName } from '@/utils/teamLabel.js';
-import { t } from '@/utils/lang.js';
+import { t, getLang } from '@/utils/lang.js';
 import { generateSpotBoard } from './habitatBoard.js';
 import { isFresh } from '@/utils/dominationSlots.js';
 
@@ -874,6 +878,7 @@ export default {
 
         isShowingTuorial: false,
         tutorialPage: 0, // あそびかたの今のページ（0から）
+        tutorialLang: null, // あそびかただけの言語（null のときは、画面全体の言語に合わせる）
         boardOverview: false, // 虫眼鏡：盤面ぜんたいを1画面に収める（スマホ）
         overviewWidth: 300,
 
@@ -2270,6 +2275,11 @@ export default {
         closeTutorial() {
             this.isShowingTuorial = false
             this.tutorialPage = 0
+            this.tutorialLang = null
+        },
+        // あそびかたの画面の言語で、文字を選ぶ
+        tt(ja, en) {
+            return this.effTutorialLang === 'en' ? en : ja
         },
         // 手札のカードの名前（英語モードでは、スキャンでとったカードの英語名）
         cardLabel(card) {
@@ -2733,64 +2743,66 @@ export default {
         ABGameProposalB
     },
     computed: {
-        // あそびかたのページ（1ページに、ひとつのことだけ）。言語は、いまの言語に合わせて切り替わる
+        // あそびかたの画面で使う言語（この画面だけの切り替えがあれば、それを使う）
+        effTutorialLang() {
+            return this.tutorialLang || getLang()
+        },
+        // あそびかたのページ（短く、1ページに1つのこと）。言語は、あそびかたの画面だけで切り替えられる
         tutorialPages() {
             return [
                 {
-                    title: t('ねらい', 'Goal'),
+                    title: this.tt('ねらい', 'Goal'),
                     lines: [
-                        t('3つのチームで、カードを盤面に置いて、ポイントを集めよう。', 'Three teams place cards on the board to collect points.'),
-                        t('ポイントが一番多いチームの勝ち！', 'The team with the most points wins!')
+                        this.tt('3チームで カードを おいて、ポイントを あつめよう。', '3 teams place cards to collect points.'),
+                        this.tt('ポイントが いちばん おおい チームの かち！', 'The team with the most points wins!')
                     ]
                 },
                 {
-                    title: t('じゅんばん', 'Turns'),
+                    title: this.tt('あそびかた', 'How to play'),
                     lines: [
-                        t('自分の番に、手札からカードを1枚えらぶ。', 'On your turn, pick a card from your hand.'),
-                        t('黄色く光るマスをタップすると、そこに置ける。', 'Tap a glowing yellow tile to place it.'),
-                        t('置けないときは「スキップ」。', 'If you can\'t place a card, tap “Skip”.')
+                        this.tt('じぶんの番に、カードを 1まい えらぶ。', 'On your turn, pick 1 card.'),
+                        this.tt('きいろく ひかる マスを タップ。', 'Tap a glowing yellow tile.'),
+                        this.tt('おけない ときは「スキップ」。', 'Can\'t place? Tap “Skip”.')
                     ]
                 },
                 {
-                    title: t('どこに置ける？', 'Where can I place?'),
+                    title: this.tt('どこに おける？', 'Where can I place?'),
                     legend: 'terrain',
                     lines: [
-                        t('陸の生き物は、町・森・土に。', 'Land creatures go on town, forest, or soil.'),
-                        t('水の生き物は、川・海に。', 'Water creatures go on river or sea.'),
-                        t('黒いマスは、そのままでは置けない。', 'You can\'t place on black tiles as they are.')
+                        this.tt('町・森・土：りくの いきもの', 'Town, Forest, Soil: land creatures'),
+                        this.tt('川・海：みずの いきもの', 'River, Sea: water creatures'),
+                        this.tt('くろい マス：まだ おけない', 'Black tiles: can\'t place yet')
                     ]
                 },
                 {
-                    title: t('黒いマス：かんきょうクイズ', 'Black tile: environment quiz'),
+                    title: this.tt('くろい マス', 'Black tiles'),
                     lines: [
-                        t('黒いマスをタップすると、かんきょうクイズ（2問）ができる。', 'Tap a black tile to take a 2-question environment quiz.'),
-                        t('1回で両方正解すると、マスがとなりと同じ地形になって +3点。', 'Get both right on the first try and the tile becomes the same terrain as its neighbor: +3 pts.'),
-                        t('まちがえたら、番が次のチームにうつる。カードがなくても挑戦できる。', 'If you miss, the turn passes to the next team. You can try even without cards.')
+                        this.tt('タップすると、クイズ（2もん）。', 'Tap for a quiz (2 questions).'),
+                        this.tt('ぜんぶ 1回で 正解で +3てん。', 'Both right the first time: +3 pts.'),
+                        this.tt('まちがえたら、番は つぎの チームへ。', 'Wrong answer: the next team\'s turn.')
                     ]
                 },
                 {
-                    title: t('レベル', 'Levels'),
+                    title: this.tt('レベル', 'Levels'),
                     legend: 'levels',
                     lines: [
-                        t('Lv1（▲）は、どこにでも置ける。', 'Lv1 (▲) can go anywhere.'),
-                        t('Lv2（■）は、まわりにLv1が2つ以上あるところ。', 'Lv2 (■) needs 2 or more Lv1 around it.'),
-                        t('Lv3・Lv4も、ひとつ下のレベルが2つ以上まわりにあるところ。', 'Lv3 and Lv4 need 2 or more of the level below around them.'),
-                        t('「まわり」は、たて・よこ・ななめの8マス。', '“Around” means the 8 tiles up, down, left, right, and diagonal.')
+                        this.tt('Lv1（▲）は どこでも おける。', 'Lv1 (▲): anywhere.'),
+                        this.tt('Lv2（■）は まわりに Lv1 が 2つ以上。', 'Lv2 (■): 2 or more Lv1 nearby.'),
+                        this.tt('「まわり」は まわりの 8マス。', '“Nearby” means the 8 tiles around.')
                     ]
                 },
                 {
-                    title: t('たべる！', 'Eating!'),
+                    title: this.tt('たべる！', 'Eating!'),
                     lines: [
-                        t('高いレベルのカードを置くと、まわりの低いレベルのカードを食べる。', 'Placing a higher-level card eats the lower-level cards around it.'),
-                        t('食べられたカードは灰色になり、数えられなくなる。', 'Eaten cards turn gray and no longer count.')
+                        this.tt('高いレベルのカードは、まわりの 低いカードを たべる。', 'A higher-level card eats the lower ones nearby.'),
+                        this.tt('たべられたカードは、数えない。', 'Eaten cards don\'t count.')
                     ]
                 },
                 {
-                    title: t('ポイントと終わり', 'Points and the end'),
+                    title: this.tt('おわり', 'The end'),
                     lines: [
-                        t('置いたカードのレベルで、ポイントがもらえる。', 'You earn points based on the level of the card you place.'),
-                        t('カードがなくなる・全員がスキップする・「まけました」で終わり。', 'The game ends when no cards are left, everyone skips, or someone taps “I resign”.'),
-                        t('1位・2位・3位は、テラがもらえる（1位+10、2位+5、3位+2）。', '1st, 2nd, and 3rd earn Tera (+10, +5, +2).')
+                        this.tt('カードが なくなる・ぜんいんが スキップ・「まけました」で おわり。', 'The game ends when cards run out, everyone skips, or someone resigns.'),
+                        this.tt('1〜3位は テラが もらえる。', '1st to 3rd earn Tera.')
                     ]
                 }
             ]
