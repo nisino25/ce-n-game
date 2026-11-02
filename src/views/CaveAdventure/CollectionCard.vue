@@ -28,7 +28,7 @@
             <div v-else class="no-image">🐾</div>
         </div>
 
-        <div class="name">{{ card.name }}</div>
+        <div class="name">{{ $t(card.name, card.nameEn || card.name) }}</div>
         <div class="owner">発見者 {{ card.owner }}</div>
     </div>
 </template>

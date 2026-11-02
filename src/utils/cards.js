@@ -166,6 +166,8 @@ export function toDisplayCard(card, instance = null) {
     return {
         cardId: card.cardId,
         name: card.name,
+        // 英語モードで出す名前（スキャンでとったカードだけ入っている）
+        nameEn: card.nameEn || "",
         icon: card.image || "",
         level: LEVEL_ICONS[card.level] || "",
         levelNumber: card.level,
