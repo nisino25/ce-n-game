@@ -19,6 +19,7 @@
                     <div class="flex gap-3">
                         <button class="flex-1 rounded-xl border border-emerald-700 bg-emerald-800 py-4 text-base font-black text-emerald-100 hover:bg-emerald-700" @click="areaKey = 'hiratsuka'">平塚市</button>
                         <button class="flex-1 rounded-xl border border-sky-700 bg-sky-800 py-4 text-base font-black text-sky-100 hover:bg-sky-700" @click="areaKey = 'kushiro'">釧路市</button>
+                        <button class="flex-1 rounded-xl border border-amber-700 bg-amber-800 py-4 text-base font-black text-amber-100 hover:bg-amber-700" @click="areaKey = 'kyoto'">京都市</button>
                     </div>
                 </div>
 
@@ -41,7 +42,7 @@
 <script>
 import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
 
-const AREA_NAMES = { hiratsuka: { name: "平塚市" }, kushiro: { name: "釧路市" } };
+const AREA_NAMES = { hiratsuka: { name: "平塚市" }, kushiro: { name: "釧路市" }, kyoto: { name: "京都市" } };
 
 export default {
     name: "ABGameDemo",
