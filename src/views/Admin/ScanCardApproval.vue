@@ -32,6 +32,28 @@
                         {{ option.label }}（{{ option.count }}）
                     </button>
                 </div>
+
+                <!-- 写真の見せ方（この画面のプレビューだけ変わる。カードのデータは変えない） -->
+                <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <span class="font-bold text-slate-600">写真：</span>
+                    <button
+                        v-for="option in positionOptions"
+                        :key="option.value"
+                        type="button"
+                        class="rounded-full border px-3 py-1 font-bold transition"
+                        :class="imagePosition === option.value ? 'border-sky-600 bg-sky-600 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'"
+                        @click="imagePosition = option.value"
+                    >{{ option.label }}</button>
+                    <span class="ml-2 font-bold text-slate-600">大きさ：</span>
+                    <button
+                        v-for="option in zoomOptions"
+                        :key="option.value"
+                        type="button"
+                        class="rounded-full border px-3 py-1 font-bold transition"
+                        :class="imageZoom === option.value ? 'border-sky-600 bg-sky-600 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'"
+                        @click="imageZoom = option.value"
+                    >{{ option.label }}</button>
+                </div>
             </div>
         </header>
 
@@ -52,8 +74,10 @@
                     class="flex gap-4 rounded-2xl bg-white p-4 shadow-sm"
                     :class="decisionClass(card)"
                 >
-                    <img v-if="card.image" :src="card.image" :alt="card.name" class="h-28 w-28 flex-none rounded-xl object-cover">
-                    <div v-else class="flex h-28 w-28 flex-none items-center justify-center rounded-xl bg-slate-200 text-3xl">🐾</div>
+                    <!-- ゲームやカードライブラリで見えるのと同じカード（写真の見せ方は、上の設定で変えられる） -->
+                    <div class="flex-none">
+                        <CollectionCard :card="previewOf(card)" :image-style="imageStyle" />
+                    </div>
 
                     <div class="flex min-w-0 flex-1 flex-col">
                         <p class="truncate text-lg font-black text-slate-800">{{ card.name }}</p>
@@ -73,7 +97,7 @@
                         </p>
 
                         <!-- 決める：ON / OFF のどちらかを押す -->
-                        <div class="mt-auto grid grid-cols-2 gap-2 pt-3">
+                        <div class="mt-auto grid grid-cols-1 gap-2 pt-3">
                             <button
                                 type="button"
                                 class="whitespace-nowrap rounded-xl px-2 py-2 text-sm font-black transition disabled:opacity-50"
@@ -104,7 +128,8 @@
 
 <script>
 import db from "@/firebase.js";
-import { cardRegions, REGION_LABELS } from "@/utils/cards.js";
+import CollectionCard from "@/views/CaveAdventure/CollectionCard.vue";
+import { cardRegions, REGION_LABELS, toDisplayCard } from "@/utils/cards.js";
 
 // いま陣取りゲームで遊べる地域（関東・近畿・北海道）
 const PLAYABLE_REGIONS = ["kanto", "kinki", "hokkaido"];
@@ -112,12 +137,27 @@ const PLAYABLE_REGIONS = ["kanto", "kinki", "hokkaido"];
 export default {
     name: "ScanCardApproval",
 
+    components: { CollectionCard },
+
     created() {
         this.REGION_LABELS = REGION_LABELS;
     },
 
     data() {
         return {
+            // 写真の見せ方（この画面のプレビューだけ）
+            imagePosition: "center",
+            imageZoom: 1,
+            positionOptions: [
+                { value: "top", label: "上" },
+                { value: "center", label: "中央" },
+                { value: "bottom", label: "下" }
+            ],
+            zoomOptions: [
+                { value: 1, label: "100%" },
+                { value: 1.2, label: "120%" },
+                { value: 1.4, label: "140%" }
+            ],
             cards: [],
             loading: true,
             loadError: "",
@@ -129,6 +169,9 @@ export default {
     },
 
     computed: {
+        imageStyle() {
+            return this.imageStyleFor();
+        },
         onCount() {
             return this.cards.filter(card => card.caveOk === true).length;
         },
@@ -177,6 +220,18 @@ export default {
     },
 
     methods: {
+        // カードを、ゲームやカードライブラリで出すのと同じ形にする
+        previewOf(card) {
+            return toDisplayCard(card, { team: "", ownerName: card.ownerName || "" });
+        },
+
+        // 写真の位置と大きさ（中央・上・下、拡大）
+        // 拡大するときは、写真の中心の位置を決めて、その位置を真ん中にそろえる
+        imageStyleFor() {
+            const position = { top: "center top", center: "center center", bottom: "center bottom" }[this.imagePosition];
+            return { objectPosition: position, transform: `scale(${this.imageZoom})`, transformOrigin: position };
+        },
+
         // いま遊べる地域（関東・近畿・北海道）のうち、このカードが出る地域
         playableRegions(card) {
             return cardRegions(card).filter(region => PLAYABLE_REGIONS.includes(region));

@@ -24,7 +24,7 @@
         </div>
 
         <div class="image">
-            <img v-if="card.icon" :src="card.icon" :alt="card.name" loading="lazy">
+            <img v-if="card.icon" :src="card.icon" :alt="card.name" loading="lazy" :style="imageStyle || null">
             <div v-else class="no-image">🐾</div>
         </div>
 
@@ -45,7 +45,9 @@ export default {
     props: {
         card: { type: Object, required: true },
         // この画面だけ言語を変えたいとき（空なら、画面全体の言語に合わせる）
-        lang: { type: String, default: "" }
+        lang: { type: String, default: "" },
+        // 写真の見せ方（位置・拡大など）。指定したときだけ使う（画像の中央・拡大の調整など）
+        imageStyle: { type: Object, default: null }
     },
     methods: {
         tl(ja, en) {
@@ -119,7 +121,7 @@ export default {
 /* 写真は、植物のカードと同じ大きさ・位置（左右いっぱいに、下の名前の上まで） */
 .image{
     position:absolute;top:63px;left:6px;
-    width:138px;height:123px;
+    width:138px;height:123px;overflow:hidden;
     display:flex;align-items:center;justify-content:center;
 }
 .image img{width:100%;height:100%;object-fit:cover}
