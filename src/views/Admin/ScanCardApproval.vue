@@ -68,7 +68,7 @@
                         <div class="mt-auto grid grid-cols-2 gap-2 pt-3">
                             <button
                                 type="button"
-                                class="rounded-xl py-2 text-sm font-black transition disabled:opacity-50"
+                                class="whitespace-nowrap rounded-xl px-2 py-2 text-sm font-black transition disabled:opacity-50"
                                 :class="card.caveOk === true ? 'bg-emerald-600 text-white' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'"
                                 :disabled="savingId === card.cardId"
                                 @click="setCave(card, true)"
@@ -77,7 +77,7 @@
                             </button>
                             <button
                                 type="button"
-                                class="rounded-xl py-2 text-sm font-black transition disabled:opacity-50"
+                                class="whitespace-nowrap rounded-xl px-2 py-2 text-sm font-black transition disabled:opacity-50"
                                 :class="card.caveOk === false ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'"
                                 :disabled="savingId === card.cardId"
                                 @click="setCave(card, false)"
