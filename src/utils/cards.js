@@ -120,9 +120,12 @@ export function drawCard(library, region) {
     const target = normalizeRegion(region);
     const regionCards = library.filter(card => cardRegions(card).includes(target));
 
-    const silverCards = library.filter(card => card.frame === "silver" && card.published === true && card.source !== "scan");
-    // 指定地域かつ銀フレームのカードに絞り込む
-    const pool = regionCards.filter( card => silverCards.includes(card));
+    // くじに入るのは、公開されている銀フレームのカード。スキャンで作ったカードは、管理画面で「洞窟で出す」をONにしたものだけ
+    const drawableCards = library.filter(card => card.published === true && (card.source === "scan"
+        ? card.caveOk === true
+        : card.frame === "silver"));
+    // 指定地域のカードに絞り込む
+    const pool = regionCards.filter(card => drawableCards.includes(card));
     // const pool = regionCards.length ? regionCards : library;
     if (!pool.length) return null;
 

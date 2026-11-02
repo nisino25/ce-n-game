@@ -28,6 +28,7 @@ import CreatureScan from "@/views/CreatureScan/CreatureScan.vue";
 // import { getSession } from "@/utils/session.js";
 
 import CardAdmin from "@/views/Admin/CardAdmin.vue";
+import ScanCardApproval from "@/views/Admin/ScanCardApproval.vue";
 import CustAdmin from "@/views/Admin/CustAdmin.vue";
 import DocsView from "@/views/Docs/DocsView.vue";
 import RegionCardSpec from "@/views/DominationGame/RegionCardSpec.vue";
@@ -147,10 +148,17 @@ const routes = [
     },
 
     // ■カード管理画面
-    { 
-        path: "/card-admin", 
-        name: "CardAdmin", 
+    {
+        path: "/card-admin",
+        name: "CardAdmin",
         component: CardAdmin ,
+        meta: { requiresAdmin: true }
+    },
+    // ■スキャンのカードを、洞窟の宝箱に出すかどうかを決める画面
+    {
+        path: "/scan-card-approval",
+        name: "ScanCardApproval",
+        component: ScanCardApproval,
         meta: { requiresAdmin: true }
     },
     // ■会員管理画面
