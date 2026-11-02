@@ -137,6 +137,8 @@ export default {
     methods:{
         changeLang(lang){
             setLang(lang);
+            // 保存のときに古い言語で上書きしないよう、いま開いている会員の情報も合わせる
+            if (this.currentUser) this.currentUser.uiLang = getLang();
         },
         randomAll(){
             Object.keys(this.avatar).forEach(key=>{

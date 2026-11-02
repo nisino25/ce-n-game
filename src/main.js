@@ -4,7 +4,7 @@ import router from "./router";
 import "./registerServiceWorker";
 
 import multiavatar from "@/lib/multiavatar/multiavatar.js";
-import { t } from "@/utils/lang.js";
+import { t, loadMemberLang } from "@/utils/lang.js";
 const app = createApp(App);
 
 app.config.globalProperties.$buildAvatar = (avatar) => {
@@ -17,3 +17,6 @@ app.config.globalProperties.$t = t;
 app.use(router);
 
 app.mount("#app");
+
+// ■ログイン中なら、会員の言語（サーバーに保存したもの）をこの端末にも反映する
+loadMemberLang();
