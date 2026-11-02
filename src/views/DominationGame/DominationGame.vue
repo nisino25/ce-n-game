@@ -197,6 +197,14 @@
 
                     <!-- actions -->
                     <div class="hidden lg:grid bg-white rounded-xl shadow-sm border border-slate-200 p-3 grid-cols-2 gap-2">
+                        <!-- PCでも「洞窟へ」を出す（スマホは下の手札の列にある） -->
+                        <button
+                            v-if="!spectator"
+                            class="col-span-2 px-2 py-2.5 rounded-lg border border-amber-400 bg-amber-100 hover:bg-amber-200 text-amber-800 text-sm font-bold transition"
+                            @click="goToCave"
+                        >
+                            ⛏ {{ $t('洞窟へ', 'To the cave') }}
+                        </button>
                         <button
                             v-if="!spectator"
                             @click="selectedCard = null"
