@@ -1,7 +1,8 @@
 <template>
     <div
-    class="monitor-room relative w-screen h-screen overflow-hidden bg-slate-950 padding-4"
-    :style="themeVars"
+    ref="room"
+    class="monitor-room relative w-screen h-screen bg-slate-950 padding-4"
+    :style="[themeVars, { overflowY: scrollLocked ? 'hidden' : 'auto' }]"
     >
     <!-- ■div class="relative w-screen h-screen overflow-hidden bg-slate-950 padding-4" :style="themeVars" -->
 
@@ -395,6 +396,8 @@ export default {
 			const avatarSvg = this.$buildAvatar(currentPlayerData?.avatar);
 		
 			return {
+				// ■画面に全部収まるときは、スクロールしないように固定する（入りきらないときだけスクロールできる）
+				scrollLocked: true,
 				status: "監視システム正常",
 				isTransitioning: false,
 				isDocking: false,
@@ -600,6 +603,9 @@ export default {
     async mounted() {
         // ■仮リンクの外側を押したら閉じるための監視（beforeUnmountで外す）
         document.addEventListener("pointerdown", this.closeDevLinksOnOutsideClick);
+        // ■画面の大きさが変わったら、スクロールできるかどうかを決め直す
+        window.addEventListener("resize", this.updateScrollLock);
+        this.updateScrollLock();
 
         // ■最終ログイン日時を毎回更新し、7日以上放置されたセッションは自動でログアウトする
         if (this.checkSessionExpired()) {
@@ -626,11 +632,23 @@ export default {
 				console.log("Online Team Members:", this.onlineTeamMembers);
     },
 
+    updated() {
+        this.updateScrollLock();
+    },
+
     beforeUnmount() {
         document.removeEventListener("pointerdown", this.closeDevLinksOnOutsideClick);
+        window.removeEventListener("resize", this.updateScrollLock);
     },
 
     methods: {
+        // ■中身が画面より小さいときは、スクロールを止める（大きいときだけスクロールできる）
+        updateScrollLock() {
+            const room = this.$refs.room;
+            if (!room) return;
+            this.scrollLocked = room.scrollHeight <= room.clientHeight + 1;
+        },
+
         // ■仮リンクのパネルが開いているとき、そのパネルの外側を押したら閉じる
         closeDevLinksOnOutsideClick(event) {
             const panel = this.$refs.devLinks;
@@ -1011,6 +1029,8 @@ export default {
   }
 
   .room-title{
+      /* 左上の「退出ボタン」と重ならないように、タイトルの始まりを右にずらす */
+      padding-left: 6rem;
       color: var(--team-title-glow, #67e8f9);
       filter: drop-shadow(0 0 12px var(--team-accent, #00ffff));
       transition: color 1s ease, filter 1s ease;
