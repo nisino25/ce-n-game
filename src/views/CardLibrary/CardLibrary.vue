@@ -3,8 +3,8 @@
     <div class="min-h-screen bg-[#10151c] text-white px-4 py-6">
         <div class="mx-auto max-w-5xl">
 
-            <header class="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <div>
+            <header class="mb-5 flex items-start justify-between gap-3">
+                <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-3">
                         <h1 class="text-2xl font-black tracking-wide text-cyan-300">{{ $t('カードライブラリ', 'Card book') }}</h1>
                         <LangSwitch />
@@ -12,7 +12,7 @@
                     <p class="text-sm text-slate-400">{{ $t('登録されている生きものカードと、あなたが持っている枚数', 'All creature cards, and how many you have') }}</p>
                 </div>
                 <button
-                    class="rounded-lg border border-slate-500 px-4 py-2 text-sm font-bold hover:bg-white/10"
+                    class="shrink-0 rounded-lg border border-slate-500 px-4 py-2 text-sm font-bold hover:bg-white/10"
                     @click="$router.back()"
                 >
                     {{ $t('もどる', 'Back') }}
@@ -532,6 +532,8 @@ export default {
     display:grid;
     grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
     gap:16px 12px;justify-items:center;
+    /* 1段目の「じぶん」「もっている」のバッジが、固定バーの下に隠れないように、上に余白をとる */
+    padding-top:12px;
 }
 /* 読み込み中：カードが順に跳ねる */
 .loading-box{display:flex;flex-direction:column;align-items:center;gap:16px;padding:80px 0;color:#94a3b8}
