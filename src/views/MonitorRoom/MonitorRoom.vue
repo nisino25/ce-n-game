@@ -1029,8 +1029,9 @@ export default {
   }
 
   .room-title{
-      /* 左上の「退出ボタン」と重ならないように、タイトルの始まりを右にずらす */
-      padding-left: 6rem;
+      /* 左上の「退出ボタン」と重ならないように、左右に同じ余白をとって、まん中に置く */
+      text-align: center;
+      padding: 0 6rem;
       color: var(--team-title-glow, #67e8f9);
       filter: drop-shadow(0 0 12px var(--team-accent, #00ffff));
       transition: color 1s ease, filter 1s ease;

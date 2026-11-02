@@ -9,16 +9,16 @@
             <img v-else-if="card.group === '風'" src="/images/card/チームカラー（風・ライトグリーン）.png" class="team-bg" alt="風">
 
             <img :src="card.level" alt="レベル">
-            <span>{{ card.plant ? $t("生産者", "Producer") : $t("生態系レベル", "Ecosystem level") }}</span>
+            <span>{{ card.plant ? tl("生産者", "Producer") : tl("生態系レベル", "Ecosystem level") }}</span>
         </div>
 
         <div class="top-right">
             <div class="rare">
-                <span>{{ $t("レア度", "Rarity") }}</span>
+                <span>{{ tl("レア度", "Rarity") }}</span>
                 <strong>{{ card.rare }}</strong>
             </div>
             <div class="habitat">
-                <span>{{ $t("すみか", "Habitat") }}</span>
+                <span>{{ tl("すみか", "Habitat") }}</span>
                 <img :src="card.area2" alt="すみか">
             </div>
         </div>
@@ -28,8 +28,8 @@
             <div v-else class="no-image">🐾</div>
         </div>
 
-        <div class="name">{{ $t(card.name, card.nameEn || card.name) }}</div>
-        <div class="owner">{{ $t("発見者", "Found by") }} {{ card.owner }}</div>
+        <div class="name">{{ tl(card.name, card.nameEn || card.name) }}</div>
+        <div class="owner">{{ tl("発見者", "Found by") }} {{ card.owner }}</div>
     </div>
 </template>
 
@@ -38,10 +38,20 @@
 // ■植物（生産者）の台紙：パステルの虹色（左上は黄、右上は緑、右は水色、左下はピンク）
 const PLANT_BACKGROUND = "linear-gradient(135deg, #fff4c2 0%, #c9f7d6 30%, #c5e6ff 55%, #f6c9ef 78%, #fff1c9 100%)";
 
+import { getLang } from "@/utils/lang.js";
+
 export default {
     name: "CollectionCard",
     props: {
-        card: { type: Object, required: true }
+        card: { type: Object, required: true },
+        // この画面だけ言語を変えたいとき（空なら、画面全体の言語に合わせる）
+        lang: { type: String, default: "" }
+    },
+    methods: {
+        tl(ja, en) {
+            const current = this.lang || getLang();
+            return current === "en" ? en : ja;
+        }
     },
     computed: {
         // ■植物は、ゴールドにせず、パステルの台紙（生産者）にする
@@ -133,5 +143,5 @@ export default {
 .mini-card.plant .image img{object-fit:cover}
 .mini-card.plant .name{top:190px;font-size:15px}
 .mini-card.plant .owner{position:absolute;top:210px;left:0;width:100%;font-size:9px;color:#000}
-.owner{position:absolute;top:190px;left:0;width:100%;font-size:10px;color:#444}
+.owner{position:absolute;top:186px;left:0;width:100%;font-size:10px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;box-sizing:border-box}
 </style>

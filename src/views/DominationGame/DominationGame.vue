@@ -461,84 +461,79 @@
             </div>
         </div>
 
-        <!-- ■地形・レベルの説明（はてなボタンから開くモーダル） -->
+        <!-- ■あそびかた（はてなボタンから開く。1ページずつ「つぎ」「まえ」で進む） -->
         <div
             v-if="isShowingTuorial"
             class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
-            @click.self="isShowingTuorial = false"
+            @click.self="closeTutorial"
         >
             <div class="relative w-full max-w-sm">
-                <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" @click="isShowingTuorial = false">✕</button>
-                <div class="max-h-[85vh] space-y-4 overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
-                <p class="text-center text-lg font-black text-slate-700">{{ $t('あそびかた', 'How to play') }}</p>
+                <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" :aria-label="$t('とじる', 'Close')" @click="closeTutorial">✕</button>
+                <div class="flex max-h-[85vh] flex-col rounded-2xl bg-white p-5 shadow-xl">
+                    <p class="text-center text-xs font-bold text-slate-400">{{ tutorialPage + 1 }} / {{ tutorialPages.length }}</p>
+                    <p class="mt-1 text-center text-lg font-black text-slate-700">{{ tutorialPages[tutorialPage].title }}</p>
 
-                <!-- ■ゲームの仕組み（やさしい言葉で） -->
-                <ol class="space-y-2.5 text-left text-[13px] leading-relaxed text-slate-700">
-                    <li class="flex gap-2">
-                        <span class="rule-no">1</span>
-                        <span v-html="$t('<b>めざせ ナンバー1！</b> 3チームで、カードを ばんめんに おいて ポイントを あつめるよ。いちばん ポイントが たかい チームが かち。', '<b>Aim for number 1!</b> Three teams place cards on the board to collect points. The team with the most points wins.')"></span>
-                    </li>
-                    <li class="flex gap-2">
-                        <span class="rule-no">2</span>
-                        <span v-html="$t('<b>じゅんばんに 1まい ずつ。</b> じぶんの ばんに、カードを えらんで、<b>きいろく ひかる マス</b>を タップ。おけない ときは「スキップ」。', '<b>Take turns, one card at a time.</b> On your turn, pick a card and tap a <b>glowing yellow tile</b>. If you cannot place a card, tap “Skip”.')"></span>
-                    </li>
-                    <li class="flex gap-2">
-                        <span class="rule-no">3</span>
-                        <span v-html="$t('<b>おける ばしょ。</b> りくの いきものは <b>町・森・土</b>、みずの いきものは <b>川・海</b>。<b>くろい マス</b>（未開発地）には、そのままでは おけないよ。', '<b>Where to place.</b> Land creatures go on <b>town, forest, or soil</b>; water creatures go on <b>river or sea</b>. You cannot place on a <b>black tile</b> (undeveloped land) as it is.')"></span>
-                    </li>
-                    <li class="flex gap-2">
-                        <span class="rule-no">4</span>
-                        <span v-html="$t('<b>かんきょうチャレンジ！</b> <b>くろい マス</b>を タップすると、かんきょうクイズ（<b>2もん</b>）が できるよ。<b>ぜんぶ 1かいで</b> あてたら せいこう！ マスが <b>となりの マスと おなじ ちけい</b>に なおって <b>+3てん</b>。（その ばんは、なおした マスには おけないよ。つぎの ばんから おけるよ）しっぱいすると ばんが つぎの チームに うつるよ。カードが なくても ちょうせん できるよ。', '<b>Environment challenge!</b> Tap a <b>black tile</b> to answer an environment quiz (<b>2 questions</b>). Get <b>both right on the first try</b> and the tile becomes the <b>same terrain as its neighbor</b>, for <b>+3 pts</b>. (You cannot place on that tile this turn; you can from the next turn.) If you miss, the turn passes to the next team. You can take the challenge even without cards.')"></span>
-                    </li>
-                    <li class="flex gap-2">
-                        <span class="rule-no">5</span>
-                        <span v-html="$t('<b>レベルの ルール。</b> <b>Lv1（▲）</b>は どこにでも おける。<b>Lv2（■）</b>は、まわりに <b>Lv1が 2こ いじょう</b> ある マスだけ。Lv3は Lv2が 2こ、Lv4は Lv3が 2こ いるところに おけるよ。（まわり ＝ たて・よこ・ななめの 8マス）', '<b>Level rules.</b> <b>Lv1 (▲)</b> can go anywhere. <b>Lv2 (■)</b> only where there are <b>2 or more Lv1</b> around it. Lv3 needs 2 Lv2 around it, and Lv4 needs 2 Lv3. (Around = the 8 tiles up, down, left, right and diagonal.)')"></span>
-                    </li>
-                    <li class="flex gap-2">
-                        <span class="rule-no">6</span>
-                        <span v-html="$t('<b>たべる！</b> レベルの たかい カードを おくと、まわりの <b>ひくい レベルの カード</b>を たべるよ。たべられた カードは はいいろに なって、おくための かずにも ならなくなる。', '<b>Eating!</b> When you place a higher-level card, it eats the <b>lower-level cards</b> around it. Eaten cards turn gray and no longer count for placing.')"></span>
-                    </li>
-                    <li class="flex gap-2">
-                        <span class="rule-no">7</span>
-                        <span v-html="$t('<b>ポイント。</b> おいた カードの レベルで きまるよ（下の ひょう）。', '<b>Points.</b> Based on the level of the card you place (see the table below).')"></span>
-                    </li>
-                    <li class="flex gap-2">
-                        <span class="rule-no">8</span>
-                        <span v-html="$t('<b>おわり。</b> カードが なくなる、ぜんいんが スキップする、または「まけました」を おすと おわり。<b>1位・2位・3位</b>に なると、テラが もらえるよ（1位 +10、2位 +5、3位 +2）。', '<b>The end.</b> The game ends when no cards are left, when everyone skips, or when someone taps “I resign”. <b>1st, 2nd, or 3rd</b> earns Tera (1st +10, 2nd +5, 3rd +2).')"></span>
-                    </li>
-                </ol>
+                    <div class="mt-3 flex-1 space-y-2 overflow-y-auto text-left text-[14px] leading-relaxed text-slate-700">
+                        <p v-for="(line, index) in tutorialPages[tutorialPage].lines" :key="index" class="flex gap-2">
+                            <span v-if="tutorialPages[tutorialPage].lines.length > 1" class="mt-0.5 flex-none text-slate-400">•</span>
+                            <span>{{ line }}</span>
+                        </p>
 
-                <!-- ■ちけい（すむ ばしょ）：盤面と同じ色・もようの見本つき -->
-                <div class="border-t border-slate-200 pt-3">
-                    <p class="legend-title">🗺 {{ $t('ちけい（いきものの すむ ばしょ）', 'Terrain (where creatures live)') }}</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div v-for="item in terrainList" :key="item.key" class="legend-terrain">
-                            <span class="legend-swatch" :style="terrainSwatchStyle(item.key)"></span>
-                            <span class="text-left leading-tight">
-                                <b class="block text-[13px] text-slate-700">{{ $t(item.label, item.labelEn) }}</b>
-                                <small class="block text-[10px] font-bold text-slate-500">{{ $t(item.hint, item.hintEn) }}</small>
-                            </span>
+                        <!-- ちけい（すむ ばしょ）：盤面と同じ色・もようの見本 -->
+                        <div v-if="tutorialPages[tutorialPage].legend === 'terrain'" class="grid grid-cols-2 gap-2 pt-2">
+                            <div v-for="item in terrainList" :key="item.key" class="legend-terrain">
+                                <span class="legend-swatch" :style="terrainSwatchStyle(item.key)"></span>
+                                <span class="text-left leading-tight">
+                                    <b class="block text-[13px] text-slate-700">{{ $t(item.label, item.labelEn) }}</b>
+                                    <small class="block text-[10px] font-bold text-slate-500">{{ $t(item.hint, item.hintEn) }}</small>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- レベルと ポイント：盤面と同じ形 -->
+                        <div v-if="tutorialPages[tutorialPage].legend === 'levels'" class="grid grid-cols-4 gap-1.5 pt-2">
+                            <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="legend-level">
+                                <svg class="legend-shape" viewBox="0 0 24 24" aria-hidden="true" :style="{ fill: teamColor(humanPlayerId) }">
+                                    <polygon v-if="tier === 1" points="12,3 22.5,21 1.5,21" />
+                                    <rect v-else-if="tier === 2" x="3" y="3" width="18" height="18" rx="1.5" />
+                                    <circle v-else-if="tier === 3" cx="12" cy="12" r="9" />
+                                    <polygon v-else points="12,1.5 14.9,8.4 22.4,9 16.7,13.9 18.5,21.3 12,17.4 5.5,21.3 7.3,13.9 1.6,9 9.1,8.4" />
+                                </svg>
+                                <b class="text-[13px] text-slate-700">Lv{{ tier }}</b>
+                                <span class="legend-points">{{ getScoreForTile(tier) }}{{ $t('点', ' pts') }}</span>
+                                <small class="text-[9px] font-bold leading-tight text-slate-500">{{ tier === 1 ? $t('どこでも', 'Anywhere') : $t(`まわりに Lv${tier - 1}が 2こ`, `2 × Lv${tier - 1} around`) }}</small>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- ■レベルと ポイント：盤面と同じ形。おける ばしょの ルールつき -->
-                <div class="border-t border-slate-200 pt-3">
-                    <p class="legend-title">⭐ {{ $t('レベルと ポイント', 'Levels and points') }}</p>
-                    <div class="grid grid-cols-4 gap-1.5">
-                        <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="legend-level">
-                            <svg class="legend-shape" viewBox="0 0 24 24" aria-hidden="true" :style="{ fill: teamColor(humanPlayerId) }">
-                                <polygon v-if="tier === 1" points="12,3 22.5,21 1.5,21" />
-                                <rect v-else-if="tier === 2" x="3" y="3" width="18" height="18" rx="1.5" />
-                                <circle v-else-if="tier === 3" cx="12" cy="12" r="9" />
-                                <polygon v-else points="12,1.5 14.9,8.4 22.4,9 16.7,13.9 18.5,21.3 12,17.4 5.5,21.3 7.3,13.9 1.6,9 9.1,8.4" />
-                            </svg>
-                            <b class="text-[13px] text-slate-700">Lv{{ tier }}</b>
-                            <span class="legend-points">{{ getScoreForTile(tier) }}{{ $t('点', ' pts') }}</span>
-                            <small class="text-[9px] font-bold leading-tight text-slate-500">{{ tier === 1 ? $t('どこでも', 'Anywhere') : $t(`まわりに Lv${tier - 1}が 2こ`, `2 × Lv${tier - 1} around`) }}</small>
+                    <div class="mt-4 flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            class="rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                            :disabled="tutorialPage === 0"
+                            @click="tutorialPage--"
+                        >◀ {{ $t('まえ', 'Back') }}</button>
+                        <div class="flex gap-1">
+                            <span
+                                v-for="(page, index) in tutorialPages"
+                                :key="index"
+                                class="h-2 w-2 rounded-full"
+                                :class="index === tutorialPage ? 'bg-slate-700' : 'bg-slate-300'"
+                            ></span>
                         </div>
+                        <button
+                            v-if="tutorialPage < tutorialPages.length - 1"
+                            type="button"
+                            class="rounded-xl bg-sky-500 px-4 py-2 text-sm font-bold text-white hover:bg-sky-600"
+                            @click="tutorialPage++"
+                        >{{ $t('つぎ', 'Next') }} ▶</button>
+                        <button
+                            v-else
+                            type="button"
+                            class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-600"
+                            @click="closeTutorial"
+                        >{{ $t('とじる', 'Close') }}</button>
                     </div>
-                </div>
                 </div>
             </div>
         </div>
@@ -878,6 +873,7 @@ export default {
         gameState: 'playing', // 'playing' or 'finished'
 
         isShowingTuorial: false,
+        tutorialPage: 0, // あそびかたの今のページ（0から）
         boardOverview: false, // 虫眼鏡：盤面ぜんたいを1画面に収める（スマホ）
         overviewWidth: 300,
 
@@ -2270,6 +2266,11 @@ export default {
         teamShortName(name) {
             return teamShortName(name)
         },
+        // あそびかたを閉じる（次に開いたときは、最初のページから）
+        closeTutorial() {
+            this.isShowingTuorial = false
+            this.tutorialPage = 0
+        },
         // 手札のカードの名前（英語モードでは、スキャンでとったカードの英語名）
         cardLabel(card) {
             return t(card.label, card.labelEn || card.label)
@@ -2732,6 +2733,68 @@ export default {
         ABGameProposalB
     },
     computed: {
+        // あそびかたのページ（1ページに、ひとつのことだけ）。言語は、いまの言語に合わせて切り替わる
+        tutorialPages() {
+            return [
+                {
+                    title: t('ねらい', 'Goal'),
+                    lines: [
+                        t('3つのチームで、カードを盤面に置いて、ポイントを集めよう。', 'Three teams place cards on the board to collect points.'),
+                        t('ポイントが一番多いチームの勝ち！', 'The team with the most points wins!')
+                    ]
+                },
+                {
+                    title: t('じゅんばん', 'Turns'),
+                    lines: [
+                        t('自分の番に、手札からカードを1枚えらぶ。', 'On your turn, pick a card from your hand.'),
+                        t('黄色く光るマスをタップすると、そこに置ける。', 'Tap a glowing yellow tile to place it.'),
+                        t('置けないときは「スキップ」。', 'If you can\'t place a card, tap “Skip”.')
+                    ]
+                },
+                {
+                    title: t('どこに置ける？', 'Where can I place?'),
+                    legend: 'terrain',
+                    lines: [
+                        t('陸の生き物は、町・森・土に。', 'Land creatures go on town, forest, or soil.'),
+                        t('水の生き物は、川・海に。', 'Water creatures go on river or sea.'),
+                        t('黒いマスは、そのままでは置けない。', 'You can\'t place on black tiles as they are.')
+                    ]
+                },
+                {
+                    title: t('黒いマス：かんきょうクイズ', 'Black tile: environment quiz'),
+                    lines: [
+                        t('黒いマスをタップすると、かんきょうクイズ（2問）ができる。', 'Tap a black tile to take a 2-question environment quiz.'),
+                        t('1回で両方正解すると、マスがとなりと同じ地形になって +3点。', 'Get both right on the first try and the tile becomes the same terrain as its neighbor: +3 pts.'),
+                        t('まちがえたら、番が次のチームにうつる。カードがなくても挑戦できる。', 'If you miss, the turn passes to the next team. You can try even without cards.')
+                    ]
+                },
+                {
+                    title: t('レベル', 'Levels'),
+                    legend: 'levels',
+                    lines: [
+                        t('Lv1（▲）は、どこにでも置ける。', 'Lv1 (▲) can go anywhere.'),
+                        t('Lv2（■）は、まわりにLv1が2つ以上あるところ。', 'Lv2 (■) needs 2 or more Lv1 around it.'),
+                        t('Lv3・Lv4も、ひとつ下のレベルが2つ以上まわりにあるところ。', 'Lv3 and Lv4 need 2 or more of the level below around them.'),
+                        t('「まわり」は、たて・よこ・ななめの8マス。', '“Around” means the 8 tiles up, down, left, right, and diagonal.')
+                    ]
+                },
+                {
+                    title: t('たべる！', 'Eating!'),
+                    lines: [
+                        t('高いレベルのカードを置くと、まわりの低いレベルのカードを食べる。', 'Placing a higher-level card eats the lower-level cards around it.'),
+                        t('食べられたカードは灰色になり、数えられなくなる。', 'Eaten cards turn gray and no longer count.')
+                    ]
+                },
+                {
+                    title: t('ポイントと終わり', 'Points and the end'),
+                    lines: [
+                        t('置いたカードのレベルで、ポイントがもらえる。', 'You earn points based on the level of the card you place.'),
+                        t('カードがなくなる・全員がスキップする・「まけました」で終わり。', 'The game ends when no cards are left, everyone skips, or someone taps “I resign”.'),
+                        t('1位・2位・3位は、テラがもらえる（1位+10、2位+5、3位+2）。', '1st, 2nd, and 3rd earn Tera (+10, +5, +2).')
+                    ]
+                }
+            ]
+        },
       currentPlayer() {
           return this.players.find(p => p.id === this.currentPlayerId)
       },

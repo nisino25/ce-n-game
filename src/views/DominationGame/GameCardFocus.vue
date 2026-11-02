@@ -2,30 +2,37 @@
     <!-- ■陣取りゲームで、カードを大きく見せる画面（タイルをタップ／手札をタップ）。
          カードの見た目は、カードライブラリ・宝箱と同じ共通のカード（CollectionCard）を使う -->
     <div class="focus-overlay" @click.self="$emit('close')">
-        <button class="focus-close" :aria-label="$t('閉じる', 'Close')" @click="$emit('close')">✕</button>
+        <button class="focus-close" :aria-label="tl('閉じる', 'Close')" @click="$emit('close')">✕</button>
+
+        <!-- この画面だけの言語の切り替え（画面全体の言語は変えない） -->
+        <div class="focus-lang" role="group" aria-label="表示言語">
+            <button type="button" :class="{ on: effLang === 'ja' }" @click="localLang = 'ja'">日本語</button>
+            <button type="button" :class="{ on: effLang === 'en' }" @click="localLang = 'en'">English</button>
+        </div>
 
         <div class="focus-card" :style="{ '--s': scale }">
-            <CollectionCard v-if="display" :card="display" />
+            <CollectionCard v-if="display" :card="display" :lang="effLang" />
             <CreatureCard v-else :creature="card" />
         </div>
 
         <!-- ゲームのルールに関わる情報（レベル・食べもの）は、カードの下に文字で出す -->
         <div class="focus-info">
             <span class="focus-info-tag">Lv{{ card.tier }}</span>
-            <span class="focus-info-label">{{ $t('食べもの', 'Food') }}</span>
+            <span class="focus-info-label">{{ tl('食べもの', 'Food') }}</span>
             <template v-if="card.food && card.food.length">
                 <span v-for="(food, index) in card.food" :key="index" class="focus-info-food">{{ food }}</span>
             </template>
-            <span v-else class="focus-info-none">{{ $t('なし', 'None') }}</span>
+            <span v-else class="focus-info-none">{{ tl('なし', 'None') }}</span>
         </div>
 
-        <button v-if="selectable" class="focus-select" @click="$emit('select')">{{ $t('選択する', 'Select') }}</button>
+        <button v-if="selectable" class="focus-select" @click="$emit('select')">{{ tl('選択する', 'Select') }}</button>
     </div>
 </template>
 
 <script>
 import CollectionCard from "@/views/CaveAdventure/CollectionCard.vue";
 import CreatureCard from "./CreatureCard.vue";
+import { getLang } from "@/utils/lang.js";
 
 export default {
     name: "GameCardFocus",
@@ -36,7 +43,21 @@ export default {
         selectable: { type: Boolean, default: false } // 「選択する」ボタンを出すか（手札のとき）
     },
     emits: ["close", "select"],
+    data() {
+        return {
+            // この画面だけの言語（null のときは、画面全体の言語に合わせる）
+            localLang: null
+        };
+    },
+    methods: {
+        tl(ja, en) {
+            return this.effLang === "en" ? en : ja;
+        }
+    },
     computed: {
+        effLang() {
+            return this.localLang || getLang();
+        },
         // 画面に収まる大きさ（最大2倍）。カードの基本の大きさは 150×220
         scale() {
             const byHeight = (window.innerHeight * 0.55) / 220;
@@ -55,6 +76,14 @@ export default {
     -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
     padding:16px;
 }
+.focus-lang{
+    position:absolute;top:max(18px,env(safe-area-inset-top));left:14px;
+    display:flex;border:1px solid rgba(255,255,255,.3);border-radius:999px;overflow:hidden;
+}
+.focus-lang button{
+    padding:6px 12px;font-size:12px;font-weight:700;color:#cbd5e1;background:transparent;
+}
+.focus-lang button.on{background:#e2e8f0;color:#0f172a}
 .focus-close{
     position:absolute;top:max(14px,env(safe-area-inset-top));right:14px;
     width:40px;height:40px;border-radius:50%;
