@@ -5,7 +5,10 @@
 
             <header class="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 class="text-2xl font-black tracking-wide text-cyan-300">{{ $t('カードライブラリ', 'Card book') }}</h1>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <h1 class="text-2xl font-black tracking-wide text-cyan-300">{{ $t('カードライブラリ', 'Card book') }}</h1>
+                        <LangSwitch />
+                    </div>
                     <p class="text-sm text-slate-400">{{ $t('登録されている生きものカードと、あなたが持っている枚数', 'All creature cards, and how many you have') }}</p>
                 </div>
                 <button
@@ -45,16 +48,12 @@
                     </div>
                 </section>
 
+                <!-- 足りないときだけ、あと何枚かを出す（足りているときは出さない） -->
                 <p
-                    class="mb-5 rounded-lg px-4 py-2 text-sm font-bold"
-                    :class="collectionTotal >= minCards ? 'bg-emerald-900/60 text-emerald-200' : 'bg-amber-900/50 text-amber-200'"
+                    v-if="collectionTotal < minCards"
+                    class="mb-5 rounded-lg bg-amber-900/50 px-4 py-2 text-sm font-bold text-amber-200"
                 >
-                    <template v-if="collectionTotal >= minCards">
-                        ✅ {{ $t(`手元のカードが${minCards}枚以上あるので「すみかにもどそう！」で遊べます`, `You have ${minCards}+ cards, so you can play "Back to our hideout!"`) }}
-                    </template>
-                    <template v-else>
-                        🔒 {{ $t(`「すみかにもどそう！」は手元のカードが${minCards}枚以上で遊べます（あと${minCards - collectionTotal}枚）`, `"Back to our hideout!" needs ${minCards}+ cards (${minCards - collectionTotal} more)`) }}
-                    </template>
+                    🔒 {{ $t(`「すみかにもどそう！」は手元のカードが${minCards}枚以上で遊べます（あと${minCards - collectionTotal}枚）`, `"Back to our hideout!" needs ${minCards}+ cards (${minCards - collectionTotal} more)`) }}
                 </p>
 
                 <div class="sticky-bar">
@@ -211,6 +210,7 @@
 
 <script>
 import CollectionCard from "@/views/CaveAdventure/CollectionCard.vue";
+import LangSwitch from "@/components/LangSwitch.vue";
 import { getSession } from "@/utils/session.js";
 import { REGION_TILES } from "@/utils/creatureCardMapping.js";
 import { t } from "@/utils/lang.js";
@@ -227,7 +227,7 @@ import {
 export default {
     name: "CardLibrary",
 
-    components: { CollectionCard },
+    components: { CollectionCard, LangSwitch },
 
     data() {
         return {
