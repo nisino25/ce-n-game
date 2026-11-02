@@ -71,7 +71,20 @@
                     </button>
                 </div>
 
-                <!-- 絞り込み：ボタンを押すと、モーダルで持ち主・持っているか・場所・作られた日を選ぶ -->
+                <!-- 持っているか：タブが「ぜんぶ」のときだけ、ここで選ぶ（モーダルの外に出している） -->
+                <div v-if="tab === 'all'" class="owned-row mb-2 flex flex-wrap gap-2">
+                    <button
+                        v-for="option in ownedOptions"
+                        :key="option.value"
+                        class="filter-button"
+                        :class="{ active: ownedFilter === option.value }"
+                        @click="ownedFilter = option.value"
+                    >
+                        {{ $t(option.label, option.labelEn) }}
+                    </button>
+                </div>
+
+                <!-- 絞り込み：ボタンを押すと、モーダルで持ち主・場所・作られた日を選ぶ -->
                 <div class="mb-4 flex flex-wrap items-center gap-3">
                     <button class="filter-button" :class="{ active: activeFilterCount > 0 }" @click="filterOpen = true">
                         🔍 {{ $t('絞りこみ', 'Filter') }}<span v-if="activeFilterCount" class="ml-1">（{{ activeFilterCount }}）</span>
@@ -129,21 +142,6 @@
                         <button class="filter-button active" @click="filterOpen = false">{{ $t('閉じる', 'Close') }}</button>
                     </div>
                 </div>
-
-                <section v-if="tab === 'all'">
-                    <h3>{{ $t('持っているか', 'Owned or not') }}</h3>
-                    <div class="flex flex-wrap gap-2">
-                        <button
-                            v-for="option in ownedOptions"
-                            :key="option.value"
-                            class="filter-button"
-                            :class="{ active: ownedFilter === option.value }"
-                            @click="ownedFilter = option.value"
-                        >
-                            {{ $t(option.label, option.labelEn) }}
-                        </button>
-                    </div>
-                </section>
 
                 <section>
                     <h3>{{ $t('場所', 'Place') }}</h3>
@@ -257,7 +255,7 @@ export default {
                 { value: "mine", label: "📷 じぶんがとった", labelEn: "📷 Caught by me" },
                 { value: "others", label: "👥 ほかの人がとった", labelEn: "👥 Caught by others" }
             ],
-            ownedFilter: "owned", // 最初は「もっている」カードだけ表示する（「すべて」は絞りこみで選ぶ）
+            ownedFilter: "owned", // 最初は「もっている」カードだけ表示する（「すべて」は、タブの下の「持っているか」で選ぶ）
             regionFilter: "all",
             ownedOptions: [
                 { value: "all", label: "すべて", labelEn: "All" },
@@ -350,8 +348,7 @@ export default {
 
         // 絞りこみで、初期値（もっているカードだけ）から変えた数
         activeFilterCount() {
-            return (this.tab === "all" && this.ownedFilter !== "owned" ? 1 : 0)
-                + (this.regionFilter !== "all" ? 1 : 0)
+            return (this.regionFilter !== "all" ? 1 : 0)
                 + (this.dateFilter !== "all" ? 1 : 0);
         },
 
@@ -436,7 +433,6 @@ export default {
         },
 
         resetFilters() {
-            this.ownedFilter = "owned";
             this.regionFilter = "all";
             this.dateFilter = "all";
             this.dateFrom = "";
