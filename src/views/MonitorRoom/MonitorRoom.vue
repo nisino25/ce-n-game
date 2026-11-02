@@ -17,8 +17,8 @@
             </button>
 
         <!-- Title -->
-        <h1 class="m-4 room-title text-3xl font-bold tracking-wider">
-            SECRET BASE CONTROL ROOM
+        <h1 class="m-4 room-title font-bold tracking-wider">
+            SECRET BASE<br>CONTROL ROOM
             <!-- ■手元の開発環境のときだけDEMOと出して、本番と見分けられるようにする -->
             <span v-if="isLocalEnv" class="demo-badge">(DEMO)</span>
         </h1>
@@ -1029,9 +1029,26 @@ export default {
   }
 
   .room-title{
-      /* 左上の「退出ボタン」と重ならないように、左右に同じ余白をとって、まん中に置く */
+      /* 2行（SECRET BASE ／ CONTROL ROOM）で、まん中に置く。左上の「退出ボタン」と重ならないように左右に余白をとる */
       text-align: center;
-      padding: 0 6rem;
+      padding: 0 4.5rem;
+      font-size: clamp(1.25rem, 5vw, 1.875rem);
+      line-height: 1.2;
+      position: relative;
+  }
+  /* (DEMO) は、タイトルの2行を崩さないように、タイトルの下にずらして出す（手元の開発環境だけ） */
+  .room-title .demo-badge{
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      transform: translateX(-50%);
+      margin: 2px 0 0;
+      font-size: 11px;
+      padding: 0 6px;
+      white-space: nowrap;
+  }
+  .room-title{
+      /* 色と光る文字（テーマで変わる） */
       color: var(--team-title-glow, #67e8f9);
       filter: drop-shadow(0 0 12px var(--team-accent, #00ffff));
       transition: color 1s ease, filter 1s ease;
