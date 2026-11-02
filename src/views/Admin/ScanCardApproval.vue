@@ -59,7 +59,15 @@
                         <p class="truncate text-lg font-black text-slate-800">{{ card.name }}</p>
                         <p class="truncate text-sm font-bold text-sky-700">{{ card.nameEn || "（英語名なし）" }}</p>
                         <p class="mt-1 text-xs text-slate-500">発見者 {{ card.ownerName || "-" }} ／ レア度 {{ card.rarity || "-" }}</p>
-                        <p class="truncate text-xs text-slate-500">{{ regionText(card) }}</p>
+                        <!-- いま遊べる地域（関東・近畿・北海道）だけを、バッジで出す -->
+                        <div class="mt-1 flex flex-wrap gap-1">
+                            <span
+                                v-for="region in playableRegions(card)"
+                                :key="region"
+                                class="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-800"
+                            >{{ REGION_LABELS[region] }}</span>
+                            <span v-if="!playableRegions(card).length" class="text-xs text-slate-400">遊べる地域なし</span>
+                        </div>
                         <p class="mt-1 text-xs font-bold" :class="card.published ? 'text-emerald-700' : 'text-rose-600'">
                             {{ card.published ? "図鑑に出ている" : "図鑑に出ていない（非公開）" }}
                         </p>
@@ -98,8 +106,15 @@
 import db from "@/firebase.js";
 import { cardRegions, REGION_LABELS } from "@/utils/cards.js";
 
+// いま陣取りゲームで遊べる地域（関東・近畿・北海道）
+const PLAYABLE_REGIONS = ["kanto", "kinki", "hokkaido"];
+
 export default {
     name: "ScanCardApproval",
+
+    created() {
+        this.REGION_LABELS = REGION_LABELS;
+    },
 
     data() {
         return {
@@ -162,9 +177,9 @@ export default {
     },
 
     methods: {
-        regionText(card) {
-            const regions = cardRegions(card);
-            return regions.length ? regions.map(region => REGION_LABELS[region] || region).join("・") : "地域なし";
+        // いま遊べる地域（関東・近畿・北海道）のうち、このカードが出る地域
+        playableRegions(card) {
+            return cardRegions(card).filter(region => PLAYABLE_REGIONS.includes(region));
         },
 
         decisionClass(card) {
