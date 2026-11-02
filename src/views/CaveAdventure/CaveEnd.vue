@@ -318,6 +318,9 @@ export default {
             alert(t("会員IDを取得できません。再ログインしてください。", "Could not get your member ID. Please log in again."));
             return;
         }
+        // ■カードの情報は、カギの読み込みが失敗しても読み込む（先に始める）
+        this.loadCardData();
+
         // ■データベースからカギ情報を読み込む
         try {
             this.caveKeys = await loadCaveKeys(cenId);
@@ -333,26 +336,28 @@ export default {
             loadLastCaveArea() ||
             CAVE_AREA_IDS.find(id => this.caveKeys[id] > 0) ||
             CAVE_AREA_IDS[0];
-
-        this.loadCardData();
     },
 
     methods: {
+        // カードライブラリと会員情報は、別々に読む（片方が失敗しても、もう片方は使えるように）
         async loadCardData() {
-            try {
-                [this.library, this.user] = await Promise.all([
-                    fetchCardLibrary(),
-                    getCurrentUser()
-                ]);
-            } catch (error) {
-                console.error("カード情報の読み込みに失敗しました:", error);
-            }
+            const [library, user] = await Promise.allSettled([
+                fetchCardLibrary(),
+                getCurrentUser()
+            ]);
+            if (library.status === "fulfilled") this.library = library.value;
+            else console.error("カードライブラリの読み込みに失敗しました:", library.reason);
+            if (user.status === "fulfilled") this.user = user.value;
+            else console.error("会員情報の読み込みに失敗しました:", user.reason);
         },
 
         async openChest() {
             if (this.isOpening || this.chestPhase !== "idle") return;
+            // まだ読めていなければ、いまもう一度読む（読めないときは、読めていないことを伝える）
+            if (!this.library.length) this.library = await fetchCardLibrary().catch(() => []);
+            if (!this.user) this.user = await getCurrentUser().catch(() => null);
             if (!this.library.length || !this.user) {
-                alert(t("カード情報を読み込み中です。少し待ってからもう一度開けてください。", "Card data is still loading. Please wait a moment and try again."));
+                alert(t("カードの情報を読めませんでした。通信状況を確かめて、もう一度ためしてください。", "Could not load the card data. Check your connection and try again."));
                 return;
             }
             const cenId = getSession("loginCenId");
@@ -527,6 +532,7 @@ export default {
             this.collectionLoading = true;
             try {
                 const user = this.user || await getCurrentUser();
+                if (!this.library.length) this.library = await fetchCardLibrary();
                 const instances = user ? await fetchMyCardInstances(user.uid) : [];
                 const libraryById = Object.fromEntries(this.library.map(card => [card.cardId, card]));
                 

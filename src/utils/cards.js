@@ -72,7 +72,11 @@ export function getCurrentUser() {
 
             const doc = snapshot.docs[0];
             return { uid: doc.id, ...doc.data() };
-        })().catch(error => {
+        })().then(user => {
+            // 見つからなかった結果は覚えない（次に呼んだとき、もう一度取りに行く）
+            if (!user) currentUserPromise = null;
+            return user;
+        }).catch(error => {
             currentUserPromise = null;
             throw error;
         });
