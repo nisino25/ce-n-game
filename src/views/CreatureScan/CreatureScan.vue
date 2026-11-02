@@ -198,7 +198,7 @@
                         ⚠️ {{ $t(draftCard.dangerNote, draftCard.dangerNoteEn || draftCard.dangerNote) }}
                     </p>
                     <p v-if="duplicateCount > 0" class="mt-3 bg-sky-50 border border-sky-200 text-sky-800 text-xs rounded-lg px-3 py-2">
-                        📚 {{ $t(`同じ種類のカードは、もう ${duplicateCount} 枚あります。このまま登録もできます。`, `There are already ${duplicateCount} cards of this kind. You can still register this one.`) }}
+                        📚 {{ $t(`同じ種類のカードは、もう ${duplicateCount} 枚あります。このまま登録もできます。`, `There ${duplicateCount === 1 ? "is" : "are"} already ${duplicateCount} ${duplicateCount === 1 ? "card" : "cards"} of this kind. You can still register this one.`) }}
                     </p>
                     <p v-if="draftMessage" class="mt-3 text-rose-700 text-sm font-bold">{{ $t(draftMessage, draftMessageEn) }}</p>
                     <p v-if="draftImage" class="mt-2 text-[11px] text-slate-400">{{ $t('がぞうのおおきさ: ', 'Image size: ') }}{{ imageKb }}KB</p>

@@ -9,16 +9,16 @@
             <img v-else-if="card.group === '風'" src="/images/card/チームカラー（風・ライトグリーン）.png" class="team-bg" alt="風">
 
             <img :src="card.level" alt="レベル">
-            <span>{{ card.plant ? "生産者" : "生態系レベル" }}</span>
+            <span>{{ card.plant ? $t("生産者", "Producer") : $t("生態系レベル", "Ecosystem level") }}</span>
         </div>
 
         <div class="top-right">
             <div class="rare">
-                <span>レア度</span>
+                <span>{{ $t("レア度", "Rarity") }}</span>
                 <strong>{{ card.rare }}</strong>
             </div>
             <div class="habitat">
-                <span>すみか</span>
+                <span>{{ $t("すみか", "Habitat") }}</span>
                 <img :src="card.area2" alt="すみか">
             </div>
         </div>
@@ -29,7 +29,7 @@
         </div>
 
         <div class="name">{{ $t(card.name, card.nameEn || card.name) }}</div>
-        <div class="owner">発見者 {{ card.owner }}</div>
+        <div class="owner">{{ $t("発見者", "Found by") }} {{ card.owner }}</div>
     </div>
 </template>
 
