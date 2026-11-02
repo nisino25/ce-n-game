@@ -6,7 +6,7 @@
             <div v-for="(team, index) in territory" :key="team.id" class="rs-team">
                 <span class="rs-team-name">
                     <span class="rs-dot" :style="{ background: team.color }"></span>
-                    {{ team.name.replace('チーム', '') }}<em v-if="team.isSelf">{{ selfLabel }}</em>
+                    {{ teamShortName(team.name) }}<em v-if="team.isSelf">{{ selfLabel || $t('あなた', 'you') }}</em>
                 </span>
                 <span class="rs-bar">
                     <span
@@ -14,14 +14,14 @@
                         :style="{ width: Math.max(team.percent, team.count ? 6 : 0) + '%', background: `linear-gradient(90deg, ${team.color}, color-mix(in srgb, ${team.color} 65%, #fff))`, boxShadow: `0 0 10px ${team.color}88` }"
                     ></span>
                 </span>
-                <span class="rs-team-count"><span v-if="index === 0 && team.count" class="rs-crown">👑</span>{{ team.count }}<small>マス</small></span>
+                <span class="rs-team-count"><span v-if="index === 0 && team.count" class="rs-crown">👑</span>{{ team.count }}<small>{{ $t('マス', 'tiles') }}</small></span>
             </div>
-            <p class="rs-note">じんちの ひろさは、てんすうには はいらないよ</p>
+            <p class="rs-note">{{ $t('じんちの ひろさは、てんすうには はいらないよ', 'Territory size does not count toward the score') }}</p>
             <slot name="territory-extra"></slot>
         </section>
 
         <section class="rs-box rs-box-green">
-            <p v-if="!compact" class="rs-title">生態系ピラミッド<small>レベルごとの カードの かず</small></p>
+            <p v-if="!compact" class="rs-title">{{ $t('生態系ピラミッド', 'Ecosystem pyramid') }}<small>{{ $t('レベルごとの カードの かず', 'Number of cards per level') }}</small></p>
             <div class="rs-pyramid">
                 <div v-for="row in pyramid" :key="row.tier" class="rs-row">
                     <span v-if="!compact" class="rs-level">
@@ -42,19 +42,28 @@
                                 :style="{ flex: part.count, background: `linear-gradient(180deg, color-mix(in srgb, ${part.color} 80%, #fff), ${part.color})` }"
                             ></span>
                         </div>
-                        <span v-else class="rs-empty">なし</span>
+                        <span v-else class="rs-empty">{{ $t('なし', 'None') }}</span>
                     </div>
                     <span v-if="!compact" class="rs-count">{{ row.total }}</span>
                 </div>
             </div>
-            <p v-if="!compact" class="rs-note rs-note-green">したの レベルが たくさん いると、うえの いきものが くらせるよ。ひろい ピラミッドが、げんきな 生態系！</p>
+            <p v-if="!compact" class="rs-note rs-note-green">{{ $t('したの レベルが たくさん いると、うえの いきものが くらせるよ。ひろい ピラミッドが、げんきな 生態系！', 'With many lower-level cards, the creatures above can live. A wide pyramid is a healthy ecosystem!') }}</p>
         </section>
     </div>
 </template>
 
 <script>
+import { teamShortName } from "@/utils/teamLabel.js";
+
 export default {
     name: "GameResultSummary",
+
+    methods: {
+        // テンプレートから使うため、チーム名の短い形をここで渡す
+        teamShortName(name) {
+            return teamShortName(name);
+        },
+    },
 
     props: {
         // [{ id, name, color, isAI }]
@@ -63,7 +72,7 @@ export default {
         tierTeam: { type: Object, required: true },
         // 「あなた」と書く、じぶんのチーム（無ければ書かない）
         selfId: { type: Number, default: null },
-        selfLabel: { type: String, default: "あなた" },
+        selfLabel: { type: String, default: "" },
         // 暗い背景（けっか比べの画面）用
         dark: { type: Boolean, default: false },
         // ピラミッドだけを小さく出す（一覧用）

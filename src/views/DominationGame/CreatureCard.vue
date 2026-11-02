@@ -31,7 +31,7 @@
         <!-- Food -->
         <div>
             <div class="text-sm font-semibold">
-                食べ物 :
+                {{ $t('食べ物', 'Food') }} :
                 <span
                     v-for="(f, index) in creature.food"
                     :key="index"

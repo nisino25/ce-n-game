@@ -248,6 +248,8 @@ export function toDominationCard(card, instanceId, isVirtual = false) {
     return {
         id: card.name,
         label: card.name,
+        // 英語モードで出す名前（スキャンでとったカードだけ入っている）
+        labelEn: card.nameEn || "",
         area: card.terrain,
         tier: card.level,
         food: card.food || [],

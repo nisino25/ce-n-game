@@ -3,7 +3,7 @@
 
         <div id="returnGate" @click="returnHome">
             <span class="gate-core"></span>
-            <span class="gate-label">帰還ゲート</span>
+            <span class="gate-label">{{ $t('帰還ゲート', 'Return gate') }}</span>
         </div>
         <div id="warpEffect"></div>
         <!-- Start Message -->
@@ -11,7 +11,7 @@
             v-if="showStartScreen"
             class="map-hint absolute bottom-12 left-1/2 z-[1000] -translate-x-1/2"
         >
-            まちを タップしてね
+            {{ $t('まちを タップしてね', 'Tap a town') }}
         </div>
 
         <!-- ■ひとつもどる：拡大したあと、日本全体の地図にもどす -->
@@ -20,7 +20,7 @@
             class="map-back absolute right-4 top-5 z-[1000]"
             @click="backToJapan"
         >
-            <span class="map-back-arrow">◀</span> もどる
+            <span class="map-back-arrow">◀</span> {{ $t('もどる', 'Back') }}
         </button>
 
         <!-- Title -->
@@ -52,16 +52,16 @@
             v-if="showTally && showTitle"
             class="absolute bottom-4 left-1/2 z-[1000] flex max-w-[96vw] -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-2xl bg-[#10151c]/90 px-3 py-2 shadow-lg"
         >
-            <span class="mr-0.5 text-xs font-bold text-slate-300">{{ isAiTest ? '勝率' : 'かった かず' }}</span>
+            <span class="mr-0.5 text-xs font-bold text-slate-300">{{ isAiTest ? $t('勝率', 'Win rate') : $t('かった かず', 'Wins') }}</span>
             <span
                 v-for="team in ['water', 'air', 'earth']"
                 :key="team"
                 class="flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-black text-slate-900"
                 :style="{ background: teamColors[team] }"
             >
-                {{ teamNames[team] }} {{ teamTally[team] }}<template v-if="isAiTest"> ({{ tallyTotal ? Math.round(teamTally[team] / tallyTotal * 100) : 0 }}%)</template>
+                {{ $t(teamNames[team], teamNamesEn[team]) }} {{ teamTally[team] }}<template v-if="isAiTest"> ({{ tallyTotal ? Math.round(teamTally[team] / tallyTotal * 100) : 0 }}%)</template>
             </span>
-            <span v-if="isAiTest" class="ml-0.5 text-xs font-bold text-slate-400">{{ tallyTotal }}戦</span>
+            <span v-if="isAiTest" class="ml-0.5 text-xs font-bold text-slate-400">{{ tallyTotal }}{{ $t('戦', ' games') }}</span>
         </div>
 
         <!-- ■案内メッセージ（ゲームの画面から追い返されたときなど） -->
@@ -83,17 +83,19 @@
                     {{ spotSheet.icon }} {{ spotSheet.name }}
                     <span class="ml-1 rounded-full bg-white/15 px-2 py-0.5 align-middle text-xs font-bold">{{ habitatLabel(spotSheet.habitat) }}</span>
                 </p>
-                <p class="mb-4 mt-1 text-center text-sm font-bold text-cyan-200">どの ゲームを あそぶ？</p>
+                <p class="mb-4 mt-1 text-center text-sm font-bold text-cyan-200">{{ $t('どの ゲームを あそぶ？', 'Which game do you want to play?') }}</p>
 
                 <!-- ■自分はどこか1つのゲームでしか遊べない：あそび中のゲームがあるときの案内 -->
                 <div
                     v-if="myActiveSlots[spotSheet.city] && myActiveSlots[spotSheet.city].spotId !== spotSheet.id"
                     class="mb-3 rounded-xl border border-yellow-300/60 bg-yellow-300/10 p-3 text-sm font-bold text-yellow-100"
                 >
-                    {{ spotSheet.city === 'hiratsuka' ? '平塚市' : '釧路市' }}では、いま「{{ myActiveSlots[spotSheet.city].spotName }} ゲーム{{ myActiveSlots[spotSheet.city].gameNo }}」を あそび中だよ。
-                    おわらせると、ほかの ゲームが あそべるよ。
+                    {{ $t(
+                        (spotSheet.city === 'hiratsuka' ? '平塚市' : '釧路市') + 'では、いま「' + myActiveSlots[spotSheet.city].spotName + ' ゲーム' + myActiveSlots[spotSheet.city].gameNo + '」を あそび中だよ。おわらせると、ほかの ゲームが あそべるよ。',
+                        'You are playing ' + myActiveSlots[spotSheet.city].spotName + ' Game ' + myActiveSlots[spotSheet.city].gameNo + ' in ' + (spotSheet.city === 'hiratsuka' ? 'Hiratsuka' : 'Kushiro') + '. Finish it to play another game.'
+                    ) }}
                     <button class="mt-2 w-full rounded-lg bg-yellow-300 px-3 py-2 font-black text-slate-900" @click="goToMyActiveSlot(spotSheet.city)">
-                        ▶ そこへ いく
+                        ▶ {{ $t('そこへ いく', 'Go there') }}
                     </button>
                 </div>
 
@@ -107,7 +109,7 @@
                         >
                             <span class="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-black/25 text-2xl font-black">{{ gameNo }}</span>
                             <span>
-                                <span class="block text-lg font-black">ゲーム{{ gameNo }}</span>
+                                <span class="block text-lg font-black">{{ $t('ゲーム', 'Game ') }}{{ gameNo }}</span>
                                 <span class="block text-sm font-bold">{{ gameStateLabel(slotInfo(spotSheet, gameNo)) }}</span>
                             </span>
                         </button>
@@ -117,7 +119,7 @@
                             class="rounded-lg border border-violet-300 bg-violet-500/20 px-3 py-1.5 text-sm font-black text-violet-100 active:scale-[.98]"
                             @click="startSpotGame(spotSheet, gameNo, { spectate: true })"
                         >
-                            👀 おわった けっかを 見る
+                            👀 {{ $t('おわった けっかを 見る', 'See the finished result') }}
                         </button>
                     </div>
                 </div>
@@ -126,7 +128,7 @@
                     class="mt-4 w-full rounded-lg border border-slate-500 px-4 py-2 text-sm font-bold hover:bg-white/10"
                     @click="spotSheet = null"
                 >
-                    やめる
+                    {{ $t('やめる', 'Cancel') }}
                 </button>
             </div>
         </div>
@@ -141,13 +143,13 @@
                 class="w-full max-w-3xl rounded-2xl bg-white p-4 shadow-xl"
             >
                 <p class="mb-3 text-center text-lg font-bold">
-                    {{ tutorial.cityName }}のチュートリアル動画を見よう！
+                    {{ $t(tutorial.cityName + 'のチュートリアル動画を見よう！', 'Watch the ' + tutorialCityEn[tutorial.location] + ' tutorial video!') }}
                 </p>
                 <div class="relative w-full overflow-hidden rounded-xl bg-black" style="padding-top: 56.25%;">
                     <div ref="tutorialPlayer" class="absolute inset-0 h-full w-full"></div>
                 </div>
                 <p class="mt-3 text-center text-sm text-gray-500">
-                    動画が終わると、つぎは ABゲームだよ
+                    {{ $t('動画が終わると、つぎは ABゲームだよ', 'When the video ends, the AB game is next') }}
                 </p>
             </div>
 
@@ -171,6 +173,7 @@ import { isTestMode } from "@/utils/env.js";
 import mapSpotsSeed from "./mapSpots.json";
 import ABGameProposalB from "@/views/ABGame/ABGameProposalB.vue";
 import { slotId, isFresh, TEAM_COLORS, TEAM_NAMES } from "@/utils/dominationSlots.js";
+import { t } from "@/utils/lang.js";
 
 // ■日本全体の表示範囲（九州の南〜北海道の北）
 const JAPAN_BOUNDS = [[30.9, 129.3], [45.8, 146.2]];
@@ -180,6 +183,8 @@ const HEX_ROWS = [4, 3, 4, 3, 4];
 
 // ■すみかの札（六角形の中に出す。色ではなく文字で伝える：色はゲームの結果を塗るために取っておく）
 const HABITAT_LABELS = { town: "町", forest: "森", dirt: "土", river: "川", sea: "海" };
+const HABITAT_LABELS_EN = { town: "Town", forest: "Forest", dirt: "Soil", river: "River", sea: "Sea" };
+const TEAM_NAMES_EN = { water: "Water", air: "Air", earth: "Earth" };
 
 
 // ■地域ごとのチュートリアル動画（YouTubeの動画ID）
@@ -219,7 +224,7 @@ export default {
 
             showTitle: false,
 
-            title: "日本",
+            title: t("日本", "Japan"),
 
             hiratsukaMarker: null,
 
@@ -235,6 +240,8 @@ export default {
             teamTally: { water: 0, air: 0, earth: 0 }, // チームごとの勝った数
             teamColors: TEAM_COLORS,
             teamNames: TEAM_NAMES,
+            teamNamesEn: TEAM_NAMES_EN,
+            tutorialCityEn: { hiratsuka: "Hiratsuka", kushiro: "Kushiro" },
             notice: "",
             spotShapes: {}, // 場所ID → 地図に描いたひし形（塗り直し用）
             spotSheet: null, // 3つのゲームを選ぶ画面を開いている場所
@@ -281,10 +288,10 @@ export default {
 
         // ■ゲームの画面から追い返されたときの案内
         const notices = {
-            busy: "そのゲームは、ほかの人が あそび中だったよ",
-            done: "そのゲームは、もう おわっているよ",
-            active: "この街で あそび中の ゲームが あるよ。おわらせてから、ほかの ゲームを あそんでね",
-            nogame: "そのゲームは、もう 見られないよ"
+            busy: t("そのゲームは、ほかの人が あそび中だったよ", "Someone else is playing that game"),
+            done: t("そのゲームは、もう おわっているよ", "That game is already over"),
+            active: t("この街で あそび中の ゲームが あるよ。おわらせてから、ほかの ゲームを あそんでね", "You have a game in progress in this town. Finish it before playing another one."),
+            nogame: t("そのゲームは、もう 見られないよ", "You can't watch that game anymore")
         };
         if (notices[this.$route.query.notice]) this.showNotice(notices[this.$route.query.notice]);
 
@@ -481,7 +488,7 @@ L.tileLayer(
             this.currentPlace = null;
             this.showTitle = false;
             this.showStartScreen = true;
-            this.title = "日本";
+            this.title = t("日本", "Japan");
 
             this.map.flyToBounds(JAPAN_BOUNDS, { padding: [8, 8], animate: true, duration: 2.5 });
         },
@@ -500,10 +507,10 @@ L.tileLayer(
                 .addTo(this.map)
                 .on("click", onClick);
 
-            this.hiratsukaMarker = cityMarker([35.3150, 139.3497], "平塚市", () => this.startHiratsuka());
-            this.kushiroMarker = cityMarker([42.9849, 144.3814], "釧路市", () => this.startKushiro());
+            this.hiratsukaMarker = cityMarker([35.3150, 139.3497], t("平塚市", "Hiratsuka"), () => this.startHiratsuka());
+            this.kushiroMarker = cityMarker([42.9849, 144.3814], t("釧路市", "Kushiro"), () => this.startKushiro());
             // ■AIテストエリア（テストモードのときだけ）：平塚・釧路とは別に、AIとの試しのゲームを、何回でも遊べる
-            if (isTestMode()) this.testMarker = cityMarker([37.5, 134.5], "🧪 AIテスト", () => this.startAiTest());
+            if (isTestMode()) this.testMarker = cityMarker([37.5, 134.5], t("🧪 AIテスト", "🧪 AI test"), () => this.startAiTest());
         },
 
 
@@ -611,12 +618,12 @@ L.tileLayer(
 
         startHiratsuka() {
             this.currentPlace = { city: "hiratsuka", cityName: "平塚市" };
-            this.startZoom("平塚市", [35.3250, 139.3497], 13);
+            this.startZoom(t("平塚市", "Hiratsuka"), [35.3250, 139.3497], 13);
         },
 
         startKushiro() {
             this.currentPlace = { city: "kushiro", cityName: "釧路市" };
-            this.startZoom("釧路市", [42.9849, 144.3814], 13);
+            this.startZoom(t("釧路市", "Kushiro"), [42.9849, 144.3814], 13);
         },
 
         // ■その街の「場所」を、ハチの巣のように並べた六角形で表示する（4・3・4・3・4個の5段で18か所）。
@@ -780,13 +787,13 @@ L.tileLayer(
                 const compact = this.hexRadius < 60;
                 if (mineTag) {
                     mineTag.style.display = mine ? "block" : "none";
-                    mineTag.textContent = compact ? "▶ あなた" : "▶ あなた あそび中";
+                    mineTag.textContent = compact ? t("▶ あなた", "▶ You") : t("▶ あなた あそび中", "▶ You are playing");
                 }
                 if (otherTag) {
                     otherTag.style.display = other ? "block" : "none";
                     otherTag.textContent = compact
-                        ? (other > 1 ? `👥 ${other}` : "👥 ひと")
-                        : (other > 1 ? `👥 ほかの人 ${other}` : "👥 ほかの人 あそび中");
+                        ? (other > 1 ? `👥 ${other}` : t("👥 ひと", "👥 1"))
+                        : (other > 1 ? t(`👥 ほかの人 ${other}`, `👥 Others ${other}`) : t("👥 ほかの人 あそび中", "👥 Others are playing"));
                 }
             });
         },
@@ -808,7 +815,7 @@ L.tileLayer(
         },
 
         habitatLabel(habitat) {
-            return HABITAT_LABELS[habitat] || "";
+            return t(HABITAT_LABELS[habitat] || "", HABITAT_LABELS_EN[habitat] || "");
         },
 
         // ■ゲーム選択ボタンの色：ひし形の色と同じ
@@ -823,12 +830,14 @@ L.tileLayer(
 
         gameStateLabel(info) {
             // AIテストは、何回でも、最初から遊べる（前の結果の色は、そのまま残る）
-            if (this.isAiTest) return info.state === "won" ? `${TEAM_NAMES[info.winnerTeam] || ""}チームが かった（もういちど あそべる）` : "あそべるよ";
-            if (info.state === "mine") return "つづきから あそぶ";
-            if (info.state === "other") return `${info.ownerName ? info.ownerName + "さんが " : "ほかの人が "}あそび中 👀 観戦できるよ`;
-            if (info.state === "aiwon") return "AIが かったよ（もういちど あそべる）";
-            if (info.state === "won") return `${TEAM_NAMES[info.winnerTeam] || ""}チームが かったよ 👀 観戦できるよ`;
-            return "あそべるよ";
+            const winner = TEAM_NAMES[info.winnerTeam] || ""
+            const winnerEn = TEAM_NAMES_EN[info.winnerTeam] || ""
+            if (this.isAiTest) return info.state === "won" ? t(`${winner}チームが かった（もういちど あそべる）`, `${winnerEn} team won (you can play again)`) : t("あそべるよ", "Ready to play");
+            if (info.state === "mine") return t("つづきから あそぶ", "Continue playing");
+            if (info.state === "other") return t(`${info.ownerName ? info.ownerName + "さんが " : "ほかの人が "}あそび中 👀 観戦できるよ`, `${info.ownerName ? info.ownerName + " is playing" : "Someone else is playing"} 👀 You can watch`);
+            if (info.state === "aiwon") return t("AIが かったよ（もういちど あそべる）", "The AI won (you can play again)");
+            if (info.state === "won") return t(`${winner}チームが かったよ 👀 観戦できるよ`, `${winnerEn} team won 👀 You can watch`);
+            return t("あそべるよ", "Ready to play");
         },
 
         // ■AIテストエリア：街と同じ、六角形（18か所×3ゲーム）。何回でも、最初から遊べて、勝ったチームの色がぬられる（勝率が見える）。

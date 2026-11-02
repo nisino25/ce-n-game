@@ -2,7 +2,7 @@
     <!-- ■陣取りゲームで、カードを大きく見せる画面（タイルをタップ／手札をタップ）。
          カードの見た目は、カードライブラリ・宝箱と同じ共通のカード（CollectionCard）を使う -->
     <div class="focus-overlay" @click.self="$emit('close')">
-        <button class="focus-close" aria-label="閉じる" @click="$emit('close')">✕</button>
+        <button class="focus-close" :aria-label="$t('閉じる', 'Close')" @click="$emit('close')">✕</button>
 
         <div class="focus-card" :style="{ '--s': scale }">
             <CollectionCard v-if="display" :card="display" />
@@ -12,14 +12,14 @@
         <!-- ゲームのルールに関わる情報（レベル・食べもの）は、カードの下に文字で出す -->
         <div class="focus-info">
             <span class="focus-info-tag">Lv{{ card.tier }}</span>
-            <span class="focus-info-label">食べもの</span>
+            <span class="focus-info-label">{{ $t('食べもの', 'Food') }}</span>
             <template v-if="card.food && card.food.length">
                 <span v-for="(food, index) in card.food" :key="index" class="focus-info-food">{{ food }}</span>
             </template>
-            <span v-else class="focus-info-none">なし</span>
+            <span v-else class="focus-info-none">{{ $t('なし', 'None') }}</span>
         </div>
 
-        <button v-if="selectable" class="focus-select" @click="$emit('select')">選択する</button>
+        <button v-if="selectable" class="focus-select" @click="$emit('select')">{{ $t('選択する', 'Select') }}</button>
     </div>
 </template>
 

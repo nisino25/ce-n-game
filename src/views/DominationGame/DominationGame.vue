@@ -4,37 +4,37 @@
 
             <!-- ■観戦モード：見るだけ。自分が観戦中だと、はっきり分かるように、ずっと出しておく -->
             <div v-if="spectator" class="spectator-banner">
-                <span class="spectator-badge">👀 観戦モード</span>
-                <span class="spectator-text">{{ resultView ? 'けっか くらべの ゲームを 見ているよ（見るだけ。さわれないよ）' : ownerLabel + 'の ゲームを 見ているよ（見るだけ。さわれないよ）' }}</span>
-                <button class="spectator-back" @click="backFromGame()">もどる</button>
+                <span class="spectator-badge">👀 {{ $t('観戦モード', 'Spectating') }}</span>
+                <span class="spectator-text">{{ resultView ? $t('けっか くらべの ゲームを 見ているよ（見るだけ。さわれないよ）', 'You are watching a result comparison (watch only, no playing)') : $t(ownerLabel + 'の ゲームを 見ているよ（見るだけ。さわれないよ）', 'You are watching ' + ownerLabel + "'s game (watch only, no playing)") }}</span>
+                <button class="spectator-back" @click="backFromGame()">{{ $t('もどる', 'Back') }}</button>
             </div>
 
             <!-- Header: title + scoreboard -->
             <header class="app-header bg-white">
                 <div class="max-w-[1500px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
                     <div class="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-                        <h1 class="text-base sm:text-lg font-bold leading-tight text-slate-700">陣取り<br>ゲーム</h1>
+                        <h1 class="text-base sm:text-lg font-bold leading-tight text-slate-700">{{ $t('陣取り', 'Territory') }}<br>{{ $t('ゲーム', 'Game') }}</h1>
 
                         <button
                             class="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-xs bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-full pl-3 pr-2.5 py-1 font-mono font-bold tracking-wider text-slate-600 transition"
-                            :title="roomLabelText() ? '' : 'クリックでコピー'"
+                            :title="roomLabelText() ? '' : $t('クリックでコピー', 'Click to copy')"
                             @click="roomLabelText() ? null : copyRoomCode()"
                         >
-                            <span class="text-slate-400">{{ roomLabelText() ? '📍' : '🔑ルーム' }}</span>
+                            <span class="text-slate-400">{{ roomLabelText() ? '📍' : $t('🔑ルーム', '🔑Room') }}</span>
                             <span class="whitespace-pre-line text-left leading-tight">{{ roomLabelText() || roomCode }}</span>
                             <span v-if="roomLabelText()"></span>
-                            <span v-else-if="roomCodeCopied" class="text-emerald-600 font-sans font-normal">コピーしました！</span>
+                            <span v-else-if="roomCodeCopied" class="text-emerald-600 font-sans font-normal">{{ $t('コピーしました！', 'Copied!') }}</span>
                             <span v-else class="text-slate-400 font-sans font-normal">📋</span>
                         </button>
 
                         <!-- ■ヘッダーの右はし：？（説明をモーダルで）／🔍（盤面ぜんたい、スマホのみ） -->
                         <div class="ml-auto flex flex-none items-center gap-1.5 sm:gap-2">
-                            <button class="header-tool" :aria-label="sfxMuted ? '効果音をつける' : '効果音を消す'" @click="toggleSfx">{{ sfxMuted ? '🔇' : '🔊' }}</button>
-                            <button class="header-tool" aria-label="地形・レベルの説明を見る" @click="isShowingTuorial = true">?</button>
+                            <button class="header-tool" :aria-label="sfxMuted ? $t('効果音をつける', 'Turn sound on') : $t('効果音を消す', 'Turn sound off')" @click="toggleSfx">{{ sfxMuted ? '🔇' : '🔊' }}</button>
+                            <button class="header-tool" :aria-label="$t('地形・レベルの説明を見る', 'Show terrain and level guide')" @click="isShowingTuorial = true">?</button>
                             <button
                                 class="header-tool sm:hidden"
                                 :class="{ 'header-tool-on': boardOverview }"
-                                :aria-label="boardOverview ? 'もとの大きさにもどす' : '盤面ぜんたいを見る'"
+                                :aria-label="boardOverview ? $t('もとの大きさにもどす', 'Return to normal size') : $t('盤面ぜんたいを見る', 'View the whole board')"
                                 @click="toggleOverview"
                             >
                                 🔍
@@ -56,15 +56,15 @@
                             }"
                         >
                             <span class="h-2.5 w-2.5 flex-none rounded-full sm:h-3 sm:w-3" :style="{ background: player.color }"></span>
-                            <span class="font-semibold">{{ player.name.replace('チーム', '') }}<span class="hidden sm:inline">チーム</span></span>
-                            <span v-if="player.isAI" class="text-xs" title="AIが操作します">🤖</span>
-                            <span class="font-bold">{{ player.score }}点</span>
+                            <span class="font-semibold">{{ teamShortName(player.name) }}<span class="hidden sm:inline"> {{ $t('チーム', 'team') }}</span></span>
+                            <span v-if="player.isAI" class="text-xs" :title="$t('AIが操作します', 'Controlled by AI')">🤖</span>
+                            <span class="font-bold">{{ player.score }}{{ $t('点', ' pts') }}</span>
                             <span
                                 v-if="player.id === currentPlayerId"
                                 class="text-xs font-bold"
                                 :style="{ color: player.color }"
                             >
-                                ▶<span class="hidden sm:inline">手番</span>
+                                ▶<span class="hidden sm:inline">{{ $t('手番', ' turn') }}</span>
                             </span>
                         </div>
                     </div>
@@ -77,7 +77,7 @@
                     v-if="isAiThinking && !aiOnlyMode"
                     class="bg-amber-50 border-b border-amber-200 text-amber-800 text-center text-sm py-2 font-medium"
                 >
-                    🤖 {{ currentPlayer?.name }}が考え中…
+                    🤖 {{ $t(currentPlayer?.name + 'が考え中…', currentPlayer ? teamShortName(currentPlayer.name) + ' is thinking…' : '') }}
                 </div>
             </transition>
 
@@ -146,23 +146,23 @@
                         <template v-if="currentPlayer.isAI">
                             <div class="flex items-center gap-2 text-slate-500 text-sm py-6 justify-center">
                                 <span class="text-2xl">🤖</span>
-                                <span v-if="aiOnlyMode">AIが あそんでいます（見るだけ）</span>
-                                <span v-else>{{ currentPlayer?.name }}が手を考えています…</span>
+                                <span v-if="aiOnlyMode">{{ $t('AIが あそんでいます（見るだけ）', 'AI is playing (watch only)') }}</span>
+                                <span v-else>{{ $t(currentPlayer?.name + 'が手を考えています…', teamShortName(currentPlayer?.name) + ' is thinking…') }}</span>
                             </div>
                         </template>
                         <template v-else>
                             <div class="flex items-center gap-2 mb-3">
                                 <div class="w-5 h-5 rounded-md flex-none" :style="{ background: currentPlayer?.color }"></div>
-                                <span class="font-bold text-sm">{{ currentPlayer?.name }}</span>
-                                <button v-if="testMode" class="test-card-button" @click="showTestCards = true">🧪 デモ</button>
-                                <span class="text-sm text-slate-500 ml-auto">{{ currentPlayer?.score }}点</span>
+                                <span class="font-bold text-sm">{{ teamShortName(currentPlayer?.name) }}</span>
+                                <button v-if="testMode" class="test-card-button" @click="showTestCards = true">🧪 {{ $t('デモ', 'Demo') }}</button>
+                                <span class="text-sm text-slate-500 ml-auto">{{ currentPlayer?.score }}{{ $t('点', ' pts') }}</span>
                             </div>
 
                             <div
                                 v-if="selectedCard"
                                 class="mb-3 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2"
                             >
-                                「{{ selectedCard.label }}」を選択中 → 黄色く光るマスに配置できます
+                                {{ $t('「' + selectedCard.label + '」を選択中 → 黄色く光るマスに配置できます', 'Selected: ' + cardLabel(selectedCard) + ' → place it on a glowing yellow tile') }}
                             </div>
 
                             <div class="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
@@ -179,7 +179,7 @@
                                             :class="[areaBadgeClass(card, currentPlayerId), { 'chip-dim': !isPlaceable(card) }]"
                                             @click="previewCard(card, currentPlayerId)"
                                         >
-                                            <span>{{ card.label }}</span>
+                                            <span>{{ cardLabel(card) }}</span>
                                             <span class="text-slate-500">×{{ card.holdingCount }}</span>
                                         </button>
                                     </div>
@@ -189,7 +189,7 @@
                                     v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0"
                                     class="text-xs text-slate-400 text-center py-4"
                                 >
-                                    カードがありません
+                                    {{ $t('カードがありません', 'No cards') }}
                                 </p>
                             </div>
                         </template>
@@ -204,7 +204,7 @@
                             class="px-2 py-2.5 rounded-lg border text-sm font-medium transition"
                             :class="selectedCard ? 'bg-slate-100 hover:bg-slate-200 border-slate-300' : 'bg-slate-50 text-slate-300 border-slate-200 cursor-not-allowed'"
                         >
-                            キャンセル
+                            {{ $t('キャンセル', 'Cancel') }}
                         </button>
                         <button
                             v-if="!spectator"
@@ -213,14 +213,14 @@
                             :disabled="currentPlayer?.isAI"
                             @click="confirmSkip()"
                         >
-                            スキップ
+                            {{ $t('スキップ', 'Skip') }}
                         </button>
                         <button
                             v-if="gameState === 'playing' && !spectator"
                             class="px-2 py-2.5 rounded-lg border border-red-400 bg-red-500 hover:bg-red-600 text-white text-sm font-bold transition"
                             @click="showResignConfirm = true"
                         >
-                            🏳 まけました
+                            🏳 {{ $t('まけました', 'I resign') }}
                         </button>
                         <button
                             class="px-2 py-2.5 rounded-lg border border-rose-300 bg-rose-100 hover:bg-rose-200 text-sm font-medium transition"
@@ -240,11 +240,11 @@
                 <!-- ■あなたの手札（ほかの部分と見分けがつくよう、枠・タイトルつきの別のエリア） -->
                 <div v-if="!spectator" class="dock-panel dock-hand-panel">
                     <div class="dock-panel-title">
-                        <span>🃏 あなたのカード</span>
-                        <button v-if="testMode && !spectator" class="test-card-button" @click="showTestCards = true">🧪 デモ</button>
-                        <button v-if="!spectator" class="cave-jump-button" @click="goToCave">⛏ 洞窟へ</button>
-                        <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI && !aiOnlyMode" class="dock-note">🤖 {{ currentPlayer.name }}が 考えているよ…</span>
-                        <span v-else-if="selectedCard" class="dock-note dock-note-ok">「{{ selectedCard.label }}」→ きいろい マスに おけるよ</span>
+                        <span>🃏 {{ $t('あなたのカード', 'Your cards') }}</span>
+                        <button v-if="testMode && !spectator" class="test-card-button" @click="showTestCards = true">🧪 {{ $t('デモ', 'Demo') }}</button>
+                        <button v-if="!spectator" class="cave-jump-button" @click="goToCave">⛏ {{ $t('洞窟へ', 'To the cave') }}</button>
+                        <span v-if="gameState === 'playing' && currentPlayer && currentPlayer.isAI && !aiOnlyMode" class="dock-note">🤖 {{ $t(currentPlayer.name + 'が 考えているよ…', teamShortName(currentPlayer.name) + ' is thinking…') }}</span>
+                        <span v-else-if="selectedCard" class="dock-note dock-note-ok">{{ $t('「' + selectedCard.label + '」→ きいろい マスに おけるよ', 'Place ' + cardLabel(selectedCard) + ' on a yellow tile') }}</span>
                     </div>
                     <div v-if="gameState === 'playing' && currentPlayer && !currentPlayer.isAI" class="dock-hand">
                         <template v-for="group in groupHandByTier(hands[currentPlayerId])" :key="group.tier">
@@ -255,10 +255,10 @@
                                 :class="[areaBadgeClass(card, currentPlayerId), { 'chip-dim': !isPlaceable(card) }]"
                                 @click="previewCard(card, currentPlayerId)"
                             >
-                                <span class="dock-lv">{{ group.tier }}</span>{{ card.label }}<small>×{{ card.holdingCount }}</small>
+                                <span class="dock-lv">{{ group.tier }}</span>{{ cardLabel(card) }}<small>×{{ card.holdingCount }}</small>
                             </button>
                         </template>
-                        <span v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0" class="dock-empty">カードがありません</span>
+                        <span v-if="!hands[currentPlayerId] || hands[currentPlayerId].length === 0" class="dock-empty">{{ $t('カードがありません', 'No cards') }}</span>
                     </div>
                 </div>
 
@@ -272,14 +272,14 @@
                             :disabled="currentPlayer?.isAI"
                             @click="confirmSkip()"
                         >
-                            ⏭ スキップ
+                            ⏭ {{ $t('スキップ', 'Skip') }}
                         </button>
                         <button
                             v-if="gameState === 'playing' && !spectator"
                             class="dock-button dock-button-danger"
                             @click="showResignConfirm = true"
                         >
-                            🏳 まけました
+                            🏳 {{ $t('まけました', 'I resign') }}
                         </button>
                         <button class="dock-button dock-button-back" :class="{ 'back-glow': mustSkip }" @click="backFromGame()">
                             {{ backLabelText() }}
@@ -299,46 +299,46 @@
             <!-- ■ゲーム終了：結果（順位・1位のごほうび・じんち） -->
             <div v-if="gameState === 'finished' && !showTerritory && !replay" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
                 <div class="bg-white p-5 rounded-2xl shadow-xl text-center max-w-sm w-full max-h-[92vh] overflow-y-auto">
-                    <h2 class="text-2xl font-bold mb-1">ゲーム終了！</h2>
-                    <p v-if="spectator" class="mb-1 inline-block rounded-full bg-violet-100 px-4 py-1 text-sm font-black text-violet-700">👀 {{ resultView ? 'けっかの ゲーム' : '観戦：' + ownerLabel + 'の ゲーム' }}</p>
-                    <p v-if="spectator && winnerPlayer" class="mb-2 text-lg font-black" :style="{ color: winnerPlayer.color }">🏆 {{ winnerPlayer.name }}の かち！</p>
+                    <h2 class="text-2xl font-bold mb-1">{{ $t('ゲーム終了！', 'Game over!') }}</h2>
+                    <p v-if="spectator" class="mb-1 inline-block rounded-full bg-violet-100 px-4 py-1 text-sm font-black text-violet-700">👀 {{ resultView ? $t('けっかの ゲーム', 'Result game') : $t('観戦：' + ownerLabel + 'の ゲーム', 'Watching: ' + ownerLabel + "'s game") }}</p>
+                    <p v-if="spectator && winnerPlayer" class="mb-2 text-lg font-black" :style="{ color: winnerPlayer.color }">🏆 {{ $t(winnerPlayer.name + 'の かち！', teamShortName(winnerPlayer.name) + ' wins!') }}</p>
                     <template v-if="!spectator">
                     <p v-if="finishedResult" class="mb-1 text-lg font-black" :style="{ color: finishedResult.humanWon ? '#059669' : '#dc2626' }">
-                        {{ finishedResult.humanWon ? '1位！ かったよ！' : (finishedResult.resigned ? 'まけました…' : `${finishedResult.humanRank}位 だったよ`) }}
+                        {{ finishedResult.humanWon ? $t('1位！ かったよ！', '1st place! You won!') : (finishedResult.resigned ? $t('まけました…', 'You resigned…') : $t(`${finishedResult.humanRank}位 だったよ`, `You came ${finishedResult.humanRank}${rankSuffix(finishedResult.humanRank)}`)) }}
                     </p>
 
                     <!-- ■ゲームの得点と、順位のテラ（おわったときに、ぜんぶ見えるように） -->
                     <div v-if="finishedResult" class="mb-3 grid grid-cols-2 gap-2 text-sm font-bold">
                         <div class="rounded-xl bg-slate-100 px-3 py-2">
-                            <div class="text-xs text-slate-500">じぶんの てんすう</div>
-                            <div class="text-xl">{{ players.find(p => p.id === humanPlayerId)?.score ?? 0 }}点</div>
+                            <div class="text-xs text-slate-500">{{ $t('じぶんの てんすう', 'My score') }}</div>
+                            <div class="text-xl">{{ players.find(p => p.id === humanPlayerId)?.score ?? 0 }}{{ $t('点', ' pts') }}</div>
                         </div>
                         <div class="rounded-xl bg-amber-50 px-3 py-2">
-                            <div class="text-xs text-slate-500">順位の テラ</div>
-                            <div class="text-xl text-amber-700">+{{ rankBonusFor(finishedResult.humanRank) }}テラ</div>
+                            <div class="text-xs text-slate-500">{{ $t('順位の テラ', 'Rank Tera') }}</div>
+                            <div class="text-xl text-amber-700">+{{ rankBonusFor(finishedResult.humanRank) }} {{ $t('テラ', 'Tera') }}</div>
                         </div>
                     </div>
 
                     <!-- ■1位のごほうび（テラ） -->
                     <p v-if="rewardTera" class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-4 py-1 text-base font-black text-amber-700">
-                        🎉 +{{ rewardTera }}テラ
-                        <img src="/images/coin.png" alt="テラ" class="h-5 w-5 object-contain">
+                        🎉 +{{ rewardTera }} {{ $t('テラ', 'Tera') }}
+                        <img src="/images/coin.png" :alt="$t('テラ', 'Tera')" class="h-5 w-5 object-contain">
                     </p>
                     <p v-if="rewardTera && rewardParts" class="mb-2 text-xs font-bold text-amber-700">
-                        てんすう {{ rewardParts.score }}点 ＋ {{ finishedResult ? finishedResult.humanRank : '' }}位ボーナス {{ rewardParts.bonus }}
+                        {{ $t(`てんすう ${rewardParts.score}点 ＋ ${finishedResult ? finishedResult.humanRank : ''}位ボーナス ${rewardParts.bonus}`, `Score ${rewardParts.score} pts + ${finishedResult ? finishedResult.humanRank : ''}${finishedResult ? rankSuffix(finishedResult.humanRank) : ''} place bonus ${rewardParts.bonus}`) }}
                     </p>
-                    <p v-else-if="rewardState === 'pending'" class="mb-2 text-sm font-bold text-amber-600">テラを もらっているよ…</p>
-                    <p v-else-if="rewardState === 'error'" class="mb-2 text-sm font-bold text-red-500">テラを もらえなかったよ（ネットを たしかめて、あとで もういちど）</p>
-                    <p v-else-if="isSlotGame() && !isTestPlace() && finishedResult && finishedResult.resigned" class="mb-2 text-xs font-bold text-slate-500">まけましたの ときは、テラは もらえないよ</p>
-                    <p v-else-if="isTestPlace()" class="mb-2 text-xs font-bold text-violet-600">🧪 AIテスト：テラは もらえないよ。けっかは 地図の 色（勝率）に のこるよ</p>
-                    <p v-else-if="isSlotGame() && finishedResult" class="mb-2 text-xs font-bold text-slate-500">てんすうぶんの テラ ＋ {{ rankRewardText }} もらえるよ</p>
+                    <p v-else-if="rewardState === 'pending'" class="mb-2 text-sm font-bold text-amber-600">{{ $t('テラを もらっているよ…', 'Receiving your Tera…') }}</p>
+                    <p v-else-if="rewardState === 'error'" class="mb-2 text-sm font-bold text-red-500">{{ $t('テラを もらえなかったよ（ネットを たしかめて、あとで もういちど）', "Could not receive Tera (check your connection and try again later)") }}</p>
+                    <p v-else-if="isSlotGame() && !isTestPlace() && finishedResult && finishedResult.resigned" class="mb-2 text-xs font-bold text-slate-500">{{ $t('まけましたの ときは、テラは もらえないよ', "No Tera if you resign") }}</p>
+                    <p v-else-if="isTestPlace()" class="mb-2 text-xs font-bold text-violet-600">🧪 {{ $t('AIテスト：テラは もらえないよ。けっかは 地図の 色（勝率）に のこるよ', 'AI test: no Tera. The result stays on the map as the color (win rate)') }}</p>
+                    <p v-else-if="isSlotGame() && finishedResult" class="mb-2 text-xs font-bold text-slate-500">{{ $t('てんすうぶんの テラ ＋ ' + rankRewardText + ' もらえるよ', 'Tera for your score + ' + rankRewardText) }}</p>
                     <p v-if="isSlotGame() && !isTestPlace() && finishedResult && !finishedResult.humanWon" class="mb-2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">
-                        AIが かったので、この ばしょは 色が つかないよ。ほかの人も、もういちど ちょうせん できるよ
+                        {{ $t('AIが かったので、この ばしょは 色が つかないよ。ほかの人も、もういちど ちょうせん できるよ', 'The AI won, so this place stays uncolored. Others can try again.') }}
                     </p>
 
                     </template>
 
-                    <p class="text-sm text-slate-500 mb-2">さいごの てんすう</p>
+                    <p class="text-sm text-slate-500 mb-2">{{ $t('さいごの てんすう', 'Final scores') }}</p>
                     <ul class="text-left mb-4 space-y-2">
                         <li
                             v-for="player in sortedPlayersByScore"
@@ -347,13 +347,13 @@
                             :style="{ background: player.color + '15' }"
                         >
                             <span class="font-semibold flex items-center gap-2">
-                                <span class="rank-badge">{{ rankOf(player) }}位</span>
+                                <span class="rank-badge">{{ rankOf(player) }}{{ rankSuffix(rankOf(player)) }}</span>
                                 <span class="w-3 h-3 rounded-full" :style="{ background: player.color }"></span>
-                                {{ player.name }}
+                                {{ teamShortName(player.name) }}
                                 <span v-if="player.isAI" class="text-xs">🤖</span>
-                                <span v-else-if="!resultView" class="text-xs text-slate-500">（{{ spectator ? ownerLabel : 'あなた' }}）</span>
+                                <span v-else-if="!resultView" class="text-xs text-slate-500">（{{ spectator ? ownerLabel : $t('あなた', 'you') }}）</span>
                             </span>
-                            <span class="font-bold">{{ player.score }}点</span>
+                            <span class="font-bold">{{ player.score }}{{ $t('点', ' pts') }}</span>
                         </li>
                     </ul>
 
@@ -361,20 +361,20 @@
                     <GameResultSummary :players="players" :tier-team="tierTeam" :self-id="spectator ? null : humanPlayerId">
                         <template #territory-extra>
                             <button class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100" @click="showTerritory = true">
-                                🗺 じんちを ばんめんで みる
+                                🗺 {{ $t('じんちを ばんめんで みる', 'View territory on the board') }}
                             </button>
                         </template>
                     </GameResultSummary>
 
                     <!-- ■チームごとに、おいたカードを、Lv1から順に並べる（カードをタップすると大きく見られる） -->
                     <section v-if="placedByPlayer.length" class="mb-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm">
-                        <p class="text-center text-sm font-black text-slate-700">おいた カード</p>
-                        <p class="mb-3 text-center text-[10px] text-slate-400">カードを タップすると 大きく見られるよ</p>
+                        <p class="text-center text-sm font-black text-slate-700">{{ $t('おいた カード', 'Placed cards') }}</p>
+                        <p class="mb-3 text-center text-[10px] text-slate-400">{{ $t('カードを タップすると 大きく見られるよ', 'Tap a card to see it larger') }}</p>
                         <div v-for="pl in placedByPlayer" :key="pl.id" class="mb-6 border-t-2 border-slate-100 pt-5 first:border-t-0 first:pt-0 last:mb-0">
                             <p class="mb-2 flex items-center gap-2 text-xs font-black text-slate-700">
                                 <span class="h-2.5 w-2.5 rounded-full" :style="{ background: pl.color }"></span>
-                                {{ pl.name.replace('チーム', '') }}
-                                <span class="ml-auto text-[10px] font-bold text-slate-400">{{ pl.total }}まい</span>
+                                {{ teamShortName(pl.name) }}
+                                <span class="ml-auto text-[10px] font-bold text-slate-400">{{ pl.total }}{{ $t('まい', ' cards') }}</span>
                             </p>
                             <div v-for="row in pl.rows" :key="row.tier" class="mb-2 last:mb-0">
                                 <span class="mb-1 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-black" :class="levelBadgeClass(row.tier)">Lv{{ row.tier }}<span class="ml-1 font-bold opacity-70">{{ row.total }}まい</span></span>
@@ -400,7 +400,7 @@
                         class="mb-3 w-full rounded-xl border-2 border-violet-300 bg-violet-50 px-4 py-2.5 text-sm font-black text-violet-700 hover:bg-violet-100"
                         @click="startReplay()"
                     >
-                        ▶ ふりかえる（{{ moveLog.length }}手を 1手ずつ 見る）
+                        ▶ {{ $t(`ふりかえる（${moveLog.length}手を 1手ずつ 見る）`, `Review (${moveLog.length} moves, one at a time)`) }}
                     </button>
 
                     <!-- ■地図の場所のゲームは、おわった枠はそのまま残る（もう一回はできない）ので、街の画面にもどる -->
@@ -416,7 +416,7 @@
                         class="w-full px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold transition"
                         @click="resetTiles()"
                     >
-                        もう一回遊ぶ
+                        {{ $t('もう一回遊ぶ', 'Play again') }}
                     </button>
                 </div>
             </div>
@@ -424,9 +424,9 @@
             <!-- ■じんちを盤面で見ているときの、チームごとのマスの数と、もどるボタン -->
             <div v-if="gameState === 'finished' && showTerritory" class="territory-panel">
                 <span v-for="team in territory" :key="team.id" class="territory-chip" :style="{ background: team.color }">
-                    {{ team.name.replace('チーム', '') }}{{ team.isAI ? '' : '（あなた）' }} {{ team.count }}マス
+                    {{ teamShortName(team.name) }}{{ team.isAI ? '' : $t('（あなた）', ' (you)') }} {{ team.count }}{{ $t('マス', ' tiles') }}
                 </span>
-                <button class="territory-back" @click="showTerritory = false">けっかを みる</button>
+                <button class="territory-back" @click="showTerritory = false">{{ $t('けっかを みる', 'View results') }}</button>
             </div>
         </div>
 
@@ -437,11 +437,11 @@
             @click.self="showResignConfirm = false"
         >
             <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
-                <p class="mb-1 text-xl font-black">まけましたに する？</p>
-                <p class="mb-5 text-sm text-slate-600">AIの かちに なって、このゲームは おわるよ。</p>
+                <p class="mb-1 text-xl font-black">{{ $t('まけましたに する？', 'Resign this game?') }}</p>
+                <p class="mb-5 text-sm text-slate-600">{{ $t('AIの かちに なって、このゲームは おわるよ。', 'The AI will win and this game will end.') }}</p>
                 <div class="flex flex-col gap-2">
-                    <button class="rounded-xl bg-red-500 px-4 py-3 font-bold text-white hover:bg-red-600" @click="resign()">まけました</button>
-                    <button class="rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showResignConfirm = false">やめる</button>
+                    <button class="rounded-xl bg-red-500 px-4 py-3 font-bold text-white hover:bg-red-600" @click="resign()">{{ $t('まけました', 'I resign') }}</button>
+                    <button class="rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showResignConfirm = false">{{ $t('やめる', 'Cancel') }}</button>
                 </div>
             </div>
         </div>
@@ -452,11 +452,11 @@
             class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
         >
             <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
-                <p class="mb-1 text-xl font-black">どっちで あそぶ？</p>
-                <p class="mb-5 text-sm text-slate-600">AIに まかせると、どんどん すすむよ（ぜんぶ見るだけ）</p>
+                <p class="mb-1 text-xl font-black">{{ $t('どっちで あそぶ？', 'How do you want to play?') }}</p>
+                <p class="mb-5 text-sm text-slate-600">{{ $t('AIに まかせると、どんどん すすむよ（ぜんぶ見るだけ）', 'If the AI plays, the game moves fast (watch only)') }}</p>
                 <div class="flex flex-col gap-2">
-                    <button class="rounded-xl bg-emerald-500 px-4 py-3 font-bold text-white hover:bg-emerald-600" @click="chooseMode(false)">🧑 じぶんで あそぶ</button>
-                    <button class="rounded-xl bg-violet-500 px-4 py-3 font-bold text-white hover:bg-violet-600" @click="chooseMode(true)">🤖 AIに ぜんぶまかせる</button>
+                    <button class="rounded-xl bg-emerald-500 px-4 py-3 font-bold text-white hover:bg-emerald-600" @click="chooseMode(false)">🧑 {{ $t('じぶんで あそぶ', 'Play myself') }}</button>
+                    <button class="rounded-xl bg-violet-500 px-4 py-3 font-bold text-white hover:bg-violet-600" @click="chooseMode(true)">🤖 {{ $t('AIに ぜんぶまかせる', 'Let the AI play') }}</button>
                 </div>
             </div>
         </div>
@@ -470,53 +470,53 @@
             <div class="relative w-full max-w-sm">
                 <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" @click="isShowingTuorial = false">✕</button>
                 <div class="max-h-[85vh] space-y-4 overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
-                <p class="text-center text-lg font-black text-slate-700">あそびかた</p>
+                <p class="text-center text-lg font-black text-slate-700">{{ $t('あそびかた', 'How to play') }}</p>
 
                 <!-- ■ゲームの仕組み（やさしい言葉で） -->
                 <ol class="space-y-2.5 text-left text-[13px] leading-relaxed text-slate-700">
                     <li class="flex gap-2">
                         <span class="rule-no">1</span>
-                        <span><b>めざせ ナンバー1！</b> 3チームで、カードを ばんめんに おいて ポイントを あつめるよ。いちばん ポイントが たかい チームが かち。</span>
+                        <span v-html="$t('<b>めざせ ナンバー1！</b> 3チームで、カードを ばんめんに おいて ポイントを あつめるよ。いちばん ポイントが たかい チームが かち。', '<b>Aim for number 1!</b> Three teams place cards on the board to collect points. The team with the most points wins.')"></span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">2</span>
-                        <span><b>じゅんばんに 1まい ずつ。</b> じぶんの ばんに、カードを えらんで、<b>きいろく ひかる マス</b>を タップ。おけない ときは「スキップ」。</span>
+                        <span v-html="$t('<b>じゅんばんに 1まい ずつ。</b> じぶんの ばんに、カードを えらんで、<b>きいろく ひかる マス</b>を タップ。おけない ときは「スキップ」。', '<b>Take turns, one card at a time.</b> On your turn, pick a card and tap a <b>glowing yellow tile</b>. If you cannot place a card, tap “Skip”.')"></span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">3</span>
-                        <span><b>おける ばしょ。</b> りくの いきものは <b>町・森・土</b>、みずの いきものは <b>川・海</b>。<b>くろい マス</b>（未開発地）には、そのままでは おけないよ。</span>
+                        <span v-html="$t('<b>おける ばしょ。</b> りくの いきものは <b>町・森・土</b>、みずの いきものは <b>川・海</b>。<b>くろい マス</b>（未開発地）には、そのままでは おけないよ。', '<b>Where to place.</b> Land creatures go on <b>town, forest, or soil</b>; water creatures go on <b>river or sea</b>. You cannot place on a <b>black tile</b> (undeveloped land) as it is.')"></span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">4</span>
-                        <span><b>かんきょうチャレンジ！</b> <b>くろい マス</b>を タップすると、かんきょうクイズ（<b>2もん</b>）が できるよ。<b>ぜんぶ 1かいで</b> あてたら せいこう！ マスが <b>となりの マスと おなじ ちけい</b>に なおって <b>+3てん</b>。（その ばんは、なおした マスには おけないよ。つぎの ばんから おけるよ）しっぱいすると ばんが つぎの チームに うつるよ。カードが なくても ちょうせん できるよ。</span>
+                        <span v-html="$t('<b>かんきょうチャレンジ！</b> <b>くろい マス</b>を タップすると、かんきょうクイズ（<b>2もん</b>）が できるよ。<b>ぜんぶ 1かいで</b> あてたら せいこう！ マスが <b>となりの マスと おなじ ちけい</b>に なおって <b>+3てん</b>。（その ばんは、なおした マスには おけないよ。つぎの ばんから おけるよ）しっぱいすると ばんが つぎの チームに うつるよ。カードが なくても ちょうせん できるよ。', '<b>Environment challenge!</b> Tap a <b>black tile</b> to answer an environment quiz (<b>2 questions</b>). Get <b>both right on the first try</b> and the tile becomes the <b>same terrain as its neighbor</b>, for <b>+3 pts</b>. (You cannot place on that tile this turn; you can from the next turn.) If you miss, the turn passes to the next team. You can take the challenge even without cards.')"></span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">5</span>
-                        <span><b>レベルの ルール。</b> <b>Lv1（▲）</b>は どこにでも おける。<b>Lv2（■）</b>は、まわりに <b>Lv1が 2こ いじょう</b> ある マスだけ。Lv3は Lv2が 2こ、Lv4は Lv3が 2こ いるところに おけるよ。（まわり ＝ たて・よこ・ななめの 8マス）</span>
+                        <span v-html="$t('<b>レベルの ルール。</b> <b>Lv1（▲）</b>は どこにでも おける。<b>Lv2（■）</b>は、まわりに <b>Lv1が 2こ いじょう</b> ある マスだけ。Lv3は Lv2が 2こ、Lv4は Lv3が 2こ いるところに おけるよ。（まわり ＝ たて・よこ・ななめの 8マス）', '<b>Level rules.</b> <b>Lv1 (▲)</b> can go anywhere. <b>Lv2 (■)</b> only where there are <b>2 or more Lv1</b> around it. Lv3 needs 2 Lv2 around it, and Lv4 needs 2 Lv3. (Around = the 8 tiles up, down, left, right and diagonal.)')"></span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">6</span>
-                        <span><b>たべる！</b> レベルの たかい カードを おくと、まわりの <b>ひくい レベルの カード</b>を たべるよ。たべられた カードは はいいろに なって、おくための かずにも ならなくなる。</span>
+                        <span v-html="$t('<b>たべる！</b> レベルの たかい カードを おくと、まわりの <b>ひくい レベルの カード</b>を たべるよ。たべられた カードは はいいろに なって、おくための かずにも ならなくなる。', '<b>Eating!</b> When you place a higher-level card, it eats the <b>lower-level cards</b> around it. Eaten cards turn gray and no longer count for placing.')"></span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">7</span>
-                        <span><b>ポイント。</b> おいた カードの レベルで きまるよ（下の ひょう）。</span>
+                        <span v-html="$t('<b>ポイント。</b> おいた カードの レベルで きまるよ（下の ひょう）。', '<b>Points.</b> Based on the level of the card you place (see the table below).')"></span>
                     </li>
                     <li class="flex gap-2">
                         <span class="rule-no">8</span>
-                        <span><b>おわり。</b> カードが なくなる、ぜんいんが スキップする、または「まけました」を おすと おわり。<b>1位・2位・3位</b>に なると、テラが もらえるよ（1位 +10、2位 +5、3位 +2）。</span>
+                        <span v-html="$t('<b>おわり。</b> カードが なくなる、ぜんいんが スキップする、または「まけました」を おすと おわり。<b>1位・2位・3位</b>に なると、テラが もらえるよ（1位 +10、2位 +5、3位 +2）。', '<b>The end.</b> The game ends when no cards are left, when everyone skips, or when someone taps “I resign”. <b>1st, 2nd, or 3rd</b> earns Tera (1st +10, 2nd +5, 3rd +2).')"></span>
                     </li>
                 </ol>
 
                 <!-- ■ちけい（すむ ばしょ）：盤面と同じ色・もようの見本つき -->
                 <div class="border-t border-slate-200 pt-3">
-                    <p class="legend-title">🗺 ちけい（いきものの すむ ばしょ）</p>
+                    <p class="legend-title">🗺 {{ $t('ちけい（いきものの すむ ばしょ）', 'Terrain (where creatures live)') }}</p>
                     <div class="grid grid-cols-2 gap-2">
                         <div v-for="item in terrainList" :key="item.key" class="legend-terrain">
                             <span class="legend-swatch" :style="terrainSwatchStyle(item.key)"></span>
                             <span class="text-left leading-tight">
-                                <b class="block text-[13px] text-slate-700">{{ item.label }}</b>
-                                <small class="block text-[10px] font-bold text-slate-500">{{ item.hint }}</small>
+                                <b class="block text-[13px] text-slate-700">{{ $t(item.label, item.labelEn) }}</b>
+                                <small class="block text-[10px] font-bold text-slate-500">{{ $t(item.hint, item.hintEn) }}</small>
                             </span>
                         </div>
                     </div>
@@ -524,7 +524,7 @@
 
                 <!-- ■レベルと ポイント：盤面と同じ形。おける ばしょの ルールつき -->
                 <div class="border-t border-slate-200 pt-3">
-                    <p class="legend-title">⭐ レベルと ポイント</p>
+                    <p class="legend-title">⭐ {{ $t('レベルと ポイント', 'Levels and points') }}</p>
                     <div class="grid grid-cols-4 gap-1.5">
                         <div v-for="tier in [1, 2, 3, 4]" :key="tier" class="legend-level">
                             <svg class="legend-shape" viewBox="0 0 24 24" aria-hidden="true" :style="{ fill: teamColor(humanPlayerId) }">
@@ -534,8 +534,8 @@
                                 <polygon v-else points="12,1.5 14.9,8.4 22.4,9 16.7,13.9 18.5,21.3 12,17.4 5.5,21.3 7.3,13.9 1.6,9 9.1,8.4" />
                             </svg>
                             <b class="text-[13px] text-slate-700">Lv{{ tier }}</b>
-                            <span class="legend-points">{{ getScoreForTile(tier) }}点</span>
-                            <small class="text-[9px] font-bold leading-tight text-slate-500">{{ tier === 1 ? 'どこでも' : `まわりに Lv${tier - 1}が 2こ` }}</small>
+                            <span class="legend-points">{{ getScoreForTile(tier) }}{{ $t('点', ' pts') }}</span>
+                            <small class="text-[9px] font-bold leading-tight text-slate-500">{{ tier === 1 ? $t('どこでも', 'Anywhere') : $t(`まわりに Lv${tier - 1}が 2こ`, `2 × Lv${tier - 1} around`) }}</small>
                         </div>
                     </div>
                 </div>
@@ -545,7 +545,7 @@
 
         <!-- ■ふりかえりのバー：1手ずつ進める・戻す・自動で再生 -->
         <div v-if="replay" class="replay-bar">
-            <p class="replay-label">🎞 ふりかえり {{ replayLabel }}</p>
+            <p class="replay-label">🎞 {{ $t('ふりかえり', 'Review') }} {{ replayLabel }}</p>
             <input
                 class="replay-slider"
                 type="range"
@@ -555,27 +555,27 @@
                 @input="stepReplay(Number($event.target.value) - replay.index)"
             >
             <div class="replay-buttons">
-                <button aria-label="はじめへ" @click="stepReplay(-moveLog.length)">⏮</button>
-                <button aria-label="ひとつ もどる" @click="stepReplay(-1)">◀</button>
+                <button :aria-label="$t('はじめへ', 'To the start')" @click="stepReplay(-moveLog.length)">⏮</button>
+                <button :aria-label="$t('ひとつ もどる', 'Back one move')" @click="stepReplay(-1)">◀</button>
                 <button class="replay-play" @click="toggleReplayPlay()">{{ replay.playing ? '⏸' : '▶' }}</button>
-                <button aria-label="ひとつ すすむ" @click="stepReplay(1)">▶</button>
-                <button aria-label="さいごへ" @click="stepReplay(moveLog.length)">⏭</button>
-                <select class="replay-speed" aria-label="1手ごとの はやさ" :value="replay.interval" @change="setReplayInterval(Number($event.target.value))">
-                    <option v-for="seconds in replayIntervals" :key="seconds" :value="seconds">{{ seconds }}秒 / 手{{ seconds <= 0.02 ? "（さいそく）" : "" }}</option>
+                <button :aria-label="$t('ひとつ すすむ', 'Forward one move')" @click="stepReplay(1)">▶</button>
+                <button :aria-label="$t('さいごへ', 'To the end')" @click="stepReplay(moveLog.length)">⏭</button>
+                <select class="replay-speed" :aria-label="$t('1手ごとの はやさ', 'Speed per move')" :value="replay.interval" @change="setReplayInterval(Number($event.target.value))">
+                    <option v-for="seconds in replayIntervals" :key="seconds" :value="seconds">{{ seconds }}{{ $t('秒', ' sec') }} / {{ $t('手', 'move') }}{{ seconds <= 0.02 ? $t('（さいそく）', ' (fastest)') : "" }}</option>
                 </select>
-                <button class="replay-close" @click="closeReplay()">✕ とじる</button>
+                <button class="replay-close" @click="closeReplay()">✕ {{ $t('とじる', 'Close') }}</button>
             </div>
         </div>
 
         <!-- ■洞窟へ行く前の確認（ブラウザの確認ダイアログの代わり）。外側を押すと、やめる -->
         <div v-if="showCaveConfirm" class="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" @click.self="showCaveConfirm = false">
-            <div class="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-xl" role="dialog" aria-modal="true" aria-label="洞窟へ いきますか？">
+            <div class="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-xl" role="dialog" aria-modal="true" :aria-label="$t('洞窟へ いきますか？', 'Go to the cave?')">
                 <p class="text-3xl">⛏</p>
-                <p class="mt-2 text-base font-black text-slate-700">{{ caveTarget() ? caveTarget().name + 'の洞窟へ いきますか？' : '洞窟へ いきますか？' }}</p>
-                <p class="mt-1 text-xs font-bold text-slate-500">洞窟の ぼうけんに いくよ</p>
+                <p class="mt-2 text-base font-black text-slate-700">{{ caveTarget() ? $t(caveTarget().name + 'の洞窟へ いきますか？', 'Go to the ' + caveTarget().nameEn + ' cave?') : $t('洞窟へ いきますか？', 'Go to the cave?') }}</p>
+                <p class="mt-1 text-xs font-bold text-slate-500">{{ $t('洞窟の ぼうけんに いくよ', 'Off to a cave adventure') }}</p>
                 <div class="mt-4 flex gap-2">
-                    <button class="flex-1 rounded-xl border border-slate-300 bg-slate-100 py-2.5 font-black text-slate-600" @click="showCaveConfirm = false">やめる</button>
-                    <button class="flex-1 rounded-xl bg-amber-500 py-2.5 font-black text-white" @click="goCaveNow">いく</button>
+                    <button class="flex-1 rounded-xl border border-slate-300 bg-slate-100 py-2.5 font-black text-slate-600" @click="showCaveConfirm = false">{{ $t('やめる', 'Cancel') }}</button>
+                    <button class="flex-1 rounded-xl bg-amber-500 py-2.5 font-black text-white" @click="goCaveNow">{{ $t('いく', 'Go') }}</button>
                 </div>
             </div>
         </div>
@@ -584,10 +584,10 @@
         <div v-if="testMode && showTestCards" class="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 p-3 sm:items-center" @click.self="showTestCards = false">
             <div class="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white p-4 shadow-xl">
                 <div class="mb-2 flex items-center justify-between">
-                    <p class="text-base font-black text-slate-700">🧪 テスト：カードを えらぶ</p>
-                    <button class="header-tool" aria-label="とじる" @click="showTestCards = false">✕</button>
+                    <p class="text-base font-black text-slate-700">🧪 {{ $t('テスト：カードを えらぶ', 'Test: choose cards') }}</p>
+                    <button class="header-tool" :aria-label="$t('とじる', 'Close')" @click="showTestCards = false">✕</button>
                 </div>
-                <p class="mb-2 text-xs font-bold text-slate-500">タップすると、じぶんの カードに ふえるよ（テスト用。DBには入らない・つかうと このゲームの テラは もらえない）</p>
+                <p class="mb-2 text-xs font-bold text-slate-500">{{ $t('タップすると、じぶんの カードに ふえるよ（テスト用。DBには入らない・つかうと このゲームの テラは もらえない）', 'Tap to add a card to your hand (for testing; not saved to the DB, and using it means no Tera for this game)') }}</p>
                 <div class="overflow-y-auto">
                     <div v-for="group in testCardGroups" :key="group.level" class="mb-3">
                         <p class="mb-1 text-xs font-black text-slate-600">Lv{{ group.level }}</p>
@@ -602,7 +602,7 @@
                             </button>
                         </div>
                     </div>
-                    <p v-if="!testCardGroups.length" class="py-6 text-center text-sm text-slate-400">カードを よみこみ中…</p>
+                    <p v-if="!testCardGroups.length" class="py-6 text-center text-sm text-slate-400">{{ $t('カードを よみこみ中…', 'Loading cards…') }}</p>
                 </div>
                 <p v-if="testMessage" class="mt-2 text-center text-xs font-bold text-emerald-600">{{ testMessage }}</p>
             </div>
@@ -611,7 +611,7 @@
         <!-- ■黒いマスの「かんきょうチャレンジ」（ABゲーム2問。ぜんぶ1回で正解なら成功） -->
         <div v-if="showChallenge" class="fixed inset-0 z-[65] flex items-center justify-center bg-black/60 p-3">
             <div class="relative w-full max-w-lg">
-                <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" aria-label="やめる" @click="cancelChallenge">✕</button>
+                <button class="absolute -top-3 -right-3 z-10 rounded-full bg-white px-2 py-1 text-sm shadow" :aria-label="$t('やめる', 'Cancel')" @click="cancelChallenge">✕</button>
                 <div class="max-h-[90vh] overflow-y-auto rounded-2xl bg-[#f4f1e8] shadow-xl">
                     <ABGameProposalB embedded challenge :city="(loadPlace() && loadPlace().city) || 'hiratsuka'" :question-count="2" @start="challengeStarted = true" @finish="onChallengeFinish" />
                 </div>
@@ -625,11 +625,11 @@
             @click.self="showSkipConfirm = false"
         >
             <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
-                <p class="mb-1 text-xl font-black">スキップする？</p>
-                <p class="mb-5 text-sm text-slate-600">カードを おかずに、つぎの チームに じゅんばんを わたすよ。</p>
+                <p class="mb-1 text-xl font-black">{{ $t('スキップする？', 'Skip your turn?') }}</p>
+                <p class="mb-5 text-sm text-slate-600">{{ $t('カードを おかずに、つぎの チームに じゅんばんを わたすよ。', 'You will pass the turn to the next team without placing a card.') }}</p>
                 <div class="flex flex-col gap-2">
-                    <button class="rounded-xl bg-sky-500 px-4 py-3 font-bold text-white hover:bg-sky-600" @click="doSkip()">スキップする</button>
-                    <button class="rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showSkipConfirm = false">やめる</button>
+                    <button class="rounded-xl bg-sky-500 px-4 py-3 font-bold text-white hover:bg-sky-600" @click="doSkip()">{{ $t('スキップする', 'Skip') }}</button>
+                    <button class="rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showSkipConfirm = false">{{ $t('やめる', 'Cancel') }}</button>
                 </div>
             </div>
         </div>
@@ -642,8 +642,8 @@
             <div v-if="lordBanner" class="lord-banner" :style="{ '--c': lordBanner.color }">
                 <span class="lord-crown">👑</span>
                 <span class="lord-text">
-                    <b>{{ lordBanner.team }}チームの「{{ lordBanner.name }}」</b> が あらわれた！
-                    <small>生態系の いちばん うえの いきもの。まわりを したがえているよ</small>
+                    <b>{{ $t(lordBanner.team + 'チームの「' + lordBanner.name + '」', teamShortName(lordBanner.team + 'チーム') + ' team: ' + lordBanner.name) }}</b> {{ $t('が あらわれた！', 'has appeared!') }}
+                    <small>{{ $t('生態系の いちばん うえの いきもの。まわりを したがえているよ', 'The top creature of the ecosystem. It leads the creatures around it.') }}</small>
                 </span>
             </div>
         </transition>
@@ -661,7 +661,7 @@
     <template v-else>
         <!-- ■データ読み込み中（tiles/handsの準備ができるまで）のプレースホルダー -->
         <div class="flex items-center justify-center h-screen text-white text-lg font-bold">
-            よみこみ中...
+            {{ $t('よみこみ中...', 'Loading...') }}
         </div>
     </template>
 </template>
@@ -672,13 +672,15 @@ import GameCardFocus from './GameCardFocus.vue';
 import GameResultSummary from './GameResultSummary.vue';
 import ABGameProposalB from '@/views/ABGame/ABGameProposalB.vue';
 import { getSession } from '@/utils/session.js';
+import { teamShortName } from '@/utils/teamLabel.js';
+import { t } from '@/utils/lang.js';
 import { generateSpotBoard } from './habitatBoard.js';
 import { isFresh } from '@/utils/dominationSlots.js';
 
 // ■街ごとの洞窟（洞窟のエリアの id と、表示する名前）。「洞窟へ」ボタンの行き先に使う
 const CITY_CAVE = {
-    hiratsuka: { area: 'kanagawa', name: '関東エリア' },
-    kushiro: { area: 'hokkaido', name: '北海道エリア' },
+    hiratsuka: { area: 'kanagawa', name: '関東エリア', nameEn: 'Kanto area' },
+    kushiro: { area: 'hokkaido', name: '北海道エリア', nameEn: 'Hokkaido area' },
 };
 import { sfx } from '@/utils/sfx.js';
 import { addPoints } from '@/utils/points.js';
@@ -710,6 +712,7 @@ const AB_CHALLENGE_POINTS = 2
 
 // ■地形の名前（チャレンジ成功でなおる地形の案内に使う）
 const AREA_NAMES = { town: '町', forest: '森', dirt: '土', river: '川', sea: '海' }
+const AREA_NAMES_EN = { town: 'town', forest: 'forest', dirt: 'soil', river: 'river', sea: 'sea' }
 // ■街（mapSpots の city）と、カードの region（洞窟のエリア）の対応
 const CITY_REGION = { hiratsuka: 'kanto', kushiro: 'hokkaido' }
 
@@ -842,12 +845,12 @@ export default {
             undeveloped: '#666666'
         },
         terrainList: [
-            { key: 'town', label: '町', hint: 'りくの いきもの' },
-            { key: 'forest', label: '森', hint: 'りくの いきもの' },
-            { key: 'dirt', label: '土', hint: 'りくの いきもの' },
-            { key: 'river', label: '川', hint: 'みずの いきもの' },
-            { key: 'sea', label: '海', hint: 'みずの いきもの' },
-            { key: 'undeveloped', label: '未開発地（くろい）', hint: 'タップで クイズ→なおす' },
+            { key: 'town', label: '町', labelEn: 'Town', hint: 'りくの いきもの', hintEn: 'Land creatures' },
+            { key: 'forest', label: '森', labelEn: 'Forest', hint: 'りくの いきもの', hintEn: 'Land creatures' },
+            { key: 'dirt', label: '土', labelEn: 'Soil', hint: 'りくの いきもの', hintEn: 'Land creatures' },
+            { key: 'river', label: '川', labelEn: 'River', hint: 'みずの いきもの', hintEn: 'Water creatures' },
+            { key: 'sea', label: '海', labelEn: 'Sea', hint: 'みずの いきもの', hintEn: 'Water creatures' },
+            { key: 'undeveloped', label: '未開発地（くろい）', labelEn: 'Undeveloped (black)', hint: 'タップで クイズ→なおす', hintEn: 'Tap for a quiz, then fix it' },
         ],
 
         // ■カードはFirestoreのカードライブラリ（cards）と所持カード（cardInstances）から作る
@@ -901,9 +904,9 @@ export default {
         },
 
         backLabelText() {
-            if (this.resultView) return '📊 けっか くらべに もどる'
+            if (this.resultView) return t('📊 けっか くらべに もどる', '📊 Back to result comparison')
             const place = this.loadPlace()
-            return place && place.cityName ? `📍 ${place.cityName}にもどる` : '🏠 ホームにもどる'
+            return place && place.cityName ? t(`📍 ${place.cityName}にもどる`, `📍 Back to ${place.cityName}`) : t('🏠 ホームにもどる', '🏠 Back to home')
         },
 
         backToMonitorRoom() {
@@ -934,14 +937,14 @@ export default {
               return
           }
           if(!this.selectedCard) {
-              this.showToast("カードを選択してからタイルを選んでね")
+              this.showToast(t("カードを選択してからタイルを選んでね", "Select a card first, then pick a tile"))
               return
           }
 
           if(tile.ownerTeam !== null) return; // already owned
 
           if (!tile.validForSelection) {
-            this.showToast("このタイルにはこのカードは置けないよ")
+            this.showToast(t("このタイルにはこのカードは置けないよ", "This card can't go on this tile"))
             return // not valid for selection
           }
 
@@ -957,7 +960,7 @@ export default {
               } catch (e) {
                   console.error('カードの配置の保存に失敗しました', e)
                   this.isPlacingCard = false
-                  this.showToast("カードを置けませんでした。通信状況を確認して、もう一度ためしてね")
+                  this.showToast(t("カードを置けませんでした。通信状況を確認して、もう一度ためしてね", "Could not place the card. Check your connection and try again."))
                   return
               }
               this.isPlacingCard = false
@@ -968,7 +971,7 @@ export default {
                   this.selectedCard = null
                   this.updateValidTiles()
                   this.saveGame()
-                  this.showToast(`「${card.label}」は、ほかのゲームですでに使われていたよ`)
+                  this.showToast(t(`「${card.label}」は、ほかのゲームですでに使われていたよ`, `${card.label} was already used in another game`))
                   return
               }
           }
@@ -1143,7 +1146,7 @@ export default {
             // ■街の名前（平塚市・釧路市）を1行目、場所とゲーム番号を2行目にして、バッジの中で改行する
             const city = place.cityName || ''
             if (place.spotName && place.gameNo) {
-                const spot = `${place.spotName} ゲーム${place.gameNo}`
+                const spot = t(`${place.spotName} ゲーム${place.gameNo}`, `${place.spotName} Game ${place.gameNo}`)
                 return city ? `${city}\n${spot}` : spot
             }
             return city
@@ -1167,7 +1170,7 @@ export default {
                 || this.cardLibrary.find(item => item.name === card.label || item.name === card.id)
             if (!library) return null
             const player = this.players.find(item => item.id === teamId)
-            const ownerName = player && player.isAI ? 'AI' : ((this.slotOwner && this.slotOwner.name) || 'あなた')
+            const ownerName = player && player.isAI ? 'AI' : ((this.slotOwner && this.slotOwner.name) || t('あなた', 'you'))
             return toDisplayCard(library, { team: TEAM_NAME_BY_ID[teamId], ownerName })
         },
 
@@ -1310,7 +1313,7 @@ export default {
             this.spectateUnsub = db.collection(SAVE_COLLECTION).doc(this.roomCode).onSnapshot(doc => {
                 if (!doc.exists) {
                     // 遊んでいた人が まけて、枠があいた（AIが勝った）とき
-                    this.showToast('このゲームは おわって、ばしょが あいたよ')
+                    this.showToast(t('このゲームは おわって、ばしょが あいたよ', 'This game is over, and the spot is free now.'))
                     setTimeout(() => this.backFromGame(), 1800)
                     return
                 }
@@ -2263,6 +2266,26 @@ export default {
         },
 
         // ■順位（同点は同じ順位。自分より点が高いチームの数＋1）
+        // テンプレートから使うため、チーム名の短い形をここでも渡す
+        teamShortName(name) {
+            return teamShortName(name)
+        },
+        // 手札のカードの名前（英語モードでは、スキャンでとったカードの英語名）
+        cardLabel(card) {
+            return t(card.label, card.labelEn || card.label)
+        },
+        // 順位の後ろにつける言葉（1位・1st など）。英語は 1st / 2nd / 3rd / 4th
+        rankSuffix(rank) {
+            const ones = rank % 10
+            const tens = Math.floor(rank / 10) % 10
+            let en = 'th'
+            if (tens !== 1) {
+                if (ones === 1) en = 'st'
+                else if (ones === 2) en = 'nd'
+                else if (ones === 3) en = 'rd'
+            }
+            return t('位', en)
+        },
         rankOf(player) {
             return 1 + this.players.filter(other => other.score > player.score).length
         },
@@ -2321,7 +2344,7 @@ export default {
         announceLord(tile) {
             const player = this.players.find(p => p.id === tile.ownerTeam)
             this.lordBanner = {
-                name: (tile.placedCard && tile.placedCard.label) || 'いきもの',
+                name: (tile.placedCard && tile.placedCard.label) || t('いきもの', 'creature'),
                 team: player ? player.name.replace('チーム', '') : '',
                 color: this.teamColor(tile.ownerTeam)
             }
@@ -2352,7 +2375,7 @@ export default {
             this.recentMoves = []
             this.skipCount++
             if (this.skipCount >= this.players.length) {
-                this.showToast('全員がスキップしたので、ゲームを終了します。')
+                this.showToast(t('全員がスキップしたので、ゲームを終了します。', 'Everyone skipped, so the game ends.'))
                 this.finishGame()
                 return
             }
@@ -2367,7 +2390,7 @@ export default {
             if (!hand) return
             hand.push(toDominationCard(card, `test-${Date.now()}-${hand.length}`, true))
             this.usedTestCards = true
-            this.testMessage = `「${card.name}」を ふやしたよ`
+            this.testMessage = t(`「${card.name}」を ふやしたよ`, `Added ${card.name}`)
             clearTimeout(this.testMessageTimer)
             this.testMessageTimer = setTimeout(() => { this.testMessage = '' }, 1500)
         },
@@ -2442,13 +2465,13 @@ export default {
                 this.selectedCard = null
                 this.updateValidTiles()
                 sfx.win()
-                this.showToast(`かんきょうを なおせた！ +${AB_CHALLENGE_POINTS}てん。「${AREA_NAMES[area]}」に なったよ。このマスに、すぐ おけるよ`, true)
+                this.showToast(t(`かんきょうを なおせた！ +${AB_CHALLENGE_POINTS}てん。「${AREA_NAMES[area]}」に なったよ。このマスに、すぐ おけるよ`, `Environment fixed! +${AB_CHALLENGE_POINTS} pts. It is now ${AREA_NAMES_EN[area]}, so you can place a card here right away.`), true)
                 this.saveGame()
                 return
             }
 
             sfx.skip()
-            this.showToast('ざんねん…。つぎの チームの ばんに なるよ')
+            this.showToast(t('ざんねん…。つぎの チームの ばんに なるよ', 'Too bad… The next team takes its turn.'))
             this.recentMoves = []
             this.goToNextPlayer()
             this.saveGame()
@@ -2774,11 +2797,15 @@ export default {
       replayLabel() {
           const replay = this.replay
           if (!replay) return ''
-          if (!replay.index) return 'はじまり'
+          if (!replay.index) return t('はじまり', 'Start')
           const move = this.moveLog[replay.index - 1]
           const player = this.players.find(item => item.id === move.p)
-          const eaten = move.e && move.e.length ? `（${move.e.length}こ 食べた）` : ''
-          return `${replay.index}手め：${player ? player.name : ''} が Lv${move.tier}${move.l ? `「${move.l}」` : ''}を おいた${eaten}`
+          const eaten = move.e && move.e.length ? t(`（${move.e.length}こ 食べた）`, ` (ate ${move.e.length})`) : ''
+          const who = player ? teamShortName(player.name) : ''
+          return t(
+              `${replay.index}手め：${who} が Lv${move.tier}${move.l ? `「${move.l}」` : ''}を おいた${eaten}`,
+              `Move ${replay.index}: ${who} placed Lv${move.tier}${move.l ? ` ${move.l}` : ''}${eaten}`
+          )
       },
 
       // ■観戦モードの結果の画面に出す、勝ったチーム
@@ -2789,7 +2816,7 @@ export default {
 
       ownerLabel() {
           const owner = this.slotOwner
-          return owner && owner.name ? `${owner.name}さん` : 'ほかの人'
+          return owner && owner.name ? t(`${owner.name}さん`, owner.name) : t('ほかの人', 'someone else')
       },
 
       testCardGroups() {
@@ -2856,7 +2883,10 @@ export default {
       },
 
       rankRewardText() {
-          return `1位 +${RANK_REWARD_TERA[1]}・2位 +${RANK_REWARD_TERA[2]}・3位 +${RANK_REWARD_TERA[3]}テラ`
+          return t(
+              `1位 +${RANK_REWARD_TERA[1]}・2位 +${RANK_REWARD_TERA[2]}・3位 +${RANK_REWARD_TERA[3]}テラ`,
+              `1st +${RANK_REWARD_TERA[1]}・2nd +${RANK_REWARD_TERA[2]}・3rd +${RANK_REWARD_TERA[3]} Tera`
+          )
       },
 
       // ■AIに食べられたタイル
