@@ -9,7 +9,6 @@
                         <h1 class="text-2xl font-black tracking-wide text-cyan-300">{{ $t('カードライブラリ', 'Card book') }}</h1>
                         <LangSwitch />
                     </div>
-                    <p class="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-slate-400 sm:text-sm">{{ $t('持っている枚数', 'Your collection') }}</p>
                 </div>
                 <button
                     class="shrink-0 rounded-lg border border-slate-500 px-4 py-2 text-sm font-bold hover:bg-white/10"
