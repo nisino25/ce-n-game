@@ -254,9 +254,9 @@
 </template>
 
 <script>
-import db from "@/firebase.js";
+import db, { firebase } from "@/firebase.js";
 import { compressCardImage } from "@/utils/creatureCard.js";
-import { cardRegions, REGION_LABELS } from "@/utils/cards.js";
+import { cardRegions, REGION_LABELS, fetchCardImages, saveCardImage } from "@/utils/cards.js";
 
 export default {
   name: "CardAdmin",
@@ -264,6 +264,7 @@ export default {
   data() {
     return {
       cards: [],
+      pendingImage: null, // 管理画面で新しく選んだ画像（保存するまで cardImages には書かない）
       searchText: "",
       selectedRegion: "",
       regionLabels: REGION_LABELS,
@@ -316,11 +317,14 @@ export default {
           .collection("cards")
           .get();
 
-        this.cards = snapshot.docs
-          .map(doc => ({
-            cardId: doc.id,
-            ...doc.data()
-          }))
+        const cards = snapshot.docs.map(doc => ({
+          cardId: doc.id,
+          ...doc.data()
+        }));
+        // 画像は cardImages から読んで、一覧や編集画面に付ける
+        const images = await fetchCardImages(cards.map(card => card.cardId));
+        this.cards = cards
+          .map(card => ({ ...card, image: images[card.cardId] || card.image || "" }))
           .sort((a, b) => {
             return (a.level || 0) - (b.level || 0);
           });
@@ -357,6 +361,7 @@ export default {
         this.message = "画像を読み込んでいます...";
         const compressed = await compressCardImage(file);
         this.editCard.image = compressed.dataUrl;
+        this.pendingImage = compressed.dataUrl; // 保存するまで、cardImages には書かない
         this.message = "画像を読み込みました。保存ボタンを押してください。";
       } catch (error) {
         console.error("画像読み込みエラー:", error);
@@ -414,7 +419,8 @@ export default {
         const cardData = {
           name: this.editCard.name,
           owner: this.editCard.owner || "",
-          image: this.editCard.image || "",
+          // 画像は cardImages に保存する。cards 本体に古い画像が残っていたら消す
+          image: firebase.firestore.FieldValue.delete(),
           level: Number(this.editCard.level) || 1,
           rarity: this.editCard.rarity || "D",
           regions: this.editCard.regions || [],
@@ -429,6 +435,11 @@ export default {
           .collection("cards")
           .doc(this.editCard.cardId)
           .set(cardData, { merge: true });
+        // 新しく選んだ画像があるときだけ、cardImages を書き換える
+        if (this.pendingImage) {
+          await saveCardImage(this.editCard.cardId, this.pendingImage);
+          this.pendingImage = null;
+        }
 
         this.message = "カード情報を保存しました。";
         await this.loadCards();
@@ -466,7 +477,6 @@ export default {
         const cardData = {
           name: this.editCard.name,
           owner: this.editCard.owner || "",
-          image: this.editCard.image || "",
           level: Number(this.editCard.level) || 1,
           rarity: this.editCard.rarity || "D",
           regions: this.editCard.regions || [],
@@ -478,6 +488,11 @@ export default {
         };
 
         const ref = await db.collection("cards").add(cardData);
+        // 画像は cardImages に保存する
+        if (this.pendingImage) {
+          await saveCardImage(ref.id, this.pendingImage);
+          this.pendingImage = null;
+        }
         this.message = "新しいカードを追加しました。";
         await this.loadCards();
 

@@ -129,7 +129,7 @@
 <script>
 import db from "@/firebase.js";
 import CollectionCard from "@/views/CaveAdventure/CollectionCard.vue";
-import { cardRegions, REGION_LABELS, toDisplayCard } from "@/utils/cards.js";
+import { cardRegions, REGION_LABELS, toDisplayCard, fetchCardImages } from "@/utils/cards.js";
 
 // いま陣取りゲームで遊べる地域（関東・近畿・北海道）
 const PLAYABLE_REGIONS = ["kanto", "kinki", "hokkaido"];
@@ -208,8 +208,11 @@ export default {
             // スキャンのカードだけを、新しい順に出す
             const snapshot = await db.collection("cards").where("source", "==", "scan").get();
             const createdTime = card => (card.createdAt && card.createdAt.toMillis ? card.createdAt.toMillis() : 0);
-            this.cards = snapshot.docs
-                .map(doc => ({ cardId: doc.id, ...doc.data() }))
+            const cards = snapshot.docs.map(doc => ({ cardId: doc.id, ...doc.data() }));
+            // 画像は cardImages から読んで付ける
+            const images = await fetchCardImages(cards.map(card => card.cardId));
+            this.cards = cards
+                .map(card => ({ ...card, image: images[card.cardId] || card.image || "" }))
                 .sort((a, b) => createdTime(b) - createdTime(a));
         } catch (error) {
             console.error("スキャンのカードの読み込みに失敗しました:", error);

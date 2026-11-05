@@ -18,9 +18,8 @@ service cloud.firestore {
         && d.name is string
         && d.name.size() > 0
         && d.name.size() <= 20
-        && d.image is string
-        && d.image.size() <= 900000
-        && d.image.matches('^data:image/(webp|jpeg);base64,')
+        // 画像は cardImages/{id} に入るので、cards 本体に画像が無くてもよい（古い登録で残っていたら、大きさだけ確かめる）
+        && d.get('image', '').size() <= 900000
         && d.level is int
         && d.level >= 1
         && d.level <= 4
@@ -44,6 +43,16 @@ service cloud.firestore {
 
       // スキャンで登録されたカードは、アプリからは消せない（必要なら Firebase コンソールで消す）
       allow delete: if resource.data.get('source', '') != 'scan';
+    }
+
+    // ■カードの画像（cardImages）。cards/{id} と同じIDで、画像（data URL）だけを入れる
+    // 一覧（cards）を軽くするために、画像はここに分けてある
+    match /cardImages/{cardId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.image is string
+        && request.resource.data.image.size() <= 900000
+        && request.resource.data.image.matches('^data:image/[a-z+]+;base64,');
+      allow delete: if true;
     }
 
     // ■所持カード（cardInstances）
