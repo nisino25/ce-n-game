@@ -17,7 +17,8 @@
 
     <div ref="warp" class="warpEffect" id="warpEffect"></div>
 
-    <div id="result">{{ $t(selectedAreaInfo.name + 'のカギ：' + remainKeys + '本', selectedAreaInfo.nameEn + ' keys: ' + remainKeys) }}</div>
+    <!-- ■カギを読んでいる間は「確認中」と出す（0本と勘違いさせないため） -->
+    <div id="result">{{ keysLoaded ? $t(selectedAreaInfo.name + 'のカギ：' + remainKeys + '本', selectedAreaInfo.nameEn + ' keys: ' + remainKeys) : $t('カギを確認中…', 'Checking keys…') }}</div>
 
     <!-- ■どのエリアのカギで宝箱を開けるか（初期値は最後に遊んだ洞窟のエリア） -->
     <div class="area-tabs">
@@ -25,23 +26,19 @@
             v-for="(info, id) in areas"
             :key="id"
             class="area-tab"
-            :class="{ active: id === selectedArea }"
+            :class="{ active: id === selectedArea, empty: !caveKeys[id] }"
             :style="{ '--area-color': info.keyColor }"
             :disabled="chestPhase !== 'idle'"
             @click="selectedArea = id"
         >
             <span class="area-key">🔑</span>
-            {{ $t(info.name, info.nameEn) }} {{ caveKeys[id] }}{{ $t('本', ' keys') }}
+            {{ $t(info.name, info.nameEn) }}
+            {{ caveKeys[id] ? caveKeys[id] + $t('本', ' keys') : $t('カギなし', 'No keys') }}
         </button>
     </div>
 
-    <!-- ■宝箱：タップで開くことが伝わりにくかったので、開く前だけヒントを出す -->
-    <div v-if="chestPhase === 'idle'" class="tap-hint">
-        👆 {{ $t('タップしてあけよう！', 'Tap to open!') }}
-    </div>
-
     <!-- ■宝箱：カギを差す → 回す → 錠前が外れる → フタが開いて光があふれる → カード登場 -->
-    <div class="chest" :class="'phase-' + chestPhase" @click="openChest">
+    <div class="chest" :class="['phase-' + chestPhase, { 'no-key': keysLoaded && !remainKeys && chestPhase === 'idle' }]" @click="openChest">
         <div class="light-rays"></div>
         <div class="chest-glow"></div>
         <div class="base">
@@ -64,6 +61,16 @@
             class="sparkle"
             :style="sparkleStyle(n)"
         ></span>
+    </div>
+
+    <!-- ■宝箱を開くボタン：文字ではなく、この大きなボタンを押してもらう -->
+    <button v-if="chestPhase === 'idle' && remainKeys > 0" type="button" class="tap-hint" @click="openChest">
+        👆 {{ $t('タップしてあけよう！', 'Tap to open!') }}
+    </button>
+    <!-- ■カギが0本のときは、開けられないことと、カギの取り方をはっきり出す（読み込み中は出さない） -->
+    <div v-else-if="chestPhase === 'idle' && keysLoaded" class="no-key-banner">
+        <p class="no-key-title">🔒 {{ $t('カギが0本です', 'No keys left') }}</p>
+        <p class="no-key-sub">{{ $t('洞窟の中で カギを手に入れると、宝箱が開けられるよ', 'Find a key inside the cave to open the chest') }}</p>
     </div>
 
     <div class="flex gap-2 mt-4">
@@ -204,8 +211,8 @@
         <div class="confirm-box">
             <p>{{ $t('獲得したカードをすべて消去してもよろしいですか？', 'Clear all collected cards?') }}</p>
             <div class="confirm-actions">
+                <button class="confirm-no" @click="confirmReset = false">{{ $t('いいえ', 'No') }}</button>
                 <button class="confirm-yes" @click="resetCollection">{{ $t('消去する', 'Clear') }}</button>
-                <button class="confirm-no" @click="confirmReset = false">{{ $t('キャンセル', 'Cancel') }}</button>
             </div>
         </div>
     </div>
@@ -221,12 +228,13 @@ import {
     loadLastCaveArea
 } from "./caveAreas.js";
 import { getSession } from "@/utils/session.js";
+import { playUnlockSound, playChestOpenSound, playCardSound } from "@/utils/sounds.js";
 import db from "@/firebase.js";
 import { t } from "@/utils/lang.js";
 import CollectionCard from "./CollectionCard.vue";
 import {
     getCurrentUser,
-    fetchCardLibrary,
+    getCardLibrary,
     fetchMyCardInstances,
     drawCard,
     addCardInstance,
@@ -243,6 +251,7 @@ export default {
           user: null,
           areas: CAVE_AREAS,
           caveKeys: {}, // カギ更新変更：loadCaveKeys(),
+          keysLoaded: false, // カギの読み込みが終わったか（読み込み中に「カギ0本」を出さないため）
           selectedArea: CAVE_AREA_IDS[0],
           chestPhase: "idle", // idle | unlocking | opening | open
           showOverlay: false,
@@ -325,6 +334,7 @@ export default {
         try {
             this.caveKeys = await loadCaveKeys(cenId);
             console.log("CaveEnd カギ情報:", this.caveKeys);
+            this.keysLoaded = true;
         } catch (error) {
             console.error("カギ情報の読み込みに失敗しました:", error);
             alert(t("カギ情報を読み込めませんでした。", "Could not load your keys."));
@@ -342,7 +352,7 @@ export default {
         // カードライブラリと会員情報は、別々に読む（片方が失敗しても、もう片方は使えるように）
         async loadCardData() {
             const [library, user] = await Promise.allSettled([
-                fetchCardLibrary(),
+                getCardLibrary(),
                 getCurrentUser()
             ]);
             if (library.status === "fulfilled") this.library = library.value;
@@ -354,7 +364,7 @@ export default {
         async openChest() {
             if (this.isOpening || this.chestPhase !== "idle") return;
             // まだ読めていなければ、いまもう一度読む（読めないときは、読めていないことを伝える）
-            if (!this.library.length) this.library = await fetchCardLibrary().catch(() => []);
+            if (!this.library.length) this.library = await getCardLibrary().catch(() => []);
             if (!this.user) this.user = await getCurrentUser().catch(() => null);
             if (!this.library.length || !this.user) {
                 alert(t("カードの情報を読めませんでした。通信状況を確かめて、もう一度ためしてください。", "Could not load the card data. Check your connection and try again."));
@@ -378,6 +388,11 @@ export default {
                 rare: "", area1: "", area2: "", card: ""
             };
             let keyConsumed = false;
+            // 押したらすぐ宝箱を動かす（保存が終わるのを待つと、ボタンを押してから遅く見えるため）
+            this.chestPhase = "unlocking";
+            playUnlockSound();
+            // 画面のカギ数も先に1本減らして見せる（保存できなかったときは、下で元に戻す）
+            this.caveKeys = { ...this.caveKeys, [areaId]: currentKeys - 1 };
             try {
                 // ① Firestoreでカギを1本消費
                 const nextCount = await changeCaveKey( cenId, areaId, -1 );
@@ -390,7 +405,6 @@ export default {
                 // ③ カードを抽選
                 const card = drawCard(this.library, areaId);
                 // ④ カードをデータベースに保存
-                this.chestPhase = "unlocking";
                 const saving = addCardInstance({
                     card,
                     user: this.user,
@@ -402,12 +416,14 @@ export default {
                     new Promise(resolve => setTimeout(resolve, ms));
                 await wait(300);
                 this.chestPhase = "opening";
+                playChestOpenSound();
                 await wait(600);
                 const instance = await saving;
 
                 this.currentCard = toDisplayCard(card, instance);
                 this.chestPhase = "open";
                 this.showOverlay = true;
+                playCardSound();
             } catch (error) {
                 console.error("宝箱を開く処理に失敗しました:", error);
                 // ⑤ カード保存などに失敗した場合は、消費したカギを返す
@@ -532,7 +548,7 @@ export default {
             this.collectionLoading = true;
             try {
                 const user = this.user || await getCurrentUser();
-                if (!this.library.length) this.library = await fetchCardLibrary();
+                if (!this.library.length) this.library = await getCardLibrary();
                 const instances = user ? await fetchMyCardInstances(user.uid) : [];
                 const libraryById = Object.fromEntries(this.library.map(card => [card.cardId, card]));
                 
@@ -663,11 +679,26 @@ export default {
     /* ■常にうっすら揺れて「押せる」ことが伝わるようにする（タッチ端末はhoverが効かないため） */
     .chest.phase-idle{animation:chest-bob 1.6s ease-in-out infinite}
 
+    /* 宝箱を開くボタン（文字だけに見えないよう、枠と背景をつける） */
     .tap-hint{
-        color:#fff;font-weight:900;font-size:18px;margin-top:16px;
+        display:inline-flex;align-items:center;justify-content:center;
+        margin:16px 0 0;padding:12px 28px;border-radius:999px;cursor:pointer;
+        color:#fff;font-weight:900;font-size:18px;
+        background:rgba(0,0,0,.55);border:3px solid #ffd84d;
+        box-shadow:0 0 14px rgba(255,216,77,.6);
         text-shadow:2px 2px 0 #000,0 0 10px #000;
         animation:tap-hint-pulse 1.4s ease-in-out infinite;
+        user-select:none;-webkit-user-select:none;
     }
+    /* カギが0本のときは、宝箱を暗い灰色にして「開けられない」と分かるようにする */
+    .chest.no-key{filter:grayscale(1) brightness(.5)}
+    .no-key-banner{
+        margin-top:16px;padding:12px 24px;border-radius:16px;text-align:center;
+        background:rgba(0,0,0,.7);border:3px solid #ff6b6b;
+        color:#fff;text-shadow:2px 2px 0 #000,0 0 10px #000;
+    }
+    .no-key-title{font-size:22px;font-weight:900;margin:0}
+    .no-key-sub{font-size:15px;font-weight:700;margin:6px 0 0}
     @keyframes tap-hint-pulse{
         0%,100%{opacity:.65;transform:scale(1)}
         50%{opacity:1;transform:scale(1.06)}
@@ -852,6 +883,8 @@ export default {
     .area-tab.active{background:var(--area-color);opacity:1}
     .area-tab.active .area-key{background:rgba(0,0,0,.3)}
     .area-tab:disabled{cursor:default}
+    /* カギが0本のエリアは、灰色の点線にして「今は使えない」と分かるようにする */
+    .area-tab.empty{opacity:.45;border-style:dashed;filter:grayscale(1)}
     .area-key{
         display:inline-flex;align-items:center;justify-content:center;
         width:22px;height:22px;border-radius:50%;
@@ -1216,18 +1249,24 @@ export default {
 
     /* ■スマホ幅：ゲートボタン・見出し・エリアタブが邪魔にならないよう小さくする */
     @media (max-width: 767px){
-        .top-info{ top:6px !important; left:6px !important; }
+        /* ゲートを横に並べて、下のダンジョン・カギの表示と重ならないようにする */
+        .top-info{ top:6px !important; left:6px !important; display:flex; gap:8px; }
 
+        /* ゲートの丸に、名前（テキスト）も出す。見えないと何のボタンか分からないため */
         #returnGate,
         #forestWarpGate{
-            width:44px !important;
-            height:44px !important;
+            width:76px !important;
+            height:76px !important;
             border-width:2px !important;
-            margin-bottom:8px !important;
+            margin-bottom:0 !important;
+            font-size:10px !important;
+            line-height:1.15 !important;
+            padding:4px !important;
         }
         #returnGate > div,
         #forestWarpGate > div{
-            display:none;
+            font-size:10px;
+            margin-top:2px;
         }
 
         #result{ font-size:18px !important; letter-spacing:1px; margin-bottom:8px; }

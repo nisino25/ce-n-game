@@ -60,6 +60,8 @@ function getCaveKeyDoc(cenId, areaId) {
 
 // 会員の全洞窟のカギ数を取得する
 export async function loadCaveKeys(cenId) {
+    // 書き込みの途中で読むと、古い数になるので、先に書き込みを終わらせる
+    await waitForKeyWrites();
     const entries = await Promise.all(
         CAVE_AREA_IDS.map(async (areaId) => {
             const doc = await getCaveKeyDoc(cenId, areaId).get();
@@ -75,12 +77,19 @@ export async function loadCaveKeys(cenId) {
     return Object.fromEntries(entries);
 }
 // カギを取得（+1）または消費（-1）する
+// ■まだ終わっていないカギの書き込み。洞窟の画面は、ここが終わってから次の画面へ行く（古いカギ数を読まないため）
+const pendingKeyWrites = new Set();
+
+export async function waitForKeyWrites() {
+    await Promise.allSettled([...pendingKeyWrites]);
+}
+
 export async function changeCaveKey(cenId, areaId, delta) {
     if (delta !== 1 && delta !== -1) {
         throw new Error("カギの変更数は +1 または -1 にしてください。");
     }
     const docRef = getCaveKeyDoc(cenId, areaId);
-    return db.runTransaction(async (transaction) => {
+    const write = db.runTransaction(async (transaction) => {
         const doc = await transaction.get(docRef);
         const currentCount = doc.exists
             ? Math.max(0, Number(doc.data().count) || 0)
@@ -103,6 +112,12 @@ export async function changeCaveKey(cenId, areaId, delta) {
         );
         return nextCount;
     });
+    pendingKeyWrites.add(write);
+    try {
+        return await write;
+    } finally {
+        pendingKeyWrites.delete(write);
+    }
 }
 
 

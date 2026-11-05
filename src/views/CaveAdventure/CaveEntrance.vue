@@ -16,8 +16,26 @@
         <button
             id="startButton"
             class="absolute inset-0"
-            @click="showAreaSelect = true"
+            @click="openAreaSelect"
         ></button>
+
+        <!-- ■正しい会員として読めない（ログインしていない・カギが読めない）ときは、探検させない -->
+        <div
+            v-if="keysError"
+            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 w-[80%] max-w-md rounded-xl bg-black/80 border-2 border-red-400 px-5 py-4 text-center text-white font-bold pointer-events-none"
+        >
+            <p class="text-lg">🔒 {{ $t('今は探検できません', 'Exploring is not available right now') }}</p>
+            <p class="mt-2 text-sm">{{ $t('カギの情報を読み込めませんでした。ログインし直してから、もう一度ためしてください。', 'Could not load your keys. Please log in again and try again.') }}</p>
+        </div>
+
+        <!-- ■持っているカギの合計（種類別の内訳は出さない） -->
+        <div
+            v-if="!keysError"
+            class="absolute top-4 left-1/2 -translate-x-1/2 z-10 rounded-full bg-black/60 border-2 border-yellow-300 px-5 py-1.5 text-white font-black text-lg whitespace-nowrap pointer-events-none"
+        >
+            <template v-if="keysLoaded">🔑 {{ $t('カギ', 'Keys') }} {{ totalKeys }}{{ $t('本', '') }}</template>
+            <template v-else>🔑 {{ $t('カギを確認中…', 'Checking keys…') }}</template>
+        </div>
 
         <img
             src="/images/cave/cave-entrance.png"
@@ -39,6 +57,8 @@
                 >
                     <img :src="info.emblem" :alt="info.name" class="area-select-emblem">
                     <span>{{ $t(info.name + 'ダンジョン', info.nameEn + ' dungeon') }}</span>
+                    <!-- ■このダンジョンのカギの数（読み込み中は出さない） -->
+                    <span v-if="keysLoaded" class="area-select-keys">🔑 {{ caveKeys[id] || 0 }}{{ $t('本', ' keys') }}</span>
                 </button>
             </div>
         </div>
@@ -55,9 +75,38 @@
 </template>
 
 <script>
-import { CAVE_AREAS, saveNextCaveArea } from "./caveAreas.js";
+import { CAVE_AREAS, saveNextCaveArea, loadCaveKeys } from "./caveAreas.js";
+import { prefetchChestData } from "@/utils/cards.js";
+import { getSession } from "@/utils/session.js";
 
 export default {
+    mounted() {
+        // ■洞窟に入った時点で、宝箱のデータを裏で読んでおく（宝箱の画面で待たないように）
+        prefetchChestData();
+
+        // ■持っているカギの合計を出すために、カギの数を読む。
+        // 会員として読めなかった（ログインしていない・カギが読めない）ときは、探検させない
+        const cenId = getSession("loginCenId");
+        if (!cenId) {
+            this.keysError = true;
+            return;
+        }
+        loadCaveKeys(cenId)
+            .then(keys => {
+                this.caveKeys = keys;
+                this.keysLoaded = true;
+            })
+            .catch(error => {
+                console.error("カギ情報の読み込みに失敗しました:", error);
+                this.keysError = true;
+            });
+    },
+
+    computed: {
+        totalKeys() {
+            return Object.values(this.caveKeys).reduce((sum, count) => sum + count, 0);
+        }
+    },
 
     data() {
         return {
@@ -67,11 +116,20 @@ export default {
             areas: CAVE_AREAS,
             showAreaSelect: false,
             selectedAreaName: "",
-            selectedAreaNameEn: ""
+            selectedAreaNameEn: "",
+            caveKeys: {},
+            keysLoaded: false,
+            keysError: false
         };
     },
 
     methods: {
+
+        // ■ダンジョンを選ぶ画面は、カギが読めたときだけ開く
+        openAreaSelect() {
+            if (this.keysError) return;
+            this.showAreaSelect = true;
+        },
 
         // ■追加：帰還処理
         returnHome() {
@@ -187,6 +245,13 @@ export default {
     width: 150px;
     height: 44px;
     object-fit: contain;
+}
+
+.area-select-keys {
+    font-size: 15px;
+    font-weight: 900;
+    color: #ffd84d;
+    text-shadow: 1px 1px 0 #000;
 }
 
 #entrance {

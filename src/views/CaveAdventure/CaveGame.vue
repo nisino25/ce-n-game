@@ -14,7 +14,7 @@
 
     <div v-if="areaInfo" class="keyCount absolute top-4 right-4 text-white text-lg font-bold z-10">
       <span class="key-badge" :style="{ background: areaInfo.keyColor }">🔑</span>
-      {{ $t(areaInfo.name + 'のカギ：', areaInfo.nameEn + ' keys: ') }}<span :key="keyBumpId" class="key-count-num" :class="{ bump: keyBumpId > 0, lose: keyBumpLose }">{{ keyCount }}</span>{{ $t('本', '') }}
+      {{ $t(areaInfo.name + 'のカギ：', areaInfo.nameEn + ' keys: ') }}<span :key="keyBumpId" class="key-count-num" :class="{ bump: keyBumpId > 0, lose: keyBumpLose }">{{ keysLoaded ? keyCount : '…' }}</span>{{ $t('本', '') }}
 
         <!-- ■洞窟エンブレム（エリアに応じて固定） -->
         <img
@@ -31,6 +31,14 @@
             </li>
         </ul>
     </div>
+
+    <!-- ■取ったカギが、右上のカギの数まで飛んでいく -->
+    <div
+        v-for="fly in flyingKeys"
+        :key="fly.id"
+        class="fly-key"
+        :style="{ left: fly.x + 'px', top: fly.y + 'px', '--dx': fly.dx + 'px', '--dy': fly.dy + 'px' }"
+    >🔑</div>
 
     <!-- ■カギを取ったときの演出（取ったマスの上に表示） -->
     <div
@@ -72,6 +80,7 @@ import {
     loadCaveKeys,
     // saveCaveKeys,
     changeCaveKey,
+    waitForKeyWrites,
     saveLastCaveArea,
     takeNextCaveArea
 } from "./caveAreas.js";
@@ -111,6 +120,8 @@ export default {
             COLS: 15,
             ROWS: 25,
             caveKeys: {},  // ■エリアごとのカギ保有数（caveAreas.js）
+            keysLoaded: false, // カギを読み終えたか（読み終わるまで数は「…」と出す）
+            flyingKeys: [],    // 取ったカギが、右上の数まで飛んでいく演出
 
             home: {
                 r: 1,
@@ -185,10 +196,13 @@ export default {
         loadCaveKeys(cenId)
             .then((keys) => {
                 this.caveKeys = keys;
+                this.keysLoaded = true;
             })
             .catch((error) => {
                 console.error("カギ情報の読み込みに失敗しました:", error);
                 alert(t("カギ情報を読み込めませんでした。再ログインして確認してください。", "Could not load your keys. Please log in again and check."));
+                // ■カギが読めないときは、探検させずに入口へ戻す
+                this.$router.replace({ name: "CaveEntrance" });
             });
         // --end
 
@@ -773,8 +787,8 @@ export default {
               // ■宝箱画面で、このエリアのカギを使うようにする
               saveLastCaveArea(this.area);
 
-              // ■カギ数はlocalStorageの"caveKeys"で管理しているため、URLには載せない
-              this.$router.push("./cave-end");
+              // ■カギの書き込みが終わってから宝箱の画面へ行く（終わる前に行くと、カギ数が古いまま出る）
+              waitForKeyWrites().then(() => this.$router.push("./cave-end"));
 
               return;
 
@@ -848,8 +862,28 @@ export default {
       // ■カギ取得の演出：取ったマスからカギが飛び出して消える＋右上の本数が弾む
       showKeyPop(r, c) {
           this.showPop(r, c, { icon: "🔑", text: "+1" });
-          this.keyBumpId++;
-          this.keyBumpLose = false;
+          this.flyKeyToCounter(r, c);
+      },
+
+      // ■取ったカギが、マスから右上のカギの数まで飛んでいく。着いたら数が弾む
+      flyKeyToCounter(r, c) {
+          const canvasRect = this.canvas.getBoundingClientRect();
+          const badge = document.querySelector(".keyCount .key-badge");
+          const target = badge ? badge.getBoundingClientRect() : null;
+
+          const x0 = canvasRect.left + (c + 0.5) * this.CELL;
+          const y0 = canvasRect.top + (r + 0.5) * this.CELL;
+          const x1 = target ? target.left + target.width / 2 : window.innerWidth - 40;
+          const y1 = target ? target.top + target.height / 2 : 40;
+
+          const id = ++this.keyPopSeq;
+          this.flyingKeys.push({ id, x: x0, y: y0, dx: x1 - x0, dy: y1 - y0 });
+
+          setTimeout(() => {
+              this.flyingKeys = this.flyingKeys.filter(fly => fly.id !== id);
+              this.keyBumpId++;
+              this.keyBumpLose = false;
+          }, 700);
       },
 
       // マスの上にアイコンを飛び出させる演出（カギ取得・敵ヒット共通）
@@ -1108,6 +1142,10 @@ export default {
                 return;
             }
 
+            // 画面の数は先に変えて見せる（書き込みが終わるまで待つと、取ってから数が変わるまで遅く見えるため）
+            const before = this.caveKeys[areaId] || 0;
+            this.caveKeys = { ...this.caveKeys, [areaId]: Math.max(0, before + delta) };
+
             try {
                 console.log("カギ更新開始:", {
                     cenId,
@@ -1124,6 +1162,8 @@ export default {
                 this.caveKeys = { ...this.caveKeys, [areaId]: nextCount };
             } catch (error) {
                 console.error("カギの更新に失敗しました:", error);
+                // 保存できなかったので、先に変えた数を元に戻す
+                this.caveKeys = { ...this.caveKeys, [areaId]: before };
                 alert(t("カギを更新できませんでした。通信状態を確認してください。", "Could not update your keys. Please check your connection."));
             }
         },
@@ -1175,6 +1215,18 @@ canvas{
         display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;
         margin:10px 12px;color:#fff;font-size:13px;
     }
+}
+/* 取ったカギが、取ったマスから右上の数まで飛んでいく */
+.fly-key{
+    position:fixed;z-index:30;pointer-events:none;
+    font-size:28px;line-height:1;
+    transform:translate(-50%,-50%);
+    filter:drop-shadow(0 0 6px #ffd84d);
+    animation:fly-key .7s ease-in forwards;
+}
+@keyframes fly-key{
+    0%{transform:translate(-50%,-50%) scale(1.2)}
+    100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.5);opacity:.6}
 }
 .key-pop{
     position:fixed;z-index:20;pointer-events:none;

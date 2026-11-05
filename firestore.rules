@@ -93,5 +93,9 @@ service cloud.firestore {
     match /mapSpots/{docId} {
       allow read, write: if true;
     }
+    // ■洞窟のカギ（caveKeys）。読み書きが拒否されると、カギが表示されず、拾ったカギも保存されない
+    match /caveKeys/{docId} {
+      allow read, write: if true;
+    }
   }
 }
