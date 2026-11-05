@@ -242,6 +242,42 @@ import {
 // ■レア度の並び（A が いちばんレア）
 const RARITY_RANK = { A: 0, B: 1, C: 2, D: 3 };
 
+// ■写真の読み込み順：いちばん上の段（先頭の6枚）は先に読む。ほかは少しずつ（同時に読むのは3枚まで）
+const URGENT_PHOTO_COUNT = 6;
+const PHOTO_CONCURRENCY = 3;
+const urgentPhotoQueue = [];
+const backgroundPhotoQueue = [];
+const queuedPhotoIds = new Set();
+let activePhotoLoads = 0;
+
+function pumpPhotoQueue(vm) {
+    while (activePhotoLoads < PHOTO_CONCURRENCY) {
+        const cardId = urgentPhotoQueue.shift() || backgroundPhotoQueue.shift();
+        if (!cardId) return;
+        activePhotoLoads++;
+        fetchCardImage(cardId)
+            .then(image => { vm.imageByCardId = { ...vm.imageByCardId, [cardId]: image }; })
+            .catch(error => {
+                console.error("カードの画像の読み込みに失敗しました:", error);
+                // 次に表示したとき、もう一度読めるように覚えない
+                queuedPhotoIds.delete(cardId);
+            })
+            .finally(() => {
+                activePhotoLoads--;
+                pumpPhotoQueue(vm);
+            });
+    }
+}
+
+function queuePhotos(vm, cards, urgent) {
+    cards.forEach(card => {
+        if (card.image || vm.imageByCardId[card.cardId] !== undefined || queuedPhotoIds.has(card.cardId)) return;
+        queuedPhotoIds.add(card.cardId);
+        (urgent ? urgentPhotoQueue : backgroundPhotoQueue).push(card.cardId);
+    });
+    pumpPhotoQueue(vm);
+}
+
 export default {
     name: "CardLibrary",
 
@@ -285,7 +321,8 @@ export default {
             regionFilter: "all",
             ownedOptions: [
                 { value: "all", label: "すべて", labelEn: "All" },
-                { value: "owned", label: "もっている", labelEn: "Owned" }
+                { value: "owned", label: "もっている", labelEn: "Owned" },
+                { value: "placed", label: "使用中", labelEn: "In use" }
             ],
             // 地域の絞り込みは「北海道」「東北」のように短い名前で出す
             regionOptions: [
@@ -475,19 +512,16 @@ export default {
 
         // いま画面に出ているカード（ページの分と、拡大して見ているカード）の画像と、作った人のアバターを読む
         loadVisibleExtras() {
-            const cards = [...this.pagedCards, this.focusedCard].filter(Boolean);
+            const page = this.pagedCards;
+            // 写真は、いちばん上の段を先に読む。拡大して見ているカードも先に読む。残りは少しずつ
+            queuePhotos(this, page.slice(0, URGENT_PHOTO_COUNT), true);
+            if (this.focusedCard) queuePhotos(this, [this.focusedCard], true);
+            queuePhotos(this, page.slice(URGENT_PHOTO_COUNT), false);
+            // 次のページの写真は、今のページの後で先読みする
+            queuePhotos(this, this.filteredCards.slice(this.pageStart + this.pageSize, this.pageStart + this.pageSize * 2), false);
+
+            const cards = [...page, this.focusedCard].filter(Boolean);
             cards.forEach(card => {
-                if (!card.image && this.imageByCardId[card.cardId] === undefined) {
-                    this.imageByCardId = { ...this.imageByCardId, [card.cardId]: "" }; // 読み込み中の印
-                    fetchCardImage(card.cardId)
-                        .then(image => { this.imageByCardId = { ...this.imageByCardId, [card.cardId]: image }; })
-                        .catch(error => {
-                            console.error("カードの画像の読み込みに失敗しました:", error);
-                            const rest = { ...this.imageByCardId };
-                            delete rest[card.cardId];
-                            this.imageByCardId = rest;
-                        });
-                }
                 if (card.ownerUid && this.avatarByUid[card.ownerUid] === undefined) {
                     fetchUserAvatar(card.ownerUid)
                         .then(avatar => {
@@ -538,6 +572,8 @@ export default {
 
         matchesOwnedFilter(card) {
             if (this.ownedFilter === "all") return true;
+            // 使用中：盤面（陣取り）に置いているカードがあるもの
+            if (this.ownedFilter === "placed") return card.placedCount > 0;
             return (this.ownedFilter === "owned") === card.owned;
         },
 
@@ -626,7 +662,7 @@ export default {
 .library-grid{
     display:grid;
     grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
-    gap:16px 12px;justify-items:center;
+    gap:30px 12px;justify-items:center;
     /* 1段目の「じぶん」「もっている」のバッジが、固定バーの下に隠れないように、上に余白をとる */
     padding-top:20px;
 }
@@ -691,7 +727,7 @@ export default {
 /* スマホ幅：1行に3枚を横幅いっぱいに均等に並べる（カードは --card-scale で縮める） */
 .library-grid.three-up{
     grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:10px 8px;justify-items:stretch;
+    gap:30px 8px;justify-items:stretch;
 }
 .library-item.compact{
     width:auto;height:auto;aspect-ratio:150 / 220;
@@ -710,10 +746,14 @@ export default {
 .count-badge{
     position:absolute;right:-8px;top:-16px;z-index:20;
     border-radius:999px;background:#22d3ee;color:#0f172a;
-    padding:2px 10px;font-size:13px;font-weight:900;
+    padding:0 8px;font-size:12px;line-height:18px;font-weight:900;white-space:nowrap;
     box-shadow:0 2px 6px rgba(0,0,0,.5);
 }
 .count-badge.placed{background:#fbbf24}
+/* 動物のカード（図鑑の中だけ）：レア度の文字を大きくして、読みやすくする */
+.library-item :deep(.mini-card:not(.plant) .rare strong){font-size:20px}
+.library-item :deep(.mini-card:not(.plant) .rare span){font-size:11px}
+
 /* 作った人のアバター（カードの左下に、丸く小さく出す） */
 .owner-avatar{
     position:absolute;left:-6px;bottom:-8px;z-index:20;
@@ -722,9 +762,9 @@ export default {
 }
 .owner-avatar :deep(svg){width:100%;height:100%;display:block}
 .mine-badge{
-    position:absolute;left:-6px;top:-8px;z-index:20;
+    position:absolute;left:-6px;top:-16px;z-index:20;
     border-radius:999px;background:#f472b6;color:#0f172a;
-    padding:2px 8px;font-size:11px;font-weight:900;
+    padding:0 7px;font-size:11px;line-height:18px;font-weight:900;
     box-shadow:0 2px 6px rgba(0,0,0,.5);white-space:nowrap;
 }
 .lock-badge{
