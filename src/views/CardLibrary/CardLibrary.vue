@@ -744,7 +744,7 @@ export default {
 .library-item:focus-visible{outline:3px solid #ffd84d;outline-offset:3px}
 .library-item.unowned > :first-child{filter:grayscale(1) brightness(.5)}
 .count-badge{
-    position:absolute;right:-8px;top:-16px;z-index:20;
+    position:absolute;right:-2px;top:-16px;z-index:20;
     border-radius:999px;background:#22d3ee;color:#0f172a;
     padding:0 8px;font-size:12px;line-height:18px;font-weight:900;white-space:nowrap;
     box-shadow:0 2px 6px rgba(0,0,0,.5);
@@ -762,7 +762,7 @@ export default {
 }
 .owner-avatar :deep(svg){width:100%;height:100%;display:block}
 .mine-badge{
-    position:absolute;left:-6px;top:-16px;z-index:20;
+    position:absolute;left:-2px;top:-16px;z-index:20;
     border-radius:999px;background:#f472b6;color:#0f172a;
     padding:0 7px;font-size:11px;line-height:18px;font-weight:900;
     box-shadow:0 2px 6px rgba(0,0,0,.5);white-space:nowrap;
