@@ -22,6 +22,16 @@
                     <rect x="29.5" y="36" width="7" height="5.5" rx="1" fill="currentColor" opacity=".7" />
                 </template>
 
+                <!-- 生き物スキャン（四すみの枠＋レンズ） -->
+                <template v-else-if="kind === 'scan'">
+                    <path d="M6 16 V9 A3 3 0 0 1 9 6 H16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+                    <path d="M32 6 H39 A3 3 0 0 1 42 9 V16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+                    <path d="M42 32 V39 A3 3 0 0 1 39 42 H32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+                    <path d="M16 42 H9 A3 3 0 0 1 6 39 V32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
+                    <circle cx="24" cy="24" r="8" fill="none" stroke="currentColor" stroke-width="2.5" />
+                    <circle cx="24" cy="24" r="3.5" fill="currentColor" />
+                </template>
+
                 <!-- 看板 -->
                 <template v-else>
                     <rect x="13" y="26" width="4" height="17" fill="currentColor" opacity=".75" />
@@ -42,7 +52,7 @@
 export default {
     name: "RoomIconButton",
     props: {
-        kind: { type: String, required: true }, // "library" | "board"
+        kind: { type: String, required: true }, // "library" | "board" | "scan"
         label: { type: String, required: true }
     }
 };

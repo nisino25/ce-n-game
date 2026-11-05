@@ -11,7 +11,7 @@
             <!-- ■■帰還・ログアウトボタン -->
             <button
                 class="return-button"
-                @click="endGame"
+                @click="showExitConfirm = true"
             >
                  {{ $t('退出ボタン', 'Exit') }}
             </button>
@@ -68,15 +68,14 @@
                 {{ wildChecking ? $t("確認中…", "Checking…") : $t("すみかにもどそう！", "Back to our hideout!") }}
             </button>
 
-            <!-- ■生き物スキャン：要件定義済み・実装済みだが、今回のデプロイでは一旦非表示
+            <!-- ■生き物スキャン：CreatureScan は「?from=login」の合言葉がないと入れないので、付けて開く
                  詳細は docs/requirements/03_creature_scan.md 参照 -->
-            <!-- <button
-							class="monitor"
-							style="padding: 1.5em 0 !important;"
-							@click="changeMode('creature-scan')"
+            <button
+                class="monitor monitor-scan"
+                @click="changeMode('creature-scan?from=login')"
             >
-                生き物スキャン
-            </button> -->
+                {{ $t('生き物スキャン', 'Creature Scan') }}
+            </button>
 
             <!-- Team -->
             <button
@@ -119,8 +118,19 @@
         </div>
 
         <!-- ■仮リンク集約：本来はそれぞれの本来の画面（地図側など）に組み込む予定の暫定導線をまとめておく場所
-             ■スマホ幅で画面を覆ってしまわないよう、<details>で普段は折りたたんでおく -->
-        <details ref="devLinks" v-if="isAdmin" class="fixed bottom-4 right-4 z-[450] w-[17rem] max-w-[85vw] max-h-[75vh] overflow-y-auto bg-black/80 border border-dashed border-yellow-400/60 rounded-xl p-3 backdrop-blur-sm">
+             ■スマホ幅で画面を覆ってしまわないよう、<details>で普段は折りたたんでおく
+             ■閉じているときは右下に小さく出し、開いたときだけページの真ん中にモーダルとして出る -->
+        <!-- ■body直下に出す（ページを中でスクロールしていても、画面の真ん中に来るように） -->
+        <Teleport to="body">
+        <details
+            ref="devLinks"
+            v-if="isAdmin"
+            @toggle="devLinksOpen = $event.target.open"
+            :class="devLinksOpen
+                ? 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2'
+                : 'fixed bottom-4 right-4'"
+            class="z-[450] w-[17rem] max-w-[85vw] max-h-[75vh] overflow-y-auto bg-black/80 border border-dashed border-yellow-400/60 rounded-xl p-3 backdrop-blur-sm"
+        >
             <summary class="text-yellow-300 text-xs font-bold tracking-wider cursor-pointer select-none">🚧 仮リンク</summary>
 
             <div class="mt-3 flex flex-col gap-5">
@@ -158,9 +168,18 @@
                         チュートリアル初回フラグを消す
                     </button>
                     <p v-if="tutorialResetMessage" class="text-[11px] text-yellow-200">{{ tutorialResetMessage }}</p>
+                    <button
+                        class="text-xs text-left px-3 py-2 rounded-lg bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-100 border border-yellow-400/30 transition disabled:opacity-50"
+                        :disabled="introResetting"
+                        @click="resetIntroFlag"
+                    >
+                        イントロ初回フラグを消す
+                    </button>
+                    <p v-if="introResetMessage" class="text-[11px] text-yellow-200">{{ introResetMessage }}</p>
                 </section>
             </div>
         </details>
+        </Teleport>
 
         <!-- ■操作の結果を知らせる一時メッセージ -->
         <div
@@ -258,6 +277,10 @@
         <div class="room-icon-row">
             <RoomIconButton kind="library" :label="$t('ずかん', 'Library')" @click="$router.push({ name: 'CardLibrary' })" />
             <RoomIconButton kind="board" :label="$t('かんばん', 'Board')" @click="$router.push({ name: 'NoticeBoard' })" />
+            <!-- ■スマホだけ：生き物スキャンは、上のモニターではなくこの列に出す（PCは上のモニター） -->
+            <div class="room-icon-scan-wrap">
+                <RoomIconButton kind="scan" :label="$t('スキャン', 'Scan')" @click="changeMode('creature-scan?from=login')" />
+            </div>
         </div>
 
         <!-- ■3Dの机（「◯◯の部屋」のテーブル）。テーブルは1つだけ -->
@@ -287,43 +310,38 @@
 							cursor-pointer transition-all duration-1000"
 							:class="{ 'animate-pulse': !isTransitioning }"
 							v-html="avatarSvg"
-							@click="showProfileModal = true"
+							@click="editProfile"
 							:style="avatarTransitionStyle"
 						></div>
 
-						<!-- Profile Modal -->
-						<div
-								v-if="showProfileModal"
-								class="fixed inset-0 z-[500] flex items-center justify-center bg-black/50"
-								@click.self="showProfileModal = false"
-							>
-							<div class="bg-white rounded-xl shadow-xl p-6 w-[300px]">
-									<h2 class="text-xl font-bold text-center mb-5">
-											{{ $t('メニュー', 'Menu') }}
-									</h2>
+						<!-- ■アバターの右上の角に出す、着がえボタン（バッジ）。移動中は出さない -->
+						<button
+							v-if="!isTransitioning"
+							class="fixed z-[500] w-7 h-7 -translate-x-1/2 translate-y-1/2 rounded-full bg-[#0b1220] p-1 shadow-lg ring-2 ring-cyan-400"
+							style="left: calc(15% + 30px); bottom: calc(10% + 70px);"
+							:aria-label="$t('アバターをかえる', 'Change avatar')"
+							@click="editProfile"
+						>
+							<svg viewBox="0 0 64 64" class="w-full h-full" aria-hidden="true">
+								<path d="M32 27 V22 A4 4 0 1 1 36 18" fill="none" stroke="#22d3ee" stroke-width="5" stroke-linecap="round"/>
+								<path d="M32 27 L13 40 Q12 44 16 44 H48 Q52 44 51 40 Z" fill="none" stroke="#22d3ee" stroke-width="5" stroke-linejoin="round"/>
+							</svg>
+						</button>
 
-									<button
-											class="w-full p-3 mb-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
-											@click="editProfile"
-									>
-											{{ $t('プロフィール編集', 'Edit profile') }}
-									</button>
-
-									<button
-											class="w-full p-3 mb-3 bg-red-500 hover:bg-red-600 text-white rounded-lg"
-											@click="endGame"
-									>
-											{{ $t('ゲームを終了する', 'Quit game') }}
-									</button>
-<button
-											class="w-full p-3 bg-gray-300 hover:bg-gray-400 rounded-lg"
-											@click="showProfileModal = false"
-									>
-											{{ $t('閉じる', 'Close') }}
-									</button>
-                            
-                            </div>
-                        </div>
+            <!-- ■退出の確認：「はい」で、これまでどおり退出する -->
+            <div
+                v-if="showExitConfirm"
+                class="fixed inset-0 z-[600] flex items-center justify-center bg-black/50"
+                @click.self="showExitConfirm = false"
+            >
+                <div class="bg-white rounded-xl shadow-xl p-6 w-[300px] text-center">
+                    <p class="mb-5 text-lg font-bold">{{ $t('退出しますか？', 'Do you want to quit?') }}</p>
+                    <div class="flex gap-3 justify-center">
+                        <button class="px-5 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg" @click="showExitConfirm = false">{{ $t('いいえ', 'No') }}</button>
+                        <button class="px-5 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg" @click="endGame">{{ $t('はい', 'Yes') }}</button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Workers -->
             <div class="absolute inset-x-[4%] top-[34%] bottom-[6%] pointer-events-none">
@@ -407,6 +425,9 @@ export default {
 				// ■仮リンク：チュートリアル見たフラグのリセット
 				tutorialResetting: false,
 				tutorialResetMessage: "",
+				introResetting: false,
+				introResetMessage: "",
+				devLinksOpen: false, // 仮リンクが開いているか（開いたときだけ画面の真ん中に出す）
 				demoMessage: "",
 
 				myTeam,
@@ -434,7 +455,7 @@ export default {
 
 				teamMembers: [],
 
-				showProfileModal: false,
+				showExitConfirm: false,
 			};
     },
 
@@ -694,6 +715,24 @@ export default {
                 this.tutorialResetMessage = this.$t("消せませんでした。通信状況を確認してください", "Could not clear it. Please check your connection");
             } finally {
                 this.tutorialResetting = false;
+            }
+        },
+
+        // ■仮リンク：イントロ初回フラグを消す（次にログインしたとき、イントロの動画から始まる）
+        // ■チームはそのまま残す（イントロ側で、既にチームが決まっている人はチーム決めをスキップする）
+        async resetIntroFlag() {
+            this.introResetting = true;
+            this.introResetMessage = "";
+            try {
+                const user = await getCurrentUser();
+                if (!user) throw new Error("ユーザーが見つかりません");
+                await db.collection("users").doc(user.uid).update({ introCompleted: false });
+                this.introResetMessage = this.$t("消しました。次にログインすると、イントロの動画から始まります（チームはそのまま）", "Cleared. Next login starts with the intro video (team stays the same)");
+            } catch (error) {
+                console.error("イントロフラグの削除に失敗しました:", error);
+                this.introResetMessage = this.$t("消せませんでした。通信状況を確認してください", "Could not clear it. Please check your connection");
+            } finally {
+                this.introResetting = false;
             }
         },
 
@@ -1262,12 +1301,18 @@ export default {
       .monitor-team{ order:2; }
       .monitor-cave{ order:3; }
       .monitor-wild{ order:4; }
+      /* ■スマホ：生き物スキャンは、アイコンの列に出す（上のモニターからは外す） */
+      .monitor-scan{ display:none; }
       /* ■ドアを低くして、下のアイコン（ずかん・かんばん）が画面の下端に追いやられないようにする */
   }
 
   /* ■ドアを低くして、下のアイコン（ずかん・かんばん）が画面の下端に追いやられないようにする（PCもスマホも） */
   .room-main-door{ height:10rem; margin-top:1.25rem; margin-bottom:1.25rem; }
   @media (max-width: 640px){ .room-main-door{ height:9rem; } }
+
+  /* PCでは、アイコンの列の生き物スキャンは出さない（スマホだけ表示） */
+  .room-icon-scan-wrap{ display:none; }
+  @media (max-width: 640px){ .room-icon-scan-wrap{ display:flex; } }
 
   .room-icon-row{
       position:relative;
@@ -1295,6 +1340,7 @@ export default {
   .monitor-globe{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #4aa3ff); }
   .monitor-cave{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #ffb347); }
   .monitor-wild{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #5ee08a); }
+  .monitor-scan{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #a78bfa); }
 
 
   /* =========================

@@ -9,7 +9,7 @@
             <div class="max-w-3xl mx-auto px-3 py-2 flex gap-3 items-start">
                 <div class="flex flex-col items-center gap-2 shrink-0">
                     <div class="w-20" v-html="avatarSvg"></div>
-                    <button class="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-sm whitespace-nowrap" @click="randomAll">🎲 {{ $t('シャッフル', 'Shuffle') }}</button>
+                    <button class="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-sm whitespace-nowrap" @click="randomAll">🎲 {{ $t('おまかせ', 'Random') }}</button>
                 </div>
                 <div class="flex-1 min-w-0 flex flex-col gap-2">
                     <div class="flex justify-end">
@@ -20,7 +20,7 @@
                     </div>
                     <input type="text" :placeholder="$t('ぼうけんしゃの名前', 'Adventurer name')" class="w-full border-gray-800 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400" v-model="playerName">
                     <div class="flex gap-2">
-                        <button @click="goNext()" class="flex-1 min-w-0 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg">{{ $t('保存', 'Save') }}</button>
+                        <button @click="goNext()" class="flex-1 min-w-0 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg">{{ $t('完了', 'Done') }}</button>
                         <button @click="skipSave()" class="flex-1 min-w-0 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg">{{ $t('スキップ', 'Skip') }}</button>
                     </div>
                 </div>
@@ -31,6 +31,22 @@
 
             <p v-if="nameError" class="text-red-600 text-sm mb-2">{{ $t('名前を入力してください', 'Please enter your name') }}</p>
             <p v-if="hasInitialized && !currentUser" class="text-red-600 text-sm mb-2">{{ $t('会員情報が見つからないため、保存できません。ログインし直してください', 'Your member record was not found, so changes cannot be saved. Please log in again.') }}</p>
+
+            <!-- ■例のアバター一覧：タップすると、その組み合わせに変わる -->
+            <div class="bg-white rounded-xl shadow p-2 mb-3">
+                <p class="text-xs font-bold text-gray-700 mb-2">{{ $t('例', 'Examples') }}</p>
+                <div class="flex gap-2 overflow-x-auto pb-1 scroll-smooth">
+                    <button
+                        v-for="(example, i) in examples"
+                        :key="i"
+                        type="button"
+                        class="shrink-0 w-[72px] rounded-xl border-2 border-transparent p-1 bg-sky-50 hover:border-sky-400 transition"
+                        @click="applyExample(example)"
+                    >
+                        <div class="aspect-square w-full" v-html="exampleSvgs[i]"></div>
+                    </button>
+                </div>
+            </div>
 
             <!-- ■部品ごとに1行：左にラベル、真ん中はサムネイルを横にスライド、右はその部品のシャッフル -->
             <div class="bg-white rounded-xl shadow p-2 pr-0">
@@ -57,13 +73,18 @@
 
         </div>
 
+        <!-- ■画面の下にも完了ボタン（スマホで下までスクロールした人向け） -->
+        <div class="sticky bottom-0 z-40 bg-white shadow-[0_-2px_6px_rgba(0,0,0,0.08)] px-3 py-2">
+            <button @click="goNext()" class="w-full max-w-3xl mx-auto block py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg">{{ $t('完了', 'Done') }}</button>
+        </div>
+
         <!-- ■確認ダイアログ：ネイティブのconfirm()は環境によって動作しないため、画面内モーダルで代用する -->
         <div v-if="pendingAction" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
             <div class="bg-white rounded-xl p-6 max-w-sm w-full text-center shadow-xl">
                 <p class="mb-5 whitespace-pre-line">{{ pendingAction.message }}</p>
                 <div class="flex gap-3 justify-center">
+                    <button @click="pendingAction = null" class="px-5 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">{{ $t('いいえ', 'No') }}</button>
                     <button @click="confirmPendingAction" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">{{ $t('はい', 'Yes') }}</button>
-                    <button @click="pendingAction = null" class="px-5 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">{{ $t('キャンセル', 'Cancel') }}</button>
                 </div>
             </div>
         </div>
@@ -97,6 +118,15 @@ export default {
                 { key:"eyes", ja:"目", en:"Eyes" },
                 { key:"top", ja:"かみ", en:"Hair" }
             ],
+            // ■例のアバター（見本の組み合わせ。好きな組み合わせに差し替えてよい）
+            examples:[
+                { env:0,  clo:0,  head:0,  mouth:0,  eyes:0,  top:0 },
+                { env:5,  clo:12, head:3,  mouth:8,  eyes:20, top:14 },
+                { env:10, clo:21, head:7,  mouth:15, eyes:26, top:33 },
+                { env:17, clo:30, head:12, mouth:22, eyes:38, top:41 },
+                { env:23, clo:9,  head:28, mouth:5,  eyes:44, top:2 },
+                { env:31, clo:40, head:18, mouth:36, eyes:11, top:47 },
+            ],
             playerName:"",
             nameError: false,
             pendingAction: null,
@@ -113,6 +143,9 @@ export default {
     computed:{
         lang(){
             return getLang();
+        },
+        exampleSvgs(){
+            return this.examples.map(example => this.$buildAvatar(example));
         },
         // 部品ごとの行（48種類のサムネイル）。ほかの部品は、いまの組み合わせのまま
         rows(){
@@ -162,6 +195,13 @@ export default {
                 left: el.offsetLeft - strip.clientWidth / 2 + el.clientWidth / 2,
                 behavior: smooth ? "smooth" : "auto",
             });
+        },
+
+        // 例のアバターを選んだら、全部の部品をその組み合わせに変える
+        applyExample(example){
+            this.avatar = { ...example };
+            this.avatarSvg = this.$buildAvatar(this.avatar);
+            this.$nextTick(() => this.parts.forEach(part => this.showSelectedThumb(part.key, true)));
         },
 
         randomPart(key){

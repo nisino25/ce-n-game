@@ -447,9 +447,9 @@
             <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
                 <p class="mb-1 text-xl font-black">{{ $t('まけましたに する？', 'Resign this game?') }}</p>
                 <p class="mb-5 text-sm text-slate-600">{{ $t('AIの かちに なって、このゲームは おわるよ。', 'The AI will win and this game will end.') }}</p>
-                <div class="flex flex-col gap-2">
-                    <button class="rounded-xl bg-red-500 px-4 py-3 font-bold text-white hover:bg-red-600" @click="resign()">{{ $t('まけました', 'I resign') }}</button>
-                    <button class="rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showResignConfirm = false">{{ $t('やめる', 'Cancel') }}</button>
+                <div class="flex gap-2">
+                    <button class="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showResignConfirm = false">{{ $t('いいえ', 'No') }}</button>
+                    <button class="flex-1 rounded-xl bg-red-500 px-4 py-3 font-bold text-white hover:bg-red-600" @click="resign()">{{ $t('まけました', 'I resign') }}</button>
                 </div>
             </div>
         </div>
@@ -581,7 +581,7 @@
                 <p class="mt-2 text-base font-black text-slate-700">{{ caveTarget() ? $t(caveTarget().name + 'の洞窟へ いきますか？', 'Go to the ' + caveTarget().nameEn + ' cave?') : $t('洞窟へ いきますか？', 'Go to the cave?') }}</p>
                 <p class="mt-1 text-xs font-bold text-slate-500">{{ $t('洞窟の ぼうけんに いくよ', 'Off to a cave adventure') }}</p>
                 <div class="mt-4 flex gap-2">
-                    <button class="flex-1 rounded-xl border border-slate-300 bg-slate-100 py-2.5 font-black text-slate-600" @click="showCaveConfirm = false">{{ $t('やめる', 'Cancel') }}</button>
+                    <button class="flex-1 rounded-xl border border-slate-300 bg-slate-100 py-2.5 font-black text-slate-600" @click="showCaveConfirm = false">{{ $t('いいえ', 'No') }}</button>
                     <button class="flex-1 rounded-xl bg-amber-500 py-2.5 font-black text-white" @click="goCaveNow">{{ $t('いく', 'Go') }}</button>
                 </div>
             </div>
@@ -634,9 +634,9 @@
             <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
                 <p class="mb-1 text-xl font-black">{{ $t('スキップする？', 'Skip your turn?') }}</p>
                 <p class="mb-5 text-sm text-slate-600">{{ $t('カードを おかずに、つぎの チームに じゅんばんを わたすよ。', 'You will pass the turn to the next team without placing a card.') }}</p>
-                <div class="flex flex-col gap-2">
-                    <button class="rounded-xl bg-sky-500 px-4 py-3 font-bold text-white hover:bg-sky-600" @click="doSkip()">{{ $t('スキップする', 'Skip') }}</button>
-                    <button class="rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showSkipConfirm = false">{{ $t('やめる', 'Cancel') }}</button>
+                <div class="flex gap-2">
+                    <button class="flex-1 rounded-xl border border-slate-300 px-4 py-3 font-bold hover:bg-slate-100" @click="showSkipConfirm = false">{{ $t('いいえ', 'No') }}</button>
+                    <button class="flex-1 rounded-xl bg-sky-500 px-4 py-3 font-bold text-white hover:bg-sky-600" @click="doSkip()">{{ $t('スキップする', 'Skip') }}</button>
                 </div>
             </div>
         </div>

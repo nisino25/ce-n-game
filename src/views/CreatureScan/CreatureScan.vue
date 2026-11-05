@@ -15,9 +15,9 @@
                     </button>
                     <button
                         class="text-sm text-emerald-700 hover:text-emerald-900 underline whitespace-nowrap px-2 py-2"
-                        @click="goHome"
+                        @click="goMonitor"
                     >
-                        🏠 {{ $t('ホームにもどる', 'Back to home') }}
+                        🏠 {{ $t('モニターに戻る', 'Back to monitor') }}
                     </button>
                 </div>
             </header>
@@ -413,6 +413,11 @@ export default {
             return false;
         },
         
+        // ■モニタールームへ戻る（ログイン情報は消さない）
+        goMonitor() {
+            this.$router.push({ name: "Home" });
+        },
+
         goHome() {
             // ■■直接呼出し対応
             const cenId = (this.currentUser && this.currentUser.cenId) || getSession("loginCenId");

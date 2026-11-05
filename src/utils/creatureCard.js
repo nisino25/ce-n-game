@@ -69,9 +69,14 @@ export async function registerScannedCard({ draft, imageDataUrl, user }) {
     const instanceRef = db.collection("cardInstances").doc();
     const now = firebase.firestore.FieldValue.serverTimestamp();
 
+    // 画像は cardImages/{id} に入れる（cards 本体は軽いまま、図鑑の一覧を速くするため）
+    await db.collection("cardImages").doc(cardRef.id).set({
+        image: imageDataUrl,
+        updatedAt: now
+    });
+
     const card = {
         name: draft.name.trim(),
-        image: imageDataUrl,
         level: draft.level,
         rarity: draft.rarity,
         habitat: draft.habitat,

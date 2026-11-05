@@ -5,12 +5,27 @@
             <div id="player"></div>
         </div>
 
-        <p class="mt-6 text-white text-2xl" @click="showVideo = false;">
+        <div class="mt-6 flex items-center gap-4">
+            <button
+                class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-2 rounded-xl"
+                @click="rewind"
+            >
+                ⏪ 10秒もどる
+            </button>
+            <button
+                class="text-slate-500 hover:text-slate-400 text-xs underline underline-offset-4"
+                @click="skipIntro"
+            >
+                スキップ
+            </button>
+        </div>
+
+        <p class="mt-4 text-white text-xl" @click="skipIntro">
             あと {{ remaining }} 秒
         </p>
     </div>
 
-    <div v-else class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black flex items-center justify-center px-4">
+    <div v-else-if="!skippingTeam" class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black flex items-center justify-center px-4">
         <div class="max-w-xl w-full bg-slate-900/90 backdrop-blur rounded-2xl border border-slate-700 shadow-2xl shadow-cyan-500/10 p-10 text-center">
 
             <p class="text-xl text-slate-200 mb-3">
@@ -90,6 +105,9 @@
 
                 potentialTeam: "",
                 totalPlayers: null,
+
+                memberCheck: null, // 既に会員か（チームが決まっているか）の確認。結果はPromise
+                skippingTeam: false, // チーム決めをスキップして、ホームへ移動中
             };
         },
 
@@ -107,6 +125,7 @@
 
             this.resetTeams();
             this.loadYoutube();
+            this.memberCheck = this.loadExistingMember();
 
         },
 
@@ -130,7 +149,7 @@
                     this.player = new window.YT.Player("player", {
                         width: "960",
                         height: "540",
-                        videoId: "xpT411XKhUg",
+                        videoId: "fVeemSq-0Dk",
                         playerVars: {
                             autoplay: 1,
                             controls: 0,
@@ -152,6 +171,72 @@
                 }
             },
 
+            // 10秒戻る（動画の先頭より前には戻らない）
+            rewind() {
+                if (!this.player) return;
+                const target = Math.max(0, this.player.getCurrentTime() - 10);
+                this.player.seekTo(target, true);
+            },
+
+            // 動画を飛ばしてホームへ進む（動画の再生を止めてから閉じる）
+            skipIntro() {
+                clearInterval(this.timer);
+                if (this.player && this.player.stopVideo) this.player.stopVideo();
+                this.finishVideo();
+            },
+
+            // 既に会員でチームが決まっている人か、cenIdで確認する（チーム決めをスキップするため）
+            async loadExistingMember() {
+                if (!this.cenId) return null;
+                try {
+                    const snapshot = await db
+                        .collection("users")
+                        .where("cenId", "==", this.cenId)
+                        .limit(1)
+                        .get();
+                    if (snapshot.empty) return null;
+                    const userDoc = snapshot.docs[0];
+                    const userData = userDoc.data();
+                    return userData.team ? { docId: userDoc.id, data: userData } : null;
+                } catch (error) {
+                    console.error("会員情報の確認に失敗しました:", error);
+                    return null;
+                }
+            },
+
+            // 動画が終わった（またはスキップした）あとの処理
+            // 既に会員でチームが決まっている人は、チーム決めの画面をとばしてホームへ行く
+            async finishVideo() {
+                clearInterval(this.timer);
+                const member = await this.memberCheck;
+                if (member) {
+                    await this.finishWithExistingTeam(member);
+                    return;
+                }
+                this.showVideo = false;
+            },
+
+            // チームは今のまま、イントロだけ完了にしてホームへ
+            async finishWithExistingTeam(member) {
+                this.skippingTeam = true;
+                try {
+                    await db.collection("users").doc(member.docId).update({
+                        introCompleted: true,
+                        introCompletedAt: firebase.firestore.Timestamp.now()
+                    });
+                    setSession("playerUid", member.docId);
+                    setSession("playerData", JSON.stringify({ ...member.data, introCompleted: true }));
+                    setSession("myTeam", member.data.team);
+                    setSession("loginCenId", this.cenId);
+                    this.$router.push({ name: "Home" });
+                } catch (error) {
+                    console.error("チーム決めのスキップに失敗しました:", error);
+                    // 失敗したときは、ふつうどおりチーム決めの画面を出す
+                    this.skippingTeam = false;
+                    this.showVideo = false;
+                }
+            },
+
             onPlayerStateChange(event) {
 
                 // Video started playing
@@ -169,8 +254,7 @@
 
                 // Video ended
                 if (event.data === window.YT.PlayerState.ENDED) {
-                    clearInterval(this.timer);
-                    this.showVideo = false;
+                    this.finishVideo();
                 }
             },
 
@@ -342,12 +426,13 @@
 </script>
 
 <style scoped>
-/* 動画をスマートフォンでも縦で見やすく、画面に収まるようにする調整 */
+/* 動画は横長（16:9）のまま、スマートフォンでも画面幅に合わせて収まるようにする。
+   縦持ちで比率を9:16に変えると動画が引き伸ばされて崩れるので、比率は変えない */
 .video-wrapper {
     width: 100%;
     max-width: 800px;
-    aspect-ratio: 16 / 9; /* 基本の横長比率を維持しつつレスポンシブ化 */
-    max-height: 80vh;
+    aspect-ratio: 16 / 9;
+    max-height: 60vh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -356,14 +441,5 @@
 #player {
     width: 100% !important;
     height: 100% !important;
-}
-/* スマートフォン（縦持ち）のときの調整 */
-@media (max-width: 767px) {
-    .video-wrapper {
-        width: 100%;
-        height: auto;
-        aspect-ratio: 9 / 16; /* スマホで縦長に見せたい場合はここを調整できます */
-        max-height: 70vh;
-    }
 }
 </style>
