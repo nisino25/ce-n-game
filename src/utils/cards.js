@@ -91,13 +91,94 @@ export function resetCurrentUserCache() {
 }
 
 // ■カードライブラリ（公開中のカード）
-export async function fetchCardLibrary() {
+// ■カードの画像は cards/{id} には入れず、cardImages/{id} に入れる（一覧を軽くするため）。
+// 移行前のカードは cards/{id}.image に画像が残っているので、そちらも読めるようにしておく
+export async function fetchCardLibraryList() {
     const snapshot = await db.collection("cards")
         .where("published", "==", true)
         .get();
     return snapshot.docs
         .map(doc => ({ cardId: doc.id, ...doc.data() }))
         .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name, "ja"));
+}
+
+// ■カード1枚の画像。読んだものは覚えておき、同じ画像を2回読まない
+const cardImageCache = new Map();
+export function fetchCardImage(cardId) {
+    if (!cardImageCache.has(cardId)) {
+        const promise = (async () => {
+            const imageDoc = await db.collection("cardImages").doc(cardId).get();
+            if (imageDoc.exists) return imageDoc.data().image || "";
+            // 移行前のカードは、cards/{id} の image を読む
+            const cardDoc = await db.collection("cards").doc(cardId).get();
+            return cardDoc.exists ? cardDoc.data().image || "" : "";
+        })().catch(error => {
+            // 失敗した結果は覚えない（次に呼んだとき、もう一度取りに行く）
+            cardImageCache.delete(cardId);
+            throw error;
+        });
+        cardImageCache.set(cardId, promise);
+    }
+    return cardImageCache.get(cardId);
+}
+
+// ■複数のカードの画像をまとめて読む（戻り値: { カードID: 画像 }）
+export async function fetchCardImages(cardIds) {
+    const images = await Promise.all(cardIds.map(cardId => fetchCardImage(cardId)));
+    return Object.fromEntries(cardIds.map((cardId, index) => [cardId, images[index]]));
+}
+
+// ■カードの画像を保存する（スキャンで登録したとき・管理画面で画像を選んだとき）
+export function saveCardImage(cardId, image) {
+    cardImageCache.delete(cardId);
+    return db.collection("cardImages").doc(cardId).set({
+        image,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+}
+
+// ■カードライブラリ（宝箱・陣取りなどで使う。画像もすべて付けて返す）
+export async function fetchCardLibrary() {
+    const cards = await fetchCardLibraryList();
+    // 画像がカード本体に残っているもの（移行前）はそのまま使い、無いものは cardImages から読む
+    const missingIds = cards.filter(card => !card.image).map(card => card.cardId);
+    const images = missingIds.length ? await fetchCardImages(missingIds) : {};
+    return cards.map(card => ({ ...card, image: card.image || images[card.cardId] || "" }));
+}
+
+// ■カードを作った人（users/{uid}）のアバター。一度読んだものは覚えておく
+const userAvatarCache = new Map();
+export function fetchUserAvatar(uid) {
+    if (!userAvatarCache.has(uid)) {
+        const promise = db.collection("users").doc(uid).get()
+            .then(doc => (doc.exists ? doc.data().avatar || null : null))
+            .catch(error => {
+                userAvatarCache.delete(uid);
+                throw error;
+            });
+        userAvatarCache.set(uid, promise);
+    }
+    return userAvatarCache.get(uid);
+}
+
+// ■カードライブラリは、洞窟に入ったときに先に読んでおき、宝箱の画面ではそれを使い回す
+let cardLibraryPromise = null;
+
+export function getCardLibrary() {
+    if (!cardLibraryPromise) {
+        cardLibraryPromise = fetchCardLibrary().catch(error => {
+            // 失敗した結果は覚えない（次に呼んだとき、もう一度取りに行く）
+            cardLibraryPromise = null;
+            throw error;
+        });
+    }
+    return cardLibraryPromise;
+}
+
+// ■洞窟に入った時点で、宝箱に必要なデータを裏で読み始める（失敗しても、宝箱を開くときにもう一度読む）
+export function prefetchChestData() {
+    getCardLibrary().catch(() => {});
+    getCurrentUser().catch(() => {});
 }
 
 // ■自分が持っているカード（全ステータス）

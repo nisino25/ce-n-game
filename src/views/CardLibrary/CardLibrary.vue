@@ -88,6 +88,18 @@
                         🔍 {{ $t('絞りこみ', 'Filter') }}<span v-if="activeFilterCount" class="ml-1">（{{ activeFilterCount }}）</span>
                     </button>
                     <span class="text-xs text-slate-400">{{ filterSummary }}</span>
+                    <!-- 並べ方：新しい順（初期）・取得順（自分が手に入れた順）・レア度順 -->
+                    <div class="ml-auto flex flex-wrap gap-2">
+                        <button
+                            v-for="option in sortOptions"
+                            :key="option.value"
+                            class="filter-button"
+                            :class="{ active: sortKey === option.value }"
+                            @click="sortKey = option.value"
+                        >
+                            {{ $t(option.label, option.labelEn) }}
+                        </button>
+                    </div>
                 </div>
 
                 </div>
@@ -108,6 +120,8 @@
                         @click="focusCard(pageStart + index, $event)"
                     >
                         <CollectionCard :card="displayCard(card)" />
+                        <!-- ■作った人のアバター（スキャンでとったカードだけ） -->
+                        <span v-if="ownerAvatarSvg(card)" class="owner-avatar" v-html="ownerAvatarSvg(card)"></span>
                         <span v-if="isMine(card)" class="mine-badge">📷 {{ $t('じぶん', 'Mine') }}</span>
                         <span v-if="card.collectionCount" class="count-badge">×{{ card.collectionCount }}</span>
                         <span v-else-if="card.placedCount" class="count-badge placed">{{ $t('使用中', 'In use') }} ×{{ card.placedCount }}</span>
@@ -219,9 +233,14 @@ import {
     cardRegions,
     TERRAIN_LABELS,
     getCurrentUser,
-    fetchCardLibrary,
+    fetchCardLibraryList,
+    fetchCardImage,
+    fetchUserAvatar,
     fetchMyCardInstances
 } from "@/utils/cards.js";
+
+// ■レア度の並び（A が いちばんレア）
+const RARITY_RANK = { A: 0, B: 1, C: 2, D: 3 };
 
 export default {
     name: "CardLibrary",
@@ -234,7 +253,15 @@ export default {
             gridWidth: 0,
             filterOpen: false,
             page: 1,
-            pageSize: 15,
+            pageSize: 24, // 3列・4列・6列・8列のどれで並べても、段がそろう数（3と4の公倍数）
+            sortKey: "created", // created（新しい順）／obtained（取得順）／rarity（レア度順）
+            sortOptions: [
+                { value: "created", label: "新しい順", labelEn: "Newest" },
+                { value: "obtained", label: "取得順", labelEn: "Order caught" },
+                { value: "rarity", label: "レア度順", labelEn: "Rarity" }
+            ],
+            imageByCardId: {}, // 読んだカードの画像（一覧では読まず、表示するページの分だけ読む）
+            avatarByUid: {}, // 作った人のアバター（SVG）
             dateFilter: "all",
             dateFrom: "",
             dateTo: "",
@@ -277,9 +304,16 @@ export default {
     },
 
     watch: {
-        // 絞りこみが変わったら、1ページ目に戻す
+        // 絞りこみ・並べ方が変わったら、1ページ目に戻す
         filterKey() {
             this.page = 1;
+        },
+        // ページや見ているカードが変わったら、そこに出るカードの画像と作った人のアバターを読む
+        pagedCards() {
+            this.loadVisibleExtras();
+        },
+        focusedCard() {
+            this.loadVisibleExtras();
         },
     },
     created() {
@@ -323,9 +357,36 @@ export default {
             });
         },
 
-        // 新しいカードほど上に出す（作られた日が無いカードは、いちばん下）
+        // 自分が最初に手に入れた時刻（カードごと）。取得順の並べ方に使う
+        firstObtainedMs() {
+            const map = {};
+            this.instances.forEach(instance => {
+                // まだ保存中で時刻が無いものは、いま手に入れたものとして扱う
+                const ms = instance.obtainedAt && instance.obtainedAt.toMillis ? instance.obtainedAt.toMillis() : Date.now();
+                if (map[instance.cardId] === undefined || ms < map[instance.cardId]) map[instance.cardId] = ms;
+            });
+            return map;
+        },
+
+        // 並べ方に従って並べる。作られた日が無いカードは、新しい順のとき いちばん下
         filteredCards() {
             const createdTime = card => (card.createdAt && card.createdAt.toMillis ? card.createdAt.toMillis() : 0);
+            const newestFirst = (a, b) => createdTime(b) - createdTime(a);
+            const sorters = {
+                // 新しく作られた順
+                created: newestFirst,
+                // 自分が手に入れた順（古く手に入れたものから）。持っていないカードは、そのあと新しい順
+                obtained: (a, b) => {
+                    const oa = this.firstObtainedMs[a.cardId];
+                    const ob = this.firstObtainedMs[b.cardId];
+                    if (oa === undefined && ob === undefined) return newestFirst(a, b);
+                    if (oa === undefined) return 1;
+                    if (ob === undefined) return -1;
+                    return oa - ob;
+                },
+                // レア度の高い順（同じレア度は新しい順）
+                rarity: (a, b) => (RARITY_RANK[a.rarity] ?? 9) - (RARITY_RANK[b.rarity] ?? 9) || newestFirst(a, b)
+            };
             return this.cards
                 .filter(card =>
                     this.matchesTab(card)
@@ -333,11 +394,11 @@ export default {
                     && (this.regionFilter === "all" || cardRegions(card).includes(this.regionFilter))
                     && this.matchesDate(card)
                 )
-                .sort((a, b) => createdTime(b) - createdTime(a));
+                .sort(sorters[this.sortKey] || newestFirst);
         },
 
         filterKey() {
-            return [this.tab, this.ownedFilter, this.regionFilter, this.dateFilter].join("|");
+            return [this.tab, this.ownedFilter, this.regionFilter, this.dateFilter, this.sortKey].join("|");
         },
         pageCount() {
             return Math.max(1, Math.ceil(this.filteredCards.length / this.pageSize));
@@ -408,7 +469,40 @@ export default {
             } else if (card.ownerName) {
                 instance = { team: "", ownerName: card.ownerName };
             }
-            return toDisplayCard(card, instance);
+            // 画像は一覧では読んでいないので、読み終わったものだけ入れる（まだのあいだは空の枠）
+            return toDisplayCard({ ...card, image: card.image || this.imageByCardId[card.cardId] || "" }, instance);
+        },
+
+        // いま画面に出ているカード（ページの分と、拡大して見ているカード）の画像と、作った人のアバターを読む
+        loadVisibleExtras() {
+            const cards = [...this.pagedCards, this.focusedCard].filter(Boolean);
+            cards.forEach(card => {
+                if (!card.image && this.imageByCardId[card.cardId] === undefined) {
+                    this.imageByCardId = { ...this.imageByCardId, [card.cardId]: "" }; // 読み込み中の印
+                    fetchCardImage(card.cardId)
+                        .then(image => { this.imageByCardId = { ...this.imageByCardId, [card.cardId]: image }; })
+                        .catch(error => {
+                            console.error("カードの画像の読み込みに失敗しました:", error);
+                            const rest = { ...this.imageByCardId };
+                            delete rest[card.cardId];
+                            this.imageByCardId = rest;
+                        });
+                }
+                if (card.ownerUid && this.avatarByUid[card.ownerUid] === undefined) {
+                    fetchUserAvatar(card.ownerUid)
+                        .then(avatar => {
+                            // 作った人のアバターが無いときは、空（何も出さない）として覚える
+                            const svg = avatar ? this.$buildAvatar(avatar) : "";
+                            this.avatarByUid = { ...this.avatarByUid, [card.ownerUid]: svg };
+                        })
+                        .catch(error => console.error("作った人のアバターの読み込みに失敗しました:", error));
+                }
+            });
+        },
+
+        // 作った人のアバター（スキャンでとったカードで、読み終わったものだけ）
+        ownerAvatarSvg(card) {
+            return card.ownerUid ? this.avatarByUid[card.ownerUid] || "" : "";
         },
 
         // 自分がスキャンでとって登録したカードか
@@ -484,14 +578,16 @@ export default {
 
     async mounted() {
         try {
-            const [library, user] = await Promise.all([
-                fetchCardLibrary(),
-                getCurrentUser()
+            // 自分の情報を先に取り、カード一覧と所持カードを同時に読む
+            const user = await getCurrentUser();
+            const [library, instances] = await Promise.all([
+                fetchCardLibraryList(),
+                user ? fetchMyCardInstances(user.uid) : []
             ]);
             this.library = library;
+            this.instances = instances;
             this.playerName = (user && user.name) || "";
             this.myUid = (user && user.uid) || "";
-            this.instances = user ? await fetchMyCardInstances(user.uid) : [];
         } catch (error) {
             console.error("カードライブラリの読み込みに失敗しました:", error);
             this.loadError = "読み込みに失敗しました。通信状況を確認してください。";
@@ -532,7 +628,7 @@ export default {
     grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
     gap:16px 12px;justify-items:center;
     /* 1段目の「じぶん」「もっている」のバッジが、固定バーの下に隠れないように、上に余白をとる */
-    padding-top:12px;
+    padding-top:20px;
 }
 /* 読み込み中：カードが順に跳ねる */
 .loading-box{display:flex;flex-direction:column;align-items:center;gap:16px;padding:80px 0;color:#94a3b8}
@@ -612,12 +708,19 @@ export default {
 .library-item:focus-visible{outline:3px solid #ffd84d;outline-offset:3px}
 .library-item.unowned > :first-child{filter:grayscale(1) brightness(.5)}
 .count-badge{
-    position:absolute;right:-6px;bottom:-8px;z-index:20;
+    position:absolute;right:-8px;top:-16px;z-index:20;
     border-radius:999px;background:#22d3ee;color:#0f172a;
     padding:2px 10px;font-size:13px;font-weight:900;
     box-shadow:0 2px 6px rgba(0,0,0,.5);
 }
 .count-badge.placed{background:#fbbf24}
+/* 作った人のアバター（カードの左下に、丸く小さく出す） */
+.owner-avatar{
+    position:absolute;left:-6px;bottom:-8px;z-index:20;
+    width:32px;height:32px;border-radius:999px;overflow:hidden;
+    background:#0b1220;border:2px solid #22d3ee;
+}
+.owner-avatar :deep(svg){width:100%;height:100%;display:block}
 .mine-badge{
     position:absolute;left:-6px;top:-8px;z-index:20;
     border-radius:999px;background:#f472b6;color:#0f172a;
