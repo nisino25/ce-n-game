@@ -20,23 +20,50 @@ function encodeCanvas(canvas, quality) {
     return canvas.toDataURL("image/jpeg", quality);
 }
 
+// カードの写真の枠（CollectionCard の .image と同じ 138×123）
+export const CARD_PHOTO_ASPECT = 138 / 123;
+
+// ■写真のどこを切り取るか（枠の中に、拡大（zoom）と中心の位置（cx, cy は 0〜1）で決める）
+// zoom 1 のときは、枠と同じ比率で、いちばん大きく入る範囲（＝カードで cover したときと同じ）
+export function cropRect(srcW, srcH, edit) {
+    const aspect = CARD_PHOTO_ASPECT;
+    let baseW;
+    let baseH;
+    if (srcW / srcH > aspect) {
+        baseH = srcH;
+        baseW = srcH * aspect;
+    } else {
+        baseW = srcW;
+        baseH = srcW / aspect;
+    }
+    const zoom = Math.max(1, edit.zoom || 1);
+    const sw = baseW / zoom;
+    const sh = baseH / zoom;
+    const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+    const sx = clamp((edit.cx ?? 0.5) * srcW - sw / 2, 0, srcW - sw);
+    const sy = clamp((edit.cy ?? 0.5) * srcH - sh / 2, 0, srcH - sh);
+    return { sx, sy, sw, sh };
+}
+
 // ■写真をブラウザ上で縮小して data URL にする（canvas で描き直すので、位置情報などのEXIFも消える）
+// edit（{ zoom, cx, cy }）を渡すと、その範囲だけを切り取ってから縮小する（カードの枠と同じ比率になる）
 // 戻り値: { dataUrl, bytes, width, height, withinLimit }
-export async function compressCardImage(file) {
+export async function compressCardImage(file, edit = null) {
     const bitmap = await createImageBitmap(file);
     try {
-        const longSide = Math.max(bitmap.width, bitmap.height);
+        const crop = edit ? cropRect(bitmap.width, bitmap.height, edit) : { sx: 0, sy: 0, sw: bitmap.width, sh: bitmap.height };
+        const longSide = Math.max(crop.sw, crop.sh);
         let result = null;
 
         for (const edge of IMAGE_EDGE_STEPS) {
             const scale = Math.min(1, edge / longSide);
-            const width = Math.round(bitmap.width * scale);
-            const height = Math.round(bitmap.height * scale);
+            const width = Math.round(crop.sw * scale);
+            const height = Math.round(crop.sh * scale);
 
             const canvas = document.createElement("canvas");
             canvas.width = width;
             canvas.height = height;
-            canvas.getContext("2d").drawImage(bitmap, 0, 0, width, height);
+            canvas.getContext("2d").drawImage(bitmap, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, width, height);
 
             for (const quality of QUALITY_STEPS) {
                 const dataUrl = encodeCanvas(canvas, quality);

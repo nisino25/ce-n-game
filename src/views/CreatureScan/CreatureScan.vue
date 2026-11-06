@@ -15,70 +15,123 @@
                     </button>
                     <button
                         class="text-sm text-emerald-700 hover:text-emerald-900 underline whitespace-nowrap px-2 py-2"
-                        @click="goMonitor"
+                        @click="goHome"
                     >
-                        🏠 {{ $t('モニターに戻る', 'Back to monitor') }}
+                        🏠 {{ $t('ホームにもどる', 'Back to home') }}
                     </button>
                 </div>
             </header>
 
             <!-- 撮影・アップロードエリア -->
             <div v-if="phase === 'idle' || phase === 'preview'" class="bg-white rounded-2xl shadow-sm p-5">
-                <div
-                    class="border-2 border-dashed border-emerald-300 rounded-2xl"
-                    :class="previewUrl ? 'p-2' : 'p-10 text-center'"
+                <!-- カメラで撮る用と、アルバムから選ぶ用（capture を付けると、アルバムが開かないため分けている） -->
+                <input
+                    ref="cameraInput"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    class="hidden"
+                    @change="onFileChange"
                 >
-                    <!-- カメラで撮る用と、アルバムから選ぶ用（capture を付けると、アルバムが開かないため分けている） -->
-                    <input
-                        ref="cameraInput"
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        class="hidden"
-                        @change="onFileChange"
-                    >
-                    <input
-                        ref="albumInput"
-                        type="file"
-                        accept="image/*"
-                        class="hidden"
-                        @change="onFileChange"
-                    >
+                <input
+                    ref="albumInput"
+                    type="file"
+                    accept="image/*"
+                    class="hidden"
+                    @change="onFileChange"
+                >
 
+                <!-- 写真を選んだあとの枠（写真がないうちは、ボタン2つだけを出す） -->
+                <div
+                    v-if="previewUrl"
+                    class="border-2 border-dashed border-emerald-300 rounded-2xl p-2"
+                >
+                    <!-- 写真は、ととのえた範囲（カードの写真枠と同じ比率）で見せる -->
                     <template v-if="previewUrl">
-                        <img :src="previewUrl" class="w-full max-h-80 object-contain rounded-xl">
-                    </template>
-                    <template v-else>
-                        <div class="text-5xl mb-3">📷</div>
-                        <p class="text-emerald-800 font-bold">{{ $t('しゃしんを えらぶ', 'Choose a photo') }}</p>
-                        <p class="text-emerald-500 text-sm mt-1">{{ $t('虫でも植物でもOK', 'Insects and plants are fine') }}</p>
+                        <div class="relative mx-auto w-full overflow-hidden rounded-xl bg-white" style="aspect-ratio: 138 / 123;">
+                            <img
+                                :src="previewUrl"
+                                alt=""
+                                class="absolute max-w-none"
+                                :style="previewCropStyle"
+                                @load="onPreviewLoad"
+                            >
+                        </div>
                     </template>
                 </div>
 
-                <div class="mt-3 grid grid-cols-2 gap-2">
+                <!-- 写真がまだないとき：大きいボタンを2つ、横いっぱいに並べる -->
+                <div v-if="!previewUrl" class="flex flex-col gap-4 py-2">
                     <button
-                        class="bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold py-2.5 rounded-xl transition"
+                        type="button"
+                        class="group w-full rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-7 text-white shadow-lg shadow-emerald-300/60 transition hover:brightness-105 active:scale-[0.98]"
                         @click="$refs.cameraInput.click()"
                     >
-                        📷 {{ $t('写真をとる', 'Take a photo') }}
+                        <span class="block text-5xl leading-none">📷</span>
+                        <span class="mt-2 block text-xl font-black tracking-wide">{{ $t('写真をとる', 'Take a photo') }}</span>
                     </button>
                     <button
-                        class="bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold py-2.5 rounded-xl transition"
+                        type="button"
+                        class="group w-full rounded-3xl bg-gradient-to-r from-sky-500 to-emerald-500 px-6 py-7 text-white shadow-lg shadow-sky-300/60 transition hover:brightness-105 active:scale-[0.98]"
                         @click="$refs.albumInput.click()"
                     >
-                        🖼️ {{ $t('アルバムからえらぶ', 'Choose from album') }}
+                        <span class="block text-5xl leading-none">🖼️</span>
+                        <span class="mt-2 block text-xl font-black tracking-wide">{{ $t('アルバムからえらぶ', 'Choose from album') }}</span>
                     </button>
                 </div>
 
+
+                <!-- 判定に送る前に、写真の位置と拡大を整える（ここで切った範囲を判定し、カードの写真にもなる） -->
                 <button
-                    v-if="previewUrl"
-                    class="mt-3 text-sm text-emerald-600 hover:text-emerald-800 underline"
-                    @click="resetPhoto"
+                    v-if="previewUrl && !draftCard"
+                    type="button"
+                    class="mt-3 w-full bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold py-2.5 rounded-xl transition"
+                    @click="photoModalOpen = true"
                 >
-                    {{ $t('別の写真にする', 'Choose another photo') }}
+                    📷 {{ $t('しゃしんを ととのえる', 'Adjust the photo') }}
                 </button>
 
-                <div class="mt-4">
+                <!-- 写真を整えるモーダル（ここで切った範囲を判定し、カードの写真にもなる） -->
+                <PhotoAdjustModal
+                    v-if="photoModalOpen && previewUrl && !draftCard"
+                    :src="previewUrl"
+                    :initial-edit="photoEdit"
+                    @change="photoEdit = $event"
+                    @close="photoModalOpen = false"
+                >
+                    <template #note>
+                        <p class="text-xs text-emerald-600 mb-3">{{ $t('ここで切った範囲を判定します', 'The part you frame here is what gets judged.') }}</p>
+                    </template>
+                </PhotoAdjustModal>
+
+                <!-- 写真を選んだあと：別の写真にする（押すと、確認のポップアップが出る） -->
+                <button
+                    v-if="previewUrl"
+                    type="button"
+                    class="mt-3 w-full rounded-xl border border-emerald-300 bg-white py-2.5 font-bold text-emerald-700 transition hover:bg-emerald-50"
+                    @click="photoResetConfirm = true"
+                >
+                    🗑️ {{ $t('別の写真にする', 'Choose another photo') }}
+                </button>
+
+                <!-- 消すかの確認（ポップアップ） -->
+                <div
+                    v-if="previewUrl && photoResetConfirm"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                    @click.self="photoResetConfirm = false"
+                >
+                    <div class="w-full max-w-xs rounded-2xl bg-white p-5 text-center shadow-xl">
+                        <p class="text-lg font-bold text-slate-800">{{ $t('この写真を消しますか？', 'Delete this photo?') }}</p>
+                        <p class="mt-1 text-sm text-slate-500">{{ $t('えらびなおしになります', 'You will choose a photo again.') }}</p>
+                        <div class="mt-4 flex gap-2">
+                            <button type="button" class="flex-1 rounded-xl border border-slate-300 bg-white py-2.5 font-bold text-slate-700" @click="photoResetConfirm = false">{{ $t('やめる', 'Cancel') }}</button>
+                            <button type="button" class="flex-1 rounded-xl bg-rose-600 py-2.5 font-bold text-white" @click="confirmResetPhoto">{{ $t('消す', 'Delete') }}</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 写真を選んだあとに出す（写真がないうちは、出さない） -->
+                <div v-if="previewUrl" class="mt-4">
                     <label class="text-xs text-emerald-700 font-bold block mb-1">{{ $t('どこで見つけた？（にんい）', 'Where did you find it? (optional)') }}</label>
                     <input
                         v-model="hint"
@@ -89,6 +142,7 @@
                 </div>
 
                 <button
+                    v-if="previewUrl"
                     class="mt-5 w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-200 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl shadow-sm transition"
                     :disabled="!selectedFile"
                     @click="identify"
@@ -98,15 +152,29 @@
             </div>
 
             <!-- 判定中 -->
+            <div v-else-if="phase === 'loading' && !uploadDone" class="bg-white rounded-2xl shadow-sm p-10 text-center">
+                <div class="text-5xl mb-4 animate-bounce">📤</div>
+                <p class="text-emerald-800 font-bold">{{ $t('写真を送っているよ…', 'Sending your photo…') }}</p>
+                <div class="relative mt-4 h-3 w-full bg-emerald-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-500 transition-all duration-200" :style="{ width: uploadPercent + '%' }"></div>
+                    <!-- 送信中は、ずっと流れているしま模様を出す（小さい写真は一瞬で送り終わるため） -->
+                    <div class="upload-stripe absolute inset-0"></div>
+                </div>
+                <p class="text-emerald-600 text-sm mt-2 font-bold">{{ uploadPercent }}%</p>
+            </div>
+
             <div v-else-if="phase === 'loading'" class="bg-white rounded-2xl shadow-sm p-10 text-center">
                 <div class="text-5xl mb-4 animate-bounce">🔬</div>
                 <p class="text-emerald-800 font-bold">{{ $t('AIが はんてい中…', 'Checking your photo…') }}</p>
-                <p class="text-emerald-500 text-sm mt-1">{{ $t('2〜7秒くらい かかります', 'This takes about 2 to 7 seconds') }}</p>
+                <p class="text-emerald-500 text-sm mt-2">{{ $t(`けいか ${judgeSeconds}秒`, `${judgeSeconds}s so far`) }}</p>
+                <p class="text-emerald-500 text-sm">{{ $t('ふつう 2〜7秒', 'usually 2 to 7 s') }}</p>
             </div>
 
             <!-- 生き物が写っていない / 特定できない -->
             <div v-else-if="phase === 'no_creature' || phase === 'uncertain'" class="bg-white rounded-2xl shadow-sm p-8 text-center">
-                <img v-if="previewUrl" :src="previewUrl" class="w-full max-h-56 object-contain rounded-xl mb-4">
+                <div v-if="previewUrl" class="relative mx-auto w-full max-w-[220px] overflow-hidden rounded-xl bg-white mb-4" style="aspect-ratio: 138 / 123;">
+                    <img :src="previewUrl" alt="" class="absolute max-w-none" :style="previewCropStyle" @load="onPreviewLoad">
+                </div>
                 <div class="text-5xl mb-4">🤔</div>
                 <p class="text-emerald-800 font-bold mb-1">
                     {{ phase === 'no_creature' ? $t('生き物が写っていないみたい', 'No creature seen in the photo') : $t('生き物はいそうだけど、特定できなかったよ', 'A creature may be there, but I could not identify it') }}
@@ -122,15 +190,18 @@
 
             <!-- エラー -->
             <div v-else-if="phase === 'error'" class="bg-white rounded-2xl shadow-sm p-8 text-center">
-                <img v-if="previewUrl" :src="previewUrl" class="w-full max-h-56 object-contain rounded-xl mb-4">
+                <div v-if="previewUrl" class="relative mx-auto w-full max-w-[220px] overflow-hidden rounded-xl bg-white mb-4" style="aspect-ratio: 138 / 123;">
+                    <img :src="previewUrl" alt="" class="absolute max-w-none" :style="previewCropStyle" @load="onPreviewLoad">
+                </div>
                 <div class="text-5xl mb-4">⚠️</div>
                 <p class="text-rose-700 font-bold mb-1">{{ $t('はんていできませんでした', 'Could not identify') }}</p>
                 <p class="text-slate-500 text-sm mb-5">{{ $t(errorMessage, errorMessageEn) }}</p>
+                <!-- 写真は消さず、そのまま「ととのえる」が使える画面にもどす -->
                 <button
                     class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-xl transition"
-                    @click="resetPhoto"
+                    @click="backToPreview"
                 >
-                    {{ $t('もう一度ためす', 'Try again') }}
+                    {{ $t('写真をととのえなおす', 'Adjust the photo again') }}
                 </button>
             </div>
 
@@ -157,19 +228,22 @@
                 <div v-if="draftStatus === 'done'" class="text-center py-4">
                     <div class="text-5xl mb-3">🎉</div>
                     <p class="text-emerald-800 font-bold mb-1">{{ $t('図鑑にとうろくしました！', 'Added to your card book!') }}</p>
-                    <p class="text-slate-500 text-sm mb-5">{{ $t('図鑑の「じぶんがとった」で見られるよ', 'You can see it under "Caught by me" in the card book') }}</p>
-                    <div class="flex flex-col gap-2">
+                    <p class="text-emerald-700 font-bold text-lg mb-5">{{ $t('つぎの生きものも、撮ってみよう！', 'Find the next one and take a photo!') }}</p>
+                    <div class="flex flex-col gap-3">
+                        <!-- 連続で撮るのが基本なので、「もう一つスキャンする」を一番目立たせる -->
                         <button
-                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition"
-                            @click="goLibrary"
-                        >
-                            {{ $t('図鑑を見る', 'Open card book') }}
-                        </button>
-                        <button
-                            class="bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold py-2.5 rounded-xl transition"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg py-4 rounded-2xl shadow-md transition"
                             @click="finishAndReset"
                         >
-                            {{ $t('もう一つスキャンする', 'Scan another') }}
+                            📷 {{ $t('もう一つスキャンする', 'Scan another') }}
+                        </button>
+                        <!-- 図鑑は、ふつうの文字のリンクにして、強調しすぎないようにする -->
+                        <button
+                            type="button"
+                            class="text-sm text-emerald-700 hover:text-emerald-900 underline py-1"
+                            @click="goLibrary"
+                        >
+                            {{ $t('図鑑をみる', 'See the card book') }}
                         </button>
                     </div>
                 </div>
@@ -184,6 +258,27 @@
                         </div>
                         <p v-if="draftStatus === 'preparing'" class="text-emerald-600 text-sm font-bold mt-1">📸 {{ $t('しゃしんを じゅんびちゅう…', 'Getting the photo ready…') }}</p>
                     </div>
+
+                    <!-- 写真を整える（モーダル）。きめるで、この写真で作り直す -->
+                    <button
+                        v-if="draftImage && draftStatus !== 'preparing'"
+                        type="button"
+                        class="mb-4 w-full bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-bold py-2.5 rounded-xl transition"
+                        @click="draftPhotoModalOpen = true"
+                    >
+                        📷 {{ $t('しゃしんを ととのえる', 'Adjust the photo') }}
+                    </button>
+                    <PhotoAdjustModal
+                        v-if="draftPhotoModalOpen && draftImage && previewUrl"
+                        :src="previewUrl"
+                        :initial-edit="photoEdit"
+                        @change="onDraftPhotoChange"
+                        @close="closeDraftPhotoModal"
+                    >
+                        <template #note>
+                            <p class="text-xs text-rose-600 mb-2">{{ $t('きめると、カードの写真が作り直されます', 'The card photo is rebuilt when you press Done.') }}</p>
+                        </template>
+                    </PhotoAdjustModal>
 
                     <!-- 判定の結果のまま登録する（変更はできない） -->
                     <div class="grid grid-cols-2 gap-3 text-sm">
@@ -258,6 +353,7 @@
 
 <script>
 import CollectionCard from "@/views/CaveAdventure/CollectionCard.vue";
+import PhotoAdjustModal from "@/components/PhotoAdjustModal.vue";
 import { getCurrentUser, toDisplayCard } from "@/utils/cards.js";
 
 // ■■直接呼びだし対応
@@ -275,6 +371,7 @@ import {
 import { compressCardImage, countSameSpecies, registerScannedCard } from "@/utils/creatureCard.js";
 import { JAPAN_MAP_VIEW_BOX, JAPAN_REGION_SHAPES } from "@/utils/japanRegionShapes.js";
 import { t } from "@/utils/lang.js";
+import { cropRect } from "@/utils/creatureCard.js";
 
 // ■生き物判定API連携（2026-09-20導入）
 // 参照: /Users/nozomuando/Downloads/生き物判定API_連携ガイド.pdf
@@ -286,11 +383,15 @@ const IKIMONO_API_KEY = "WFulVxBdSXuvxH1sPNBDRcsTuvXL-dlOQBw1_iD-M7U";
 export default {
     name: "CreatureScan",
 
-    components: { CollectionCard },
+    components: { CollectionCard, PhotoAdjustModal },
 
     data() {
         return {
             phase: "idle", // idle | preview | loading | uncertain | no_creature | error
+            uploadPercent: 0, // 写真のアップロードの進み（0〜100）
+            uploadDone: false, // アップロードが終わったか（ここから先は、AIの判断を待つ）
+            judgeSeconds: 0, // 判断中の経過秒数（判断の進みは分からないので、%ではなく秒で出す）
+            judgeTimer: null,
             selectedFile: null,
             previewUrl: null,
             hint: "",
@@ -301,6 +402,13 @@ export default {
             draftCard: null, // 判定の結果から作った、カードの内容（変更はできない）
             draftImage: null, // 縮小した写真 { dataUrl, bytes, withinLimit }
             draftStatus: "", // preparing | ready | saving | done | error
+            photoEdit: { zoom: 1, cx: 0.5, cy: 0.5 }, // 写真の拡大（1〜3）と、切り取りの中心（0〜1）
+            photoEditToken: 0, // 写真の編集が古い結果で上書きされないための番号
+            photoEditDirty: false, // 登録の画面で、モーダルの中を動かしたか
+            draftPhotoModalOpen: false, // 登録の画面の「しゃしんを ととのえる」モーダルを開いているか
+            photoModalOpen: false, // 判定の前の「しゃしんを ととのえる」モーダルを開いているか
+            previewNatural: null, // 選んだ写真の元の大きさ { w, h }（ととのえた範囲を、枠の中に出すため）
+            photoResetConfirm: false, // 写真を消すかの確認を出しているか
             draftMessage: "",
             draftMessageEn: "",
             duplicateCount: 0, // 同じ学名のカードの枚数（登録は止めない）
@@ -312,6 +420,19 @@ export default {
     },
 
     computed: {
+        // 写真の枠に出す位置と大きさ（ととのえた範囲が、枠いっぱいに見えるように、写真を動かす）
+        previewCropStyle() {
+            const natural = this.previewNatural;
+            if (!natural) return { left: "0", top: "0", width: "100%", height: "100%", objectFit: "cover" };
+            const { sx, sy, sw, sh } = cropRect(natural.w, natural.h, this.photoEdit);
+            return {
+                left: `${(-sx / sw) * 100}%`,
+                top: `${(-sy / sh) * 100}%`,
+                width: `${(natural.w / sw) * 100}%`,
+                height: `${(natural.h / sh) * 100}%`
+            };
+        },
+
         // プレビューの項目（判定の結果を、読み取り専用で表示する）
         readonlyFields() {
             if (!this.draftCard) return [];
@@ -368,6 +489,7 @@ export default {
     },
 
     beforeUnmount() {
+        this.stopJudgeTimer();
         if (this.previewUrl) {
             URL.revokeObjectURL(this.previewUrl);
         }
@@ -413,11 +535,6 @@ export default {
             return false;
         },
         
-        // ■モニタールームへ戻る（ログイン情報は消さない）
-        goMonitor() {
-            this.$router.push({ name: "Home" });
-        },
-
         goHome() {
             // ■■直接呼出し対応
             const cenId = (this.currentUser && this.currentUser.cenId) || getSession("loginCenId");
@@ -446,7 +563,27 @@ export default {
 
             this.selectedFile = file;
             this.previewUrl = URL.createObjectURL(file);
+            this.photoEdit = { zoom: 1, cx: 0.5, cy: 0.5 };
+            this.photoModalOpen = false;
+            this.previewNatural = null;
             this.phase = "preview";
+        },
+
+        // エラーの画面から、同じ写真のまま選ぶ画面にもどす（写真もととのえた範囲も残す）
+        backToPreview() {
+            this.errorMessage = "";
+            this.errorMessageEn = "";
+            this.phase = "preview";
+        },
+
+        // 確認のあとに、写真を消して選びなおす画面にもどす
+        confirmResetPhoto() {
+            this.photoResetConfirm = false;
+            this.resetPhoto();
+        },
+
+        onPreviewLoad(e) {
+            this.previewNatural = { w: e.target.naturalWidth, h: e.target.naturalHeight };
         },
 
         resetPhoto() {
@@ -456,6 +593,8 @@ export default {
 
             this.selectedFile = null;
             this.previewUrl = null;
+            this.photoEdit = { zoom: 1, cx: 0.5, cy: 0.5 };
+            this.photoModalOpen = false;
             this.errorMessage = "";
             this.errorMessageEn = "";
             this.phase = "idle";
@@ -471,22 +610,35 @@ export default {
             if (!this.selectedFile) return;
 
             this.phase = "loading";
+            this.uploadPercent = 0;
+            this.uploadDone = false;
+            this.judgeSeconds = 0;
+            this.stopJudgeTimer();
 
             try {
+                // 送る写真は、ととのえた範囲だけを切り取って縮小したもの（登録用と同じ処理）
+                // 切り取りに失敗したときは、元の全体の写真は送らずに止める（ととのえた範囲以外が送られないように）
+                let photo;
+                try {
+                    const small = await compressCardImage(this.selectedFile, { ...this.photoEdit });
+                    photo = await (await fetch(small.dataUrl)).blob();
+                } catch (e) {
+                    console.error("判定用の写真の切り取りに失敗しました", e);
+                    this.errorMessage = "しゃしんを よみこめませんでした。ほかの写真で、もういちどためしてね";
+                    this.errorMessageEn = "Could not read the photo. Please try another photo.";
+                    this.phase = "error";
+                    return;
+                }
+
                 const fd = new FormData();
-                fd.append("image", this.selectedFile);
+                fd.append("image", photo, "photo.jpg");
                 if (this.hint) fd.append("hint", this.hint);
                 fd.append("max_candidates", 3);
 
-                const res = await fetch(`${IKIMONO_API_BASE}/v1/identify`, {
-                    method: "POST",
-                    headers: { "X-API-Key": IKIMONO_API_KEY },
-                    body: fd
-                });
+                // アップロードの進みを出すため、fetchではなくXMLHttpRequestで送る
+                const { ok, data } = await this.postIdentify(fd);
 
-                const data = await res.json();
-
-                if (!res.ok) {
+                if (!ok) {
                     // 子ども向けの文章があれば、それを出す（人が大きく写っているときなど）
                     this.errorMessage = (data.error && (data.error.message_for_kids || data.error.message)) || "はんていに失敗しました。もう一度ためしてね。";
                     this.errorMessageEn = (data.error && (data.error.message_for_kids_en || data.error.message_en)) || "Could not identify. Please try again.";
@@ -530,6 +682,70 @@ export default {
             }
         },
 
+        // ■判定APIへ送る。送っている間は％を出し、送り終わったら「判断中」の秒数を数え始める
+        // （サーバーの判断の進みは分からないので、判断中は％を出さない）
+        postIdentify(fd) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST", `${IKIMONO_API_BASE}/v1/identify`);
+                xhr.setRequestHeader("X-API-Key", IKIMONO_API_KEY);
+                xhr.responseType = "text";
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        this.uploadPercent = Math.round((e.loaded / e.total) * 100);
+                    }
+                };
+                // 送り終わったら、判断中の表示に切り替える（サーバーの返事を待つ）
+                // 小さい写真は一瞬で送り終わるので、送信の表示は最低0.7秒は見せる
+                const startedAt = Date.now();
+                xhr.upload.onload = () => {
+                    this.uploadPercent = 100;
+                    const wait = Math.max(0, 700 - (Date.now() - startedAt));
+                    setTimeout(() => {
+                        // 返事がもう届いて、判定が終わっていたら何もしない
+                        if (this.phase !== "loading") return;
+                        this.uploadDone = true;
+                        this.startJudgeTimer();
+                    }, wait);
+                };
+                xhr.onload = () => {
+                    this.stopJudgeTimer();
+                    let data = {};
+                    try {
+                        data = JSON.parse(xhr.responseText || "{}");
+                    } catch (e) {
+                        data = {};
+                    }
+                    resolve({ ok: xhr.status >= 200 && xhr.status < 300, data });
+                };
+                xhr.onerror = () => {
+                    this.stopJudgeTimer();
+                    reject(new Error("network error"));
+                };
+                xhr.onabort = () => {
+                    this.stopJudgeTimer();
+                    reject(new Error("aborted"));
+                };
+                xhr.send(fd);
+            });
+        },
+
+        startJudgeTimer() {
+            this.stopJudgeTimer();
+            this.judgeSeconds = 0;
+            this.judgeTimer = setInterval(() => {
+                this.judgeSeconds += 1;
+            }, 1000);
+        },
+
+        stopJudgeTimer() {
+            if (this.judgeTimer) {
+                clearInterval(this.judgeTimer);
+                this.judgeTimer = null;
+            }
+        },
+
         // ■判定の結果からカードの下書きを作り、写真の縮小と同じ種類の枚数を調べる
         async openDraft(candidate) {
             this.draftCard = candidateToCardDraft(candidate);
@@ -543,7 +759,7 @@ export default {
                 // 写真の準備はログインと関係なく行う（プレビューに写真を出すため）
                 const [user, image, duplicateCount] = await Promise.all([
                     getCurrentUser(),
-                    compressCardImage(this.selectedFile),
+                    compressCardImage(this.selectedFile, { ...this.photoEdit }),
                     countSameSpecies(this.draftCard.scientificName)
                 ]);
 
@@ -552,8 +768,8 @@ export default {
                 this.duplicateCount = duplicateCount;
 
                 if (!image.withinLimit) {
-                    this.draftMessage = "写真が大きすぎます。別の写真でためしてね";
-                    this.draftMessageEn = "The photo is too large. Please try another one.";
+                    this.draftMessage = "写真が大きすぎます。下のバーで近づけるか、別の写真でためしてね";
+                    this.draftMessageEn = "The photo is too large. Zoom in with the slider, or try another photo.";
                     this.draftStatus = "error";
                     return;
                 }
@@ -568,6 +784,53 @@ export default {
                 console.error("カードの準備に失敗しました:", error);
                 this.draftMessage = "じゅんびに失敗しました。もう一度ためしてね。";
                 this.draftMessageEn = "Could not get the card ready. Please try again.";
+                this.draftStatus = "error";
+            }
+        },
+
+        // 登録の画面の写真を、モーダルでととのえた内容に合わせる（閉じるときに、写真を作り直す）
+        onDraftPhotoChange(edit) {
+            this.photoEdit = edit;
+            this.photoEditDirty = true;
+        },
+
+        closeDraftPhotoModal() {
+            this.draftPhotoModalOpen = false;
+            if (this.photoEditDirty) {
+                this.photoEditDirty = false;
+                this.applyPhotoEdit();
+            }
+        },
+
+        // ■編集した範囲で写真を作り直す（この写真がそのままカードの写真になる）
+        async applyPhotoEdit() {
+            if (!this.selectedFile) return;
+            if (this.draftStatus === "saving" || this.draftStatus === "done") return;
+            const token = ++this.photoEditToken;
+            try {
+                const image = await compressCardImage(this.selectedFile, { ...this.photoEdit });
+                if (token !== this.photoEditToken) return; // もっと新しい編集があれば、この結果は捨てる
+                this.draftImage = image;
+
+                if (!image.withinLimit) {
+                    this.draftMessage = "写真が大きすぎます。下のバーで近づけるか、別の写真でためしてね";
+                    this.draftMessageEn = "The photo is too large. Zoom in with the slider, or try another photo.";
+                    this.draftStatus = "error";
+                    return;
+                }
+                if (!this.currentUser) {
+                    this.draftMessage = "ログインしてから、もういちどためしてね";
+                    this.draftMessageEn = "Please log in and try again.";
+                    this.draftStatus = "error";
+                    return;
+                }
+                this.draftMessage = "";
+                this.draftMessageEn = "";
+                this.draftStatus = "ready";
+            } catch (error) {
+                console.error("写真の編集に失敗しました:", error);
+                this.draftMessage = "しゃしんの じゅんびに失敗しました。もう一度ためしてね。";
+                this.draftMessageEn = "Could not prepare the photo. Please try again.";
                 this.draftStatus = "error";
             }
         },
@@ -623,6 +886,15 @@ export default {
 </script>
 
 <style scoped>
+.upload-stripe {
+    background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.4) 0 8px, transparent 8px 16px);
+    background-size: 32px 32px;
+    animation: upload-stripe-move 0.8s linear infinite;
+}
+@keyframes upload-stripe-move {
+    from { background-position: 0 0; }
+    to { background-position: 32px 0; }
+}
 .region-sparkle {
     animation: region-sparkle 1.2s ease-in-out infinite;
 }

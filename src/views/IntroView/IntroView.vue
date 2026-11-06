@@ -1,19 +1,20 @@
 <template>
     <!-- Intro Video -->
-    <div v-if="showVideo" class="fixed inset-0 bg-black flex flex-col items-center justify-center">
+    <div v-if="showVideo" class="fixed inset-0 bg-black overflow-y-auto">
+    <div class="min-h-full flex flex-col items-center justify-center px-4 py-4">
         <div class="video-wrapper">
             <div id="player"></div>
         </div>
 
-        <div class="mt-6 flex items-center gap-4">
+        <div class="mt-6 flex flex-wrap items-center justify-center gap-4">
             <button
-                class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-2 rounded-xl"
+                class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-2 rounded-xl whitespace-nowrap"
                 @click="rewind"
             >
                 ⏪ 10秒もどる
             </button>
             <button
-                class="text-slate-500 hover:text-slate-400 text-xs underline underline-offset-4"
+                class="text-slate-400 hover:text-slate-300 text-sm px-3 py-2 whitespace-nowrap underline underline-offset-4"
                 @click="skipIntro"
             >
                 スキップ
@@ -23,6 +24,7 @@
         <p class="mt-4 text-white text-xl" @click="skipIntro">
             あと {{ remaining }} 秒
         </p>
+    </div>
     </div>
 
     <div v-else-if="!skippingTeam" class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black flex items-center justify-center px-4">
@@ -433,6 +435,7 @@
     max-width: 800px;
     aspect-ratio: 16 / 9;
     max-height: 60vh;
+    flex-shrink: 0;
     display: flex;
     justify-content: center;
     align-items: center;

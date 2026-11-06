@@ -207,6 +207,37 @@
                 <CollectionCard :card="displayCard(focusedCard)" />
             </div>
 
+            <!-- 自分が撮ったカードだけ、写真を整えられる（同じカードを持つ全員の写真が変わる） -->
+            <div v-if="canEditPhoto(focusedCard)" class="focus-photo" @click.stop>
+                <button type="button" class="focus-photo-btn" @click="photoEditing = true">
+                    📷 {{ $t('しゃしんを ととのえる', 'Adjust the photo') }}
+                </button>
+            </div>
+            <PhotoAdjustModal
+                v-if="photoEditing && canEditPhoto(focusedCard)"
+                :key="focusedCard.cardId"
+                :src="photoSrcFor(focusedCard)"
+                @change="pendingEdit = $event"
+                @close="closePhotoEdit"
+            >
+                <template #note>
+                    <p class="text-xs text-rose-600 mb-2">{{ $t('ほかの人が持っているカードにも、同じ写真が出ます', 'Everyone who has this card will see the new photo.') }}</p>
+                </template>
+                <template #footer>
+                    <p v-if="photoSaving" class="text-xs text-emerald-700 text-center mt-3">{{ $t('ほぞん中…', 'Saving…') }}</p>
+                    <p v-else-if="photoMessage" class="text-xs text-emerald-700 text-center mt-3">{{ photoMessage }}</p>
+                    <div class="mt-4 flex gap-2">
+                        <button type="button" class="flex-1 bg-white border border-emerald-300 text-emerald-700 font-bold py-2.5 rounded-xl" @click="closePhotoEdit">{{ $t('やめる', 'Cancel') }}</button>
+                        <button
+                            type="button"
+                            class="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold py-2.5 rounded-xl"
+                            :disabled="!pendingEdit || photoSaving"
+                            @click="saveEditedPhoto(focusedCard, pendingEdit)"
+                        >{{ $t('保存する', 'Save') }}</button>
+                    </div>
+                </template>
+            </PhotoAdjustModal>
+
             <button class="focus-nav focus-next" :aria-label="$t('次のカード', 'Next card')" :disabled="focusedIndex === filteredCards.length - 1" @click.stop="moveFocus(1)">▶</button>
             <p class="focus-count">
                 {{ focusedIndex + 1 }} / {{ filteredCards.length }}
@@ -224,9 +255,11 @@
 <script>
 import CollectionCard from "@/views/CaveAdventure/CollectionCard.vue";
 import LangSwitch from "@/components/LangSwitch.vue";
+import PhotoAdjustModal from "@/components/PhotoAdjustModal.vue";
 import { getSession } from "@/utils/session.js";
 import { REGION_TILES } from "@/utils/creatureCardMapping.js";
 import { t } from "@/utils/lang.js";
+import { compressCardImage } from "@/utils/creatureCard.js";
 import {
     MIN_CARDS_FOR_DOMINATION,
     toDisplayCard,
@@ -236,7 +269,8 @@ import {
     fetchCardLibraryList,
     fetchCardImage,
     fetchUserAvatar,
-    fetchMyCardInstances
+    fetchMyCardInstances,
+    saveCardImage
 } from "@/utils/cards.js";
 
 // ■レア度の並び（A が いちばんレア）
@@ -281,7 +315,7 @@ function queuePhotos(vm, cards, urgent) {
 export default {
     name: "CardLibrary",
 
-    components: { CollectionCard, LangSwitch },
+    components: { CollectionCard, LangSwitch, PhotoAdjustModal },
 
     data() {
         return {
@@ -335,6 +369,10 @@ export default {
             focusedIndex: null,
             focusScale: 2,
             focusOrigin: { x: 0, y: 0, s: 1 },
+            photoEditing: false, // 自分が撮ったカードの「写真を整える」を開いているか
+            photoSaving: false,
+            photoMessage: "",
+            pendingEdit: null, // 編集中の位置・拡大（保存ボタンを押すまで、写真には反映しない）
             minCards: MIN_CARDS_FOR_DOMINATION,
             terrainLabels: TERRAIN_LABELS
         };
@@ -351,6 +389,10 @@ export default {
         },
         focusedCard() {
             this.loadVisibleExtras();
+            // 別のカードに移ったら、写真の編集は閉じる
+            this.photoEditing = false;
+            this.photoMessage = "";
+            this.pendingEdit = null;
         },
     },
     created() {
@@ -542,6 +584,51 @@ export default {
         // 自分がスキャンでとって登録したカードか
         isMine(card) {
             return Boolean(card.ownerUid) && card.ownerUid === this.myUid;
+        },
+
+        // 写真を整えられるのは、自分が撮ったスキャンのカードだけ
+        canEditPhoto(card) {
+            return Boolean(card) && card.source === "scan" && this.isMine(card);
+        },
+
+        // 編集をやめて閉じる（保存していない変更は捨てる）
+        closePhotoEdit() {
+            this.photoEditing = false;
+            this.photoMessage = "";
+            this.pendingEdit = null;
+        },
+
+        photoSrcFor(card) {
+            return (card && (card.image || this.imageByCardId[card.cardId])) || "";
+        },
+
+        // 編集した範囲で写真を作り直し、cardImages/{id} に保存する
+        // 注意：同じカードを持つ全員の写真が変わる（共有の写真を上書きする）
+        async saveEditedPhoto(card, edit) {
+            const src = this.photoSrcFor(card);
+            if (!src || this.photoSaving) return;
+
+            this.photoSaving = true;
+            this.photoMessage = "";
+            try {
+                const blob = await (await fetch(src)).blob();
+                const image = await compressCardImage(blob, edit);
+                if (!image.withinLimit) {
+                    this.photoMessage = t("写真が大きすぎます。バーで近づけてね", "The photo is too large. Zoom in with the slider.");
+                    return;
+                }
+                await saveCardImage(card.cardId, image.dataUrl);
+                // 表示に使う画像も新しいものにする（カード本体に古い画像が残っていた場合も含む）
+                card.image = image.dataUrl;
+                this.imageByCardId = { ...this.imageByCardId, [card.cardId]: image.dataUrl };
+                this.pendingEdit = null;
+                this.photoMessage = t("写真を保存しました", "Photo saved.");
+            } catch (error) {
+                console.error("写真の保存に失敗しました:", error);
+                this.photoMessage = t("保存できませんでした。もう一度ためしてね", "Could not save. Please try again.");
+            } finally {
+                this.photoSaving = false;
+            }
         },
 
         // 作られた日で絞る（作られた日が無いカードは、日付で絞ったときは出ない）
@@ -784,6 +871,14 @@ export default {
     line-height:0;
     transform:scale(var(--s,2));
     filter:drop-shadow(0 18px 30px rgba(0,0,0,.6));
+}
+.focus-photo{
+    position:absolute;bottom:calc(64px + env(safe-area-inset-bottom));left:0;right:0;
+    display:flex;justify-content:center;padding:0 12px;
+}
+.focus-photo-btn{
+    padding:8px 16px;border-radius:999px;cursor:pointer;
+    background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:14px;
 }
 .focus-close,.focus-nav{
     position:absolute;margin:0;padding:0;border-radius:50%;
