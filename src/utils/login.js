@@ -1,5 +1,6 @@
 import db from "@/firebase.js";
 import { setSession } from "@/utils/session.js";
+import { resetCurrentUserCache } from "@/utils/cards.js";
 
 // ■ログインの処理。LoginPage（ce-n.orgからのリンク）と BypassLoginPage（手元の確認用）で同じものを使う
 // 成功したら、既存会員はHome、初回はIntroへ進む。失敗したら画面に出すエラー文を返す（問題なければ空文字）
@@ -73,6 +74,8 @@ export async function loginWithCenId(cenId, router) {
                 setSession("playerUid", userDoc.id);
                 setSession("playerData", JSON.stringify(userData));
                 setSession("myTeam", userData.team);
+                // 同じ画面の中に前の会員のキャッシュが残らないように、次の会員の情報は取り直す
+                resetCurrentUserCache();
                 router.push({ name: "Home" });
                 return "";
             }

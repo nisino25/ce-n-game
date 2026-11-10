@@ -68,14 +68,6 @@
                 {{ wildChecking ? $t("確認中…", "Checking…") : $t("すみかにもどそう！", "Back to our hideout!") }}
             </button>
 
-            <!-- ■生き物スキャン：CreatureScan は「?from=login」の合言葉がないと入れないので、付けて開く
-                 詳細は docs/requirements/03_creature_scan.md 参照 -->
-            <button
-                class="monitor monitor-scan"
-                @click="changeMode('creature-scan?from=login')"
-            >
-                {{ $t('生き物スキャン', 'Creature Scan') }}
-            </button>
 
             <!-- Team -->
             <button
@@ -360,7 +352,7 @@
     </div>
 </template>
 <script>
-import db from './../../firebase.js';
+import db, { firebase } from './../../firebase.js';
 import {
     MIN_CARDS_FOR_DOMINATION,
     getCurrentUser,
@@ -427,6 +419,7 @@ export default {
 				tutorialResetMessage: "",
 				introResetting: false,
 				introResetMessage: "",
+				presenceTimer: null, // オンライン表示のための、1分ごとの更新タイマー
 				devLinksOpen: false, // 仮リンクが開いているか（開いたときだけ画面の真ん中に出す）
 				demoMessage: "",
 
@@ -643,6 +636,9 @@ export default {
         sendDeviceStatsOnce(); // どんな端末か（粗い分類だけ）を、1日1回、数字として記録する（docs/device-stats.md）
         this.loadResumeRoom();
 
+        // ■今モニタールームにいることを記録し、チームの一覧を1分ごとに読み直す（オンラインの判定に使う）
+        this.startPresence();
+
         this.teamMembers = await this.getTeamMembers();
 				// console.log("Current Player Data:", this.currentPlayerData);
 				// console.log("My Team:", this.myTeam);
@@ -660,9 +656,40 @@ export default {
     beforeUnmount() {
         document.removeEventListener("pointerdown", this.closeDevLinksOnOutsideClick);
         window.removeEventListener("resize", this.updateScrollLock);
+        this.stopPresence();
     },
 
     methods: {
+        // ■オンライン表示：モニタールームにいる間、入室時刻を1分ごとに更新する（10分以内なら「オンライン」）
+        // 以前は、イントロを終えた時の1回しか記録していなかったため、時間がたつと他の人から見えなくなっていた
+        startPresence() {
+            this.stopPresence();
+            const uid = getSession("playerUid");
+            if (!uid) return;
+
+            const beat = () => {
+                db.collection("users").doc(uid)
+                    .update({ enteredMonitorRoomAt: firebase.firestore.Timestamp.now() })
+                    .catch(error => console.warn("入室時刻の更新に失敗しました:", error));
+            };
+            beat();
+            this.presenceTimer = setInterval(async () => {
+                beat();
+                try {
+                    this.teamMembers = await this.getTeamMembers();
+                } catch (error) {
+                    console.warn("チームの一覧の読み直しに失敗しました:", error);
+                }
+            }, 60 * 1000);
+        },
+
+        stopPresence() {
+            if (this.presenceTimer) {
+                clearInterval(this.presenceTimer);
+                this.presenceTimer = null;
+            }
+        },
+
         // ■中身が画面より小さいときは、スクロールを止める（大きいときだけスクロールできる）
         updateScrollLock() {
             const room = this.$refs.room;
@@ -1301,8 +1328,6 @@ export default {
       .monitor-team{ order:2; }
       .monitor-cave{ order:3; }
       .monitor-wild{ order:4; }
-      /* ■スマホ：生き物スキャンは、アイコンの列に出す（上のモニターからは外す） */
-      .monitor-scan{ display:none; }
       /* ■ドアを低くして、下のアイコン（ずかん・かんばん）が画面の下端に追いやられないようにする */
   }
 
@@ -1310,9 +1335,8 @@ export default {
   .room-main-door{ height:10rem; margin-top:1.25rem; margin-bottom:1.25rem; }
   @media (max-width: 640px){ .room-main-door{ height:9rem; } }
 
-  /* PCでは、アイコンの列の生き物スキャンは出さない（スマホだけ表示） */
-  .room-icon-scan-wrap{ display:none; }
-  @media (max-width: 640px){ .room-icon-scan-wrap{ display:flex; } }
+  /* 生き物スキャンは、PC もスマホも、アイコンの列から入る（上段のモニターには出さない） */
+  .room-icon-scan-wrap{ display:flex; }
 
   .room-icon-row{
       position:relative;
@@ -1340,7 +1364,6 @@ export default {
   .monitor-globe{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #4aa3ff); }
   .monitor-cave{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #ffb347); }
   .monitor-wild{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #5ee08a); }
-  .monitor-scan{ --team-accent: color-mix(in srgb, var(--room-accent, #0ff) 55%, #a78bfa); }
 
 
   /* =========================
