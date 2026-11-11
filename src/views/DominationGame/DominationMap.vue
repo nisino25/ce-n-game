@@ -1,14 +1,31 @@
 <template>
     <div class="relative h-screen w-full">
+        <!-- ■追加：地図表示前のランダム画像（3枚から1枚をランダム表示） -->
+        <div
+            v-if="showIntroImage"
+            class="fixed inset-0 z-[4000] flex cursor-pointer items-center justify-center bg-black"
+            @click="showIntroImage = false"
+        >
+            <img
+                v-if="selectedIntroImage"
+                :src="selectedIntroImage"
+                alt="イントロ画像"
+                class="max-h-full max-w-full object-contain"
+            />
+            <!-- タップを促すメッセージ -->
+            <div class="absolute bottom-12 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-6 py-3 text-lg font-black text-cyan-200 shadow-lg backdrop-blur-sm animate-pulse border border-cyan-400/50 whitespace-nowrap">
+                画面をタップして地図をひらく
+            </div>
+        </div>
 
         <div id="returnGate" @click="returnHome">
             <span class="gate-core"></span>
             <span class="gate-label">帰還ゲート</span>
         </div>
         <div id="warpEffect"></div>
-        <!-- Start Message -->
+        <!-- Start Message & チュートリアル -->
         <div
-            v-if="showStartScreen"
+            v-if="showStartScreen && !showIntroImage"
             class="map-hint absolute bottom-12 left-1/2 z-[1000] -translate-x-1/2"
         >
             まちを タップしてね
@@ -212,6 +229,14 @@ export default {
 
     data() {
         return {
+            // ■追加：地図表示前のランダム画像用データ
+            showIntroImage: true,
+            introImages: [
+                "/images/Domination/すみかに戻す説明01.png", // 1つ目の画像パス
+                "/images/Domination/すみかに戻す説明02.png", // 2つ目の画像パス
+                "/images/Domination/すみかに戻す説明03.png"  // 3つ目の画像パス
+            ],
+            selectedIntroImage: "",
 
             map: null,
 
@@ -268,6 +293,11 @@ export default {
     },
 
     mounted() {
+        // ■追加：3つの画像からランダムで1つを選ぶ
+        if (this.introImages.length > 0) {
+            const randomIndex = Math.floor(Math.random() * this.introImages.length);
+            this.selectedIntroImage = this.introImages[randomIndex];
+        }
 
         // ■陣取りゲームの「平塚市にもどる」から来たときは、日本の地図を見せず、その街の六角形の画面から始める
         const directCity = mapSpotsSeed.cities[this.$route.query.city] && (!mapSpotsSeed.cities[this.$route.query.city].test || isTestMode()) ? this.$route.query.city : null;
@@ -1085,7 +1115,7 @@ L.tileLayer(
     cursor: pointer;
     background: radial-gradient(circle at 50% 40%, rgba(34, 211, 238, 0.28), rgba(6, 14, 26, 0.92) 70%);
     box-shadow: 0 0 22px rgba(34, 211, 238, 0.55), inset 0 0 18px rgba(34, 211, 238, 0.35);
-    z-index: 1000;
+    z-index: 5000;
 }
 /* まわりをまわる光の輪 */
 #returnGate::before {

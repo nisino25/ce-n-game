@@ -949,10 +949,24 @@ export default {
 				// ■保存されているログイン日時が7日(=>12hに変更)以上前なら自動ログアウトする。
 				// 期限内であれば、今回のアクセスとして日時を更新して続行する
 				checkSessionExpired() {
-					const SEVEN_DAYS_MS = 12 * 60 * 60 * 1000;
+                    // 情報確認のため
+                    const loginDate = getSession("loginDate");
                     // ■会員IDと会員情報を取得:26.10.11
                     const loginCenId = getSession("loginCenId");
                     const playerData = getSession("playerData");
+                    console.log("===== セッション確認 =====");
+                    console.log("loginCenId:", loginCenId);
+                    console.log("playerData:", playerData);
+                    console.log("loginDate:", loginDate);
+                    console.log("localStorage loginCenId:",
+                        localStorage.getItem("loginCenId"));
+                    console.log("localStorage playerData:",
+                        localStorage.getItem("playerData"));
+                    console.log("Cookie:", document.cookie);
+                    console.log("==========================");
+
+					const SEVEN_DAYS_MS = 12 * 60 * 60 * 1000;
+                    
                     // ■会員IDまたは会員情報がない場合はエラー画面へ:26.10.11
                     if (!loginCenId || !playerData) {
                         console.warn("会員情報がありません。アクセスエラー！");

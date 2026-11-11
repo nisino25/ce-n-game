@@ -40,6 +40,7 @@ export function getSession(key) {
 
 export function setSession(key, value) {
     localStorage.setItem(key, value);
+    // スマホ対応：if (key !== "playerData") {
     writeCookie(key, value, COOKIE_MAX_AGE_DAYS);
 }
 
