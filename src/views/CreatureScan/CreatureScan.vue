@@ -515,6 +515,9 @@ export default {
             this.$router.push({ name: "ScanLogin" }); // またはホーム画面などへ
             return;
         }
+        // 4. 図鑑を開くとき、ログインした会員の情報を待たないように、先に読んでおく
+        //    （モニタールームからの図鑑と同じ速さにするため。1件だけの読み取りで、写真を選んだときの読み取りを早めるだけ）
+        getCurrentUser().catch(() => {});
     },
 
     methods: {
