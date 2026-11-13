@@ -284,13 +284,31 @@ const backgroundPhotoQueue = [];
 const queuedPhotoIds = new Set();
 let activePhotoLoads = 0;
 
-function pumpPhotoQueue(vm) {
+// 今開いている図鑑（写真を書き込む先）。図鑑を開くたびに入れ替える
+let photoView = null;
+
+// 図鑑を開いたときに、前の表示の写真キューを空にする（残ったままだと、新しい表示に写真が届かない）
+function startPhotoQueue(vm) {
+    photoView = vm;
+    urgentPhotoQueue.length = 0;
+    backgroundPhotoQueue.length = 0;
+    queuedPhotoIds.clear();
+}
+
+function stopPhotoQueue(vm) {
+    if (photoView === vm) photoView = null;
+}
+
+function pumpPhotoQueue() {
     while (activePhotoLoads < PHOTO_CONCURRENCY) {
         const cardId = urgentPhotoQueue.shift() || backgroundPhotoQueue.shift();
         if (!cardId) return;
         activePhotoLoads++;
         fetchCardImage(cardId)
-            .then(image => { vm.imageByCardId = { ...vm.imageByCardId, [cardId]: image }; })
+            .then(image => {
+                // 書き込むのは、いま開いている図鑑（前の表示には書かない）
+                if (photoView) photoView.imageByCardId = { ...photoView.imageByCardId, [cardId]: image };
+            })
             .catch(error => {
                 console.error("カードの画像の読み込みに失敗しました:", error);
                 // 次に表示したとき、もう一度読めるように覚えない
@@ -298,7 +316,7 @@ function pumpPhotoQueue(vm) {
             })
             .finally(() => {
                 activePhotoLoads--;
-                pumpPhotoQueue(vm);
+                pumpPhotoQueue();
             });
     }
 }
@@ -309,7 +327,7 @@ function queuePhotos(vm, cards, urgent) {
         queuedPhotoIds.add(card.cardId);
         (urgent ? urgentPhotoQueue : backgroundPhotoQueue).push(card.cardId);
     });
-    pumpPhotoQueue(vm);
+    pumpPhotoQueue();
 }
 
 export default {
@@ -402,6 +420,7 @@ export default {
         this.measureGrid();
     },
     beforeUnmount() {
+        stopPhotoQueue(this);
         window.removeEventListener("resize", this.measureGrid);
     },
     computed: {
@@ -700,6 +719,7 @@ export default {
     },
 
     async mounted() {
+        startPhotoQueue(this);
         try {
             // 自分の情報を先に取り、カード一覧と所持カードを同時に読む
             const user = await getCurrentUser();

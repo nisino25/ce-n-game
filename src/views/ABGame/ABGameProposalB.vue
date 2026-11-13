@@ -97,7 +97,10 @@
                         </div>
                         <div class="flex gap-4 items-start mb-4">
                             <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-28 h-28 object-cover rounded-xl flex-none">
-                            <p class="text-gray-700 text-sm leading-relaxed" v-html="currentQuestion.comment"></p>
+                            <!-- 長い説明は、枠を固定して、文字だけスクロールする -->
+                            <div class="flex-1 min-w-0 h-40 overflow-y-auto pr-1">
+                                <p class="text-gray-700 text-sm leading-relaxed" v-html="currentQuestion.comment"></p>
+                            </div>
                         </div>
                         <div class="flex flex-wrap gap-2 justify-center mb-4">
                             <img
@@ -193,7 +196,7 @@ const SIDE_TEXT = {
             meter: "⚡ エネルギー", choice: "エネルギー", result: "エネルギー",
             img: "/images/ABGames/kushiro/env1.jpg",
             help: {
-                title: "自然をこわしてつくる再生エネルギーは本当にいいの？",
+                title: "【自然とエネルギー】",
                 body: "湿原の自然を壊して作られるメガソーラーが問題になっているよ。ここにはシマフクロウなどの希少ないきものが住んでいるのに、たいせつなすみかを追われたり、エサがなくなって、もっと少なくなってしまうよ。これ以上メガソーラーを増やさないためにどうすればいい？",
             },
         },
@@ -201,7 +204,7 @@ const SIDE_TEXT = {
             meter: "🗑️ ごみのポイ捨て対策", choice: "ごみのポイ捨て対策", result: "ごみのポイ捨て対策",
             img: "/images/ABGames/kushiro/env2.jpg",
             help: {
-                title: "ポイ捨てしないで！",
+                title: "【ごみのポイ捨て】",
                 body: "湿原の中にごみをポイ捨てする人があとをたたないよ。観光客やトラックの運転手など、遠くから来た人たちが、湿原に住むいきものや地域に住む人をくるしめているよ。日本で一番大きな、自然豊かな湿原を守るためには、みんなの行動が一番大切だよ。",
             },
         },
@@ -212,7 +215,7 @@ const SIDE_TEXT = {
             meter: "🏖️ 海ごみ対策", choice: "海ごみ対策", result: "海ごみ対策",
             img: "/images/ABGames/kyoto/env1.jpg",
             help: {
-                title: "京都の海にごみが流れつくよ",
+                title: "【海のプラスチックごみ】",
                 body: "京都の海は日本海に面しているため、風の強い冬にたくさんの海ごみが打ち上げられるんだ。プラスチックごみや発泡スチロールなど、海外のごみまで流れきて困っているよ。どうすれば海ごみをへらすことができる？",
             },
         },
@@ -220,7 +223,7 @@ const SIDE_TEXT = {
             meter: "⛰️ 里山再生", choice: "里山再生", result: "里山再生",
             img: "/images/ABGames/kyoto/env2.jpg",
             help: {
-                title: "五山送り火と里山を守ろう",
+                title: "【里山と文化】",
                 body: "京都の夏のおまつり「五山送り火」は、山にたいまつで大きな文字や絵を描くのだけれど、山があれてきて、たいまつに使う「あかまつ」という木がかれ、草ぼうぼうになってしまい、毎年つづけていくのが大変になっているよ。里山の自然を守るためにどうすればいい？",
             },
         },
