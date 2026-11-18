@@ -767,6 +767,8 @@ const AI_MIN_HAND_SIZE = 10;
 // テストモードで「AIにぜんぶまかせる」ときの、1手あたりの待ち時間（ミリ秒）
 const AI_ONLY_TURN_MS = 400;
 const AI_LEVEL_WEIGHTS = { 1: 4, 2: 3, 3: 2, 4: 1 };
+// ■植物（生産者）は陣取りでは使わない。手札・AIの手札・テストの一覧のどれにも入れないよう、カードライブラリの段階で外す
+const isPlayableCard = card => card.category !== 'plant';
 
 // ■プレイヤーの所持カード（DBの cardInstances）かどうか。
 // AIチームの仮のカードや、固定デッキ時代に保存されたカード（cardId が無い）はDBを更新しない
@@ -1659,7 +1661,7 @@ export default {
                 }),
                 slot ? this.fetchSlotContext() : Promise.resolve(null)
             ])
-            this.cardLibrary = library
+            this.cardLibrary = library.filter(isPlayableCard)
 
             let loaded = savedLoaded
 
