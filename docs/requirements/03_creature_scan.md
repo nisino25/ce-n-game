@@ -3,13 +3,13 @@
 - 対象: `CreatureScan.vue` / 外部API「ikimono-api」
 - 作成日: 2026-09-24
 - 位置づけ: [00_overview.md](00_overview.md) の詳細版（生き物スキャン機能部分）
-- ステータス: **実装済みだが、2026-09-24時点でMonitorRoomからの導線は一旦非表示にしてデプロイ**（[00_overview.md](00_overview.md) 8章参照）。画面・ルート・API連携コード自体は`src/views/CreatureScan/CreatureScan.vue`に残っている
+- ステータス: **実装済み。MonitorRoomからの導線を再表示済み**（`?from=login` の合言葉を付けて `/creature-scan` を開く）。画面・ルート・API連携コードは`src/views/CreatureScan/CreatureScan.vue`にある
 
 ---
 
 ## 1. 概要・目的
 
-来場者が撮影・アップロードした写真をAI（外部API）に判定させ、写っている生き物の名前・特徴・レア度などを表示する機能。MonitorRoomの「生き物スキャン」ボタンから遷移する想定（現在ボタンはコメントアウトで非表示）。
+来場者が撮影・アップロードした写真をAI（外部API）に判定させ、写っている生き物の名前・特徴・レア度などを表示する機能。MonitorRoomの「生き物スキャン」ボタンから遷移する想定。
 
 ## 2. 外部API連携（ikimono-api）
 
@@ -57,7 +57,7 @@
 
 ## 4. 画面遷移
 
-- MonitorRoomの「生き物スキャン」ボタン → `changeMode('creature-scan')`（ドア演出付きでモード切替） → `/creature-scan`
+- MonitorRoomの「生き物スキャン」ボタン → `changeMode('creature-scan?from=login')`（ドア演出付きでモード切替） → `/creature-scan?from=login`
 - 画面右上「🏠 ホームにもどる」ボタン → MonitorRoom（`Home`）へ
 
 ## 5. 既知の課題・未実装事項
