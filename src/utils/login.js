@@ -27,7 +27,8 @@ export async function loginWithCenId(cenId, router) {
         }
     }
 
-    if (findMeResult.message) {
+    // findMe に届かなかったとき（null）は確認をスキップして続ける（null の .message で落ちないようにする）
+    if (findMeResult && findMeResult.message) {
         router.push({ name: "Error" });
         return "";
     }
@@ -74,6 +75,8 @@ export async function loginWithCenId(cenId, router) {
                 setSession("playerUid", userDoc.id);
                 setSession("playerData", JSON.stringify(userData));
                 setSession("myTeam", userData.team);
+                // 今ログインした時刻にする（古い最終アクセス日時が残っていると、モニタールームで自動ログアウトされるため）
+                setSession("loginDate", String(Date.now()));
                 // 同じ画面の中に前の会員のキャッシュが残らないように、次の会員の情報は取り直す
                 resetCurrentUserCache();
                 router.push({ name: "Home" });
@@ -81,6 +84,8 @@ export async function loginWithCenId(cenId, router) {
             }
         }
         // usersにデータがない場合だけ、初回INTROへ
+        // 初回も今ログインした扱いにする（Intro のあとモニタールームで、古い日時のせいで追い出されないように）
+        setSession("loginDate", String(Date.now()));
         console.log("Introへ渡す cenId:", cenId);
         router.push({
             name: "Intro",

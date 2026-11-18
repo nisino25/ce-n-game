@@ -271,7 +271,7 @@
             <RoomIconButton kind="board" :label="$t('かんばん', 'Board')" @click="$router.push({ name: 'NoticeBoard' })" />
             <!-- ■スマホだけ：生き物スキャンは、上のモニターではなくこの列に出す（PCは上のモニター） -->
             <div class="room-icon-scan-wrap">
-                <RoomIconButton kind="scan" :label="$t('スキャン', 'Scan')" @click="changeMode('creature-scan?from=login')" />
+                <RoomIconButton kind="scan" :label="$t('スキャン', 'Scan')" @click="changeMode('creature-scan?from=login&return=monitor')" />
             </div>
         </div>
 

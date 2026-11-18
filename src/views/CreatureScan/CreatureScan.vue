@@ -15,9 +15,9 @@
                     </button>
                     <button
                         class="text-sm text-emerald-700 hover:text-emerald-900 underline whitespace-nowrap px-2 py-2"
-                        @click="goHome"
+                        @click="goBack"
                     >
-                        🏠 {{ $t('ホームにもどる', 'Back to home') }}
+                        🏠 {{ returnsToMonitor ? $t('モニターにもどる', 'Back to monitor room') : $t('会員ページにもどる', 'Back to member page') }}
                     </button>
                 </div>
             </header>
@@ -420,6 +420,10 @@ export default {
     },
 
     computed: {
+        // モニタールームから来たとき（URLに return=monitor）は、戻るボタンでモニタールームへ戻す
+        returnsToMonitor() {
+            return this.$route.query.return === "monitor";
+        },
         // 写真の枠に出す位置と大きさ（ととのえた範囲が、枠いっぱいに見えるように、写真を動かす）
         previewCropStyle() {
             const natural = this.previewNatural;
@@ -538,6 +542,15 @@ export default {
             return false;
         },
         
+        // 戻るボタン：モニタールームから来たら、ログイン情報を消さずにモニタールームへ。会員ページから来たら、会員ページへ
+        goBack() {
+            if (this.returnsToMonitor) {
+                this.$router.push({ name: "Home" });
+                return;
+            }
+            this.goHome();
+        },
+
         goHome() {
             // ■■直接呼出し対応
             const cenId = (this.currentUser && this.currentUser.cenId) || getSession("loginCenId");

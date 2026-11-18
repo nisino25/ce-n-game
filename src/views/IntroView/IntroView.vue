@@ -431,17 +431,18 @@
 /* 動画は横長（16:9）のまま、スマートフォンでも画面幅に合わせて収まるようにする。
    縦持ちで比率を9:16に変えると動画が引き伸ばされて崩れるので、比率は変えない */
 .video-wrapper {
+    position: relative;
     width: 100%;
     max-width: 800px;
     aspect-ratio: 16 / 9;
     max-height: 60vh;
     flex-shrink: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
-/* YouTubeのiframe（#player）を親要素いっぱいに合わせる */
-#player {
+/* YouTubeのiframe（#player）を、枠（16:9）の中に収める。
+   枠の外へはみ出すと、下のボタン（10秒もどる・スキップ）の文字が隠れてしまうため、絶対配置で枠いっぱいにする */
+.video-wrapper :deep(#player) {
+    position: absolute;
+    inset: 0;
     width: 100% !important;
     height: 100% !important;
 }
