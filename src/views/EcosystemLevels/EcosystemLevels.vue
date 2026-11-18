@@ -1,7 +1,7 @@
 <template>
     <!-- ■生態系レベルのページ：レベルの意味と、カードのレベルを、ここで簡単に変えられる。モニタールームの仮リンクから -->
     <div class="min-h-screen bg-slate-50 p-4 text-slate-700">
-        <div class="mx-auto max-w-2xl">
+        <div class="mx-auto max-w-6xl">
             <button class="mb-3 text-sm font-black text-slate-500" @click="$router.push({ name: 'Home' })">← モニタールームにもどる</button>
 
             <h1 class="text-lg font-black">生態系レベル</h1>
@@ -50,34 +50,40 @@
                 <section class="rounded-xl bg-white p-3 shadow-sm">
                     <p v-if="!visibleCards.length" class="py-6 text-center text-xs font-bold text-slate-400">このレベルのカードはありません</p>
 
-                    <ul class="space-y-2">
+                    <ul class="grid grid-cols-2 gap-3 md:grid-cols-4">
                         <li
                             v-for="card in pagedCards"
                             :key="card.cardId"
-                            class="flex items-center gap-3 rounded-lg bg-slate-100 p-2"
+                            class="flex flex-col rounded-lg bg-slate-100 p-2"
                         >
                             <img
                                 v-if="card.image"
                                 :src="card.image"
                                 :alt="card.name"
-                                class="h-14 w-14 flex-none rounded-md bg-white object-cover"
+                                class="aspect-[3/4] w-full rounded-md bg-white object-contain"
                             >
-                            <div v-else class="h-14 w-14 flex-none rounded-md bg-slate-200"></div>
+                            <div v-else class="aspect-[3/4] w-full rounded-md bg-slate-200"></div>
 
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate text-xs font-black">{{ card.name }}</p>
-                                <p class="text-[11px] text-slate-500">{{ card.rarity }}</p>
-                                <p v-if="savingId === card.cardId" class="text-[11px] text-slate-400">保存中…</p>
-                                <p v-else-if="savedId === card.cardId" class="text-[11px] font-bold text-emerald-600">保存した</p>
+                            <div class="mt-2 min-w-0">
+                                <p class="truncate text-sm font-black">{{ card.name }}</p>
+                                <p class="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-slate-500">
+                                    <span
+                                        class="rounded-full px-2 py-0.5 text-[11px] font-black"
+                                        :class="isPlant(card) ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'"
+                                    >{{ isPlant(card) ? '🌱 植物' : '🐾 動物' }}</span>
+                                    <span>{{ card.rarity }}</span>
+                                </p>
+                                <p v-if="savingId === card.cardId" class="text-xs text-slate-400">保存中…</p>
+                                <p v-else-if="savedId === card.cardId" class="text-xs font-bold text-emerald-600">保存した</p>
                             </div>
 
-                            <div class="flex flex-none gap-1">
+                            <div class="mt-2 grid grid-cols-4 gap-1">
                                 <button
                                     v-for="item in LEVELS"
                                     :key="item.level"
                                     type="button"
                                     :disabled="savingId === card.cardId"
-                                    class="rounded-md border px-2 py-1 text-xs font-black transition disabled:opacity-50"
+                                    class="rounded-md border px-1 py-1.5 text-xs font-black transition disabled:opacity-50"
                                     :class="card.level === item.level
                                         ? 'border-emerald-600 bg-emerald-600 text-white'
                                         : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-100'"
@@ -192,6 +198,10 @@ export default {
     methods: {
         countOf(level) {
             return this.cards.filter(card => card.level === level).length;
+        },
+        // 植物（生産者）かどうか。植物以外は動物として出す
+        isPlant(card) {
+            return card.category === "plant";
         },
         // ■Lvのボタンを押したら、まず確認を出す（すぐには保存しない）
         requestLevel(card, level) {
