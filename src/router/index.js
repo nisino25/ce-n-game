@@ -32,6 +32,7 @@ import ScanCardApproval from "@/views/Admin/ScanCardApproval.vue";
 import CustAdmin from "@/views/Admin/CustAdmin.vue";
 import DocsView from "@/views/Docs/DocsView.vue";
 import RegionCardSpec from "@/views/DominationGame/RegionCardSpec.vue";
+import EcosystemLevels from "@/views/EcosystemLevels/EcosystemLevels.vue";
 import ABGameDemo from "@/views/ABGame/ABGameDemo.vue";
 import NoticeBoard from "@/views/NoticeBoard/NoticeBoard.vue";
 import CommentsAdmin from "@/views/Admin/CommentsAdmin.vue";
@@ -229,6 +230,12 @@ const routes = [
         path: "/region-card-spec",
         name: "RegionCardSpec",
         component: RegionCardSpec
+    },
+    // ■生態系レベルのページ（レベルの意味と、カードのレベルを変える）。モニタールームの仮リンクから
+    {
+        path: "/ecosystem-levels",
+        name: "EcosystemLevels",
+        component: EcosystemLevels
     },
     // ■ABゲームのデモ（平塚・釧路の全問題）。モニタールームの仮リンクから
     {

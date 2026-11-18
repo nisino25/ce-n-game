@@ -373,6 +373,7 @@ const DEV_LINK_GROUPS = [
         links: [
             { label: "ドキュメント", name: "Docs" },
             { label: "陣取りの地域のカード", name: "RegionCardSpec" },
+            { label: "生態系レベル", name: "EcosystemLevels" },
             { label: "ABゲームのデモ（平塚・釧路）", name: "ABGameDemo" }
         ]
     },
