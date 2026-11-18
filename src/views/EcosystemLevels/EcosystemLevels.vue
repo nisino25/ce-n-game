@@ -50,29 +50,81 @@
                 <section class="rounded-xl bg-white p-3 shadow-sm">
                     <p v-if="!visibleCards.length" class="py-6 text-center text-xs font-bold text-slate-400">このレベルのカードはありません</p>
 
-                    <ul class="space-y-1">
+                    <ul class="space-y-2">
                         <li
-                            v-for="card in visibleCards"
+                            v-for="card in pagedCards"
                             :key="card.cardId"
-                            class="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs"
+                            class="flex items-center gap-3 rounded-lg bg-slate-100 p-2"
                         >
-                            <span class="font-black">{{ card.name }}</span>
-                            <span class="text-slate-500">{{ card.rarity }}</span>
-                            <span class="ml-auto flex items-center gap-2">
-                                <span v-if="savingId === card.cardId" class="text-slate-400">保存中…</span>
-                                <span v-else-if="savedId === card.cardId" class="font-bold text-emerald-600">保存した</span>
-                                <select
-                                    :value="card.level"
+                            <img
+                                v-if="card.image"
+                                :src="card.image"
+                                :alt="card.name"
+                                class="h-14 w-14 flex-none rounded-md bg-white object-cover"
+                            >
+                            <div v-else class="h-14 w-14 flex-none rounded-md bg-slate-200"></div>
+
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-xs font-black">{{ card.name }}</p>
+                                <p class="text-[11px] text-slate-500">{{ card.rarity }}</p>
+                                <p v-if="savingId === card.cardId" class="text-[11px] text-slate-400">保存中…</p>
+                                <p v-else-if="savedId === card.cardId" class="text-[11px] font-bold text-emerald-600">保存した</p>
+                            </div>
+
+                            <div class="flex flex-none gap-1">
+                                <button
+                                    v-for="item in LEVELS"
+                                    :key="item.level"
+                                    type="button"
                                     :disabled="savingId === card.cardId"
-                                    class="rounded-md border border-slate-300 bg-white px-2 py-1 font-black"
-                                    @change="changeLevel(card, $event.target.value)"
+                                    class="rounded-md border px-2 py-1 text-xs font-black transition disabled:opacity-50"
+                                    :class="card.level === item.level
+                                        ? 'border-emerald-600 bg-emerald-600 text-white'
+                                        : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-100'"
+                                    @click="requestLevel(card, item.level)"
                                 >
-                                    <option v-for="item in LEVELS" :key="item.level" :value="item.level">Lv{{ item.level }}</option>
-                                </select>
-                            </span>
+                                    Lv{{ item.level }}
+                                </button>
+                            </div>
                         </li>
                     </ul>
+
+                    <!-- ページ送り（1ページ25まい） -->
+                    <div v-if="pageCount > 1" class="mt-3 flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            :disabled="page <= 1"
+                            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-40"
+                            @click="page -= 1"
+                        >
+                            ← まえ
+                        </button>
+                        <span class="text-xs font-black text-slate-500">{{ page }} / {{ pageCount }} ページ（{{ visibleCards.length }}まい）</span>
+                        <button
+                            type="button"
+                            :disabled="page >= pageCount"
+                            class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-40"
+                            @click="page += 1"
+                        >
+                            つぎ →
+                        </button>
+                    </div>
                 </section>
+
+                <!-- 変える前の確認（レベルを変えるときは、必ずここで「変える」を押してから保存する） -->
+                <div v-if="pendingChange" class="fixed inset-0 z-[4000] flex items-center justify-center bg-black/60 p-4" @click.self="cancelLevel">
+                    <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+                        <p class="mb-1 text-sm font-black text-slate-500">生態系レベルを変えますか？</p>
+                        <p class="mb-4 text-lg font-black">{{ pendingChange.card.name }}</p>
+                        <p class="mb-5 text-base font-bold">
+                            Lv{{ pendingChange.from }} → <span class="text-emerald-700">Lv{{ pendingChange.to }}</span>
+                        </p>
+                        <div class="flex gap-2">
+                            <button type="button" class="flex-1 rounded-xl border border-slate-300 bg-white py-2.5 font-black text-slate-600" @click="cancelLevel">やめる</button>
+                            <button type="button" class="flex-1 rounded-xl bg-emerald-600 py-2.5 font-black text-white hover:bg-emerald-700" @click="confirmLevel">変える</button>
+                        </div>
+                    </div>
+                </div>
             </template>
         </div>
     </div>
@@ -81,6 +133,9 @@
 <script>
 import db from "@/firebase.js";
 import { fetchCardLibrary } from "@/utils/cards.js";
+
+// ■1ページに出すカードの数
+const PAGE_SIZE = 25;
 
 // ■レベルの説明（短い文。直したいときは、ここを書き換える）
 const LEVELS = [
@@ -101,6 +156,8 @@ export default {
             selectedKey: "all",
             savingId: null,
             savedId: null,
+            page: 1,
+            pendingChange: null, // 変える前の確認中の { card, from, to }
         };
     },
     computed: {
@@ -116,21 +173,50 @@ export default {
                 : this.cards.filter(card => card.level === this.selectedKey);
             return list.slice().sort((a, b) => (a.level || 0) - (b.level || 0) || String(a.name).localeCompare(String(b.name), "ja"));
         },
+        pageCount() {
+            return Math.max(1, Math.ceil(this.visibleCards.length / PAGE_SIZE));
+        },
+        // いまのページのカードだけ（1ページ25まい）
+        pagedCards() {
+            const current = Math.min(this.page, this.pageCount);
+            const start = (current - 1) * PAGE_SIZE;
+            return this.visibleCards.slice(start, start + PAGE_SIZE);
+        },
+    },
+    watch: {
+        // 絞りこみを変えたら、1ページ目から見る
+        selectedKey() {
+            this.page = 1;
+        },
     },
     methods: {
         countOf(level) {
             return this.cards.filter(card => card.level === level).length;
         },
-        // ■レベルを変える：cards/{id} の level だけを書き換える（画像や持ち主は変えない）
-        async changeLevel(card, value) {
-            const level = Number(value);
-            if (!LEVELS.some(item => item.level === level) || level === card.level) return;
+        // ■Lvのボタンを押したら、まず確認を出す（すぐには保存しない）
+        requestLevel(card, level) {
+            if (level === card.level || this.savingId) return;
+            this.pendingChange = { card, from: card.level, to: level };
+        },
+
+        cancelLevel() {
+            this.pendingChange = null;
+        },
+
+        // ■確認で「変える」を押したときだけ保存する：cards/{id} の level だけを書き換える（画像や持ち主は変えない）
+        async confirmLevel() {
+            const change = this.pendingChange;
+            if (!change) return;
+            const { card, to } = change;
+            this.pendingChange = null;
             this.savingId = card.cardId;
             this.savedId = null;
             try {
-                await db.collection("cards").doc(card.cardId).update({ level });
-                card.level = level;
+                await db.collection("cards").doc(card.cardId).update({ level: to });
+                card.level = to;
                 this.savedId = card.cardId;
+                // 絞りこみからカードが外れたときに、ページが空にならないようにする
+                this.page = Math.min(this.page, this.pageCount);
             } catch (error) {
                 console.error("生態系レベルの保存に失敗しました", error);
                 alert("保存できませんでした。通信を確かめて、もう一度してください。");
