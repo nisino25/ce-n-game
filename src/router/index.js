@@ -42,6 +42,7 @@ import SoundTest from "@/views/DominationGame/SoundTest.vue";
 import EatenCompare from "@/views/DominationGame/EatenCompare.vue";
 import DeviceStats from "@/views/Admin/DeviceStats.vue";
 import ClothesLab from "@/views/ClothesLab/ClothesLab.vue";
+import AvatarButtonLab from "@/views/AvatarButtonLab/AvatarButtonLab.vue";
 
 
 const routes = [
@@ -249,6 +250,13 @@ const routes = [
         path: "/clothes-lab",
         name: "ClothesLab",
         component: ClothesLab
+    },
+
+    // ■鉛筆ボタンの置き場所を比べる画面（開発用）
+    {
+        path: "/avatar-button-lab",
+        name: "AvatarButtonLab",
+        component: AvatarButtonLab
     },
 
     {
