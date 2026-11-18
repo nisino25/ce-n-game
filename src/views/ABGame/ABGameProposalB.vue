@@ -55,7 +55,10 @@
             <div v-else-if="phase === 'question' || phase === 'correct'">
 
                 <div class="bg-white rounded-2xl shadow-sm p-4 mb-5 flex gap-4 items-center">
-                    <img :src="`/images/ABGames/${currentQuestion.imgB}`" class="w-24 h-24 object-cover rounded-xl flex-none">
+                    <div class="flex-none w-36">
+                        <img :src="`/images/ABGames/${currentQuestion.imgB}`" class="w-36 h-36 object-cover rounded-xl">
+                        <p v-if="currentQuestion.imgBCredit" class="mt-1 text-[10px] leading-tight text-gray-500">提供：{{ currentQuestion.imgBCredit }}</p>
+                    </div>
                     <p class="text-gray-800 text-sm leading-relaxed">{{ currentQuestion.bComment }}</p>
                 </div>
 
@@ -67,7 +70,8 @@
                             :disabled="phase === 'correct'"
                             @click="choose('A')"
                         >
-                            <img :src="sideText.A.img" class="w-full h-28 object-cover rounded-xl mb-2">
+                            <img :src="sideText.A.img" class="w-full h-40 object-cover rounded-xl mb-1">
+                            <p v-if="sideText.A.credit" class="mb-1 text-[10px] leading-tight text-gray-500 text-left">提供：{{ sideText.A.credit }}</p>
                             <span class="font-bold text-sky-800 text-sm">{{ sideText.A.choice }}</span>
                         </button>
                         <button class="help-button" :aria-label="sideText.A.choice + 'って？'" @click="helpSide = 'A'">？</button>
@@ -79,7 +83,8 @@
                             :disabled="phase === 'correct'"
                             @click="choose('C')"
                         >
-                            <img :src="sideText.C.img" class="w-full h-28 object-cover rounded-xl mb-2">
+                            <img :src="sideText.C.img" class="w-full h-40 object-cover rounded-xl mb-1">
+                            <p v-if="sideText.C.credit" class="mb-1 text-[10px] leading-tight text-gray-500 text-left">提供：{{ sideText.C.credit }}</p>
                             <span class="font-bold text-emerald-800 text-sm">{{ sideText.C.choice }}</span>
                         </button>
                         <button class="help-button" :aria-label="sideText.C.choice + 'って？'" @click="helpSide = 'C'">？</button>
@@ -95,10 +100,13 @@
                         <div class="flex items-center gap-2 mb-3">
                             <span class="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">正解！</span>
                         </div>
-                        <div class="flex gap-4 items-start mb-4">
-                            <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-28 h-28 object-cover rounded-xl flex-none">
-                            <!-- 長い説明は、枠を固定して、文字だけスクロールする -->
-                            <div class="flex-1 min-w-0 h-40 overflow-y-auto pr-1">
+                        <div class="flex flex-col sm:flex-row gap-4 sm:items-start mb-4">
+                            <div class="flex-none w-36 mx-auto sm:mx-0">
+                                <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-36 h-36 object-cover rounded-xl">
+                                <p v-if="currentQuestion.qaCredit" class="mt-1 text-[10px] leading-tight text-gray-500">提供：{{ currentQuestion.qaCredit }}</p>
+                            </div>
+                            <!-- 長い説明は、枠を固定して、文字だけスクロールする。枠とスクロールバーを出して、スクロールできることがわかるようにする -->
+                            <div class="explain-scroll w-full sm:flex-1 min-w-0 h-40 overflow-y-scroll border-2 border-gray-300 rounded-xl bg-gray-50 p-3">
                                 <p class="text-gray-700 text-sm leading-relaxed" v-html="currentQuestion.comment"></p>
                             </div>
                         </div>
@@ -457,6 +465,21 @@ export default {
 </script>
 
 <style scoped>
+/* 説明文のスクロール枠：スクロールバーを常に出して、スクロールできることがわかるようにする */
+.explain-scroll {
+    scrollbar-gutter: stable;
+}
+.explain-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+.explain-scroll::-webkit-scrollbar-track {
+    background: #e5e7eb;
+    border-radius: 5px;
+}
+.explain-scroll::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 5px;
+}
 .help-button{
     position: absolute;
     top: 0.5rem;
