@@ -91,6 +91,8 @@ export function getSession(key) {
 
     const local = localStorage.getItem(key);
     if (local !== null) {
+        // このタブで最初に読んだ値は、このタブの値にする（あとで別のタブがログインしても、このタブは変わらない）
+        if (TAB_KEYS.includes(key)) writeTab(key, local);
         return local;
     }
 
@@ -98,6 +100,7 @@ export function getSession(key) {
     if (cookie !== null) {
         // ■CookieにはあるがlocalStorageには無い＝standalone起動直後。localStorageにも復元しておく
         localStorage.setItem(key, cookie);
+        if (TAB_KEYS.includes(key)) writeTab(key, cookie);
         return cookie;
     }
 
