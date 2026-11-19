@@ -50,7 +50,7 @@
             </div>
 
             <div class="list-detail">
-              Lv.{{ card.level }}
+              {{ card.category === 'plant' ? '植物（レベルなし）' : `Lv.${card.level}` }}
               ／ レア {{ card.rarity }}
               ／ 地域: <span :class="{'unregistered-text': !hasRegion(card)}">{{ regionNames(card) || "未登録" }}</span>
               ／ 発見者: {{ card.owner || "なし" }}
@@ -421,7 +421,8 @@ export default {
           owner: this.editCard.owner || "",
           // 画像は cardImages に保存する。cards 本体に古い画像が残っていたら消す
           image: firebase.firestore.FieldValue.delete(),
-          level: Number(this.editCard.level) || 1,
+          // 植物（生産者）は、生態系レベルを持たない（保存しなおしても、1にしない）
+          level: this.editCard.category === "plant" ? null : (Number(this.editCard.level) || 1),
           rarity: this.editCard.rarity || "D",
           regions: this.editCard.regions || [],
           habitat: this.editCard.habitat || "",
@@ -477,7 +478,8 @@ export default {
         const cardData = {
           name: this.editCard.name,
           owner: this.editCard.owner || "",
-          level: Number(this.editCard.level) || 1,
+          // 植物（生産者）は、生態系レベルを持たない（保存しなおしても、1にしない）
+          level: this.editCard.category === "plant" ? null : (Number(this.editCard.level) || 1),
           rarity: this.editCard.rarity || "D",
           regions: this.editCard.regions || [],
           habitat: this.editCard.habitat || "",

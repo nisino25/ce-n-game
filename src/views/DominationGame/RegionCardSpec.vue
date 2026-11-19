@@ -55,7 +55,7 @@
                             class="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs"
                         >
                             <span class="font-black">{{ card.name }}</span>
-                            <span class="text-slate-500">Lv{{ card.level }}・{{ card.rarity }}</span>
+                            <span class="text-slate-500">{{ card.category === 'plant' ? '植物' : `Lv${card.level}` }}・{{ card.rarity }}</span>
                             <span class="ml-auto flex flex-wrap justify-end gap-1">
                                 <!-- この カードが属する地域（複数ある場合は、ぜんぶバッジで出す） -->
                                 <span
