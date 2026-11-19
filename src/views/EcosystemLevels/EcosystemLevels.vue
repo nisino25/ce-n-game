@@ -9,8 +9,16 @@
 
             <!-- レベルの説明 -->
             <section class="mb-4 rounded-xl bg-white p-3 shadow-sm">
-                <h2 class="mb-2 text-sm font-black">レベルの意味</h2>
-                <ul class="space-y-2">
+                <button
+                    type="button"
+                    class="flex w-full items-center justify-between text-left text-sm font-black"
+                    :aria-expanded="showLevelInfo"
+                    @click="showLevelInfo = !showLevelInfo"
+                >
+                    レベルの意味
+                    <span class="text-xs text-slate-500">{{ showLevelInfo ? '▲ たたむ' : '▼ ひらく' }}</span>
+                </button>
+                <ul v-if="showLevelInfo" class="mt-2 space-y-2">
                     <li v-for="item in LEVELS" :key="item.level" class="flex items-center gap-3">
                         <img :src="item.icon" :alt="`Lv${item.level}`" class="h-12 w-12 flex-none object-contain">
                         <div class="min-w-0 flex-1">
@@ -19,7 +27,7 @@
                         </div>
                     </li>
                 </ul>
-                <p class="mt-3 text-xs leading-relaxed text-slate-500">
+                <p v-if="showLevelInfo" class="mt-3 text-xs leading-relaxed text-slate-500">
                     下のレベルほど たくさん いて、その上に 上のレベルの いきものが くらせるよ（ピラミッド）。
                 </p>
             </section>
@@ -29,7 +37,7 @@
 
             <template v-else>
                 <!-- 絞りこみ：レベルごと（すべて・Lv1〜Lv4） -->
-                <div class="mb-3 flex flex-wrap gap-2" role="tablist">
+                <div ref="listTop" class="mb-3 flex flex-wrap gap-2" role="tablist">
                     <button
                         v-for="tab in tabs"
                         :key="tab.key"
@@ -50,7 +58,7 @@
                 <section class="rounded-xl bg-white p-3 shadow-sm">
                     <p v-if="!visibleCards.length" class="py-6 text-center text-xs font-bold text-slate-400">このレベルのカードはありません</p>
 
-                    <ul class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <ul class="grid grid-cols-2 gap-3 md:grid-cols-5">
                         <li
                             v-for="card in pagedCards"
                             :key="card.cardId"
@@ -66,13 +74,9 @@
 
                             <div class="mt-2 min-w-0">
                                 <p class="truncate text-sm font-black">{{ card.name }}</p>
-                                <p class="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-slate-500">
-                                    <span
-                                        class="rounded-full px-2 py-0.5 text-[11px] font-black"
-                                        :class="isPlant(card) ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'"
-                                    >{{ isPlant(card) ? '🌱 植物' : '🐾 動物' }}</span>
-                                    <span>{{ card.rarity }}</span>
-                                </p>
+                                <p class="mt-0.5 text-xs text-slate-500">レア度：{{ card.rarity }}</p>
+                                <p class="text-xs text-slate-500">作成日時：{{ dateOf(card) }}</p>
+                                <p class="text-xs text-slate-500">作成者：{{ creatorOf(card) }}</p>
                                 <p v-if="savingId === card.cardId" class="text-xs text-slate-400">保存中…</p>
                                 <p v-else-if="savedId === card.cardId" class="text-xs font-bold text-emerald-600">保存した</p>
                             </div>
@@ -101,7 +105,7 @@
                             type="button"
                             :disabled="page <= 1"
                             class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-40"
-                            @click="page -= 1"
+                            @click="goPage(page - 1)"
                         >
                             ← まえ
                         </button>
@@ -110,7 +114,7 @@
                             type="button"
                             :disabled="page >= pageCount"
                             class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-black text-slate-600 disabled:opacity-40"
-                            @click="page += 1"
+                            @click="goPage(page + 1)"
                         >
                             つぎ →
                         </button>
@@ -143,6 +147,12 @@ import { fetchCardLibrary } from "@/utils/cards.js";
 // ■1ページに出すカードの数
 const PAGE_SIZE = 25;
 
+// ■カードを作った時刻（ミリ秒）。時刻が無いカードは、いちばん前に出す
+function createdMs(card) {
+    const at = card.createdAt;
+    return at && typeof at.toMillis === "function" ? at.toMillis() : 0;
+}
+
 // ■レベルの説明（短い文。直したいときは、ここを書き換える）
 const LEVELS = [
     { level: 1, icon: "/images/card/生態系レベル１.png", text: "生態系の いちばん下の土台。いちばん たくさん いるよ" },
@@ -163,6 +173,7 @@ export default {
             savingId: null,
             savedId: null,
             page: 1,
+            showLevelInfo: false, // レベルの説明は、はじめは縮めておく
             pendingChange: null, // 変える前の確認中の { card, from, to }
         };
     },
@@ -177,7 +188,9 @@ export default {
             const list = this.selectedKey === "all"
                 ? this.cards
                 : this.cards.filter(card => card.level === this.selectedKey);
-            return list.slice().sort((a, b) => (a.level || 0) - (b.level || 0) || String(a.name).localeCompare(String(b.name), "ja"));
+            // 生成時間順（新しいものから）
+            // 同じ時刻（まとめて登録したもの）は、名前順にする
+            return list.slice().sort((a, b) => createdMs(b) - createdMs(a) || String(a.name).localeCompare(String(b.name), "ja"));
         },
         pageCount() {
             return Math.max(1, Math.ceil(this.visibleCards.length / PAGE_SIZE));
@@ -199,9 +212,23 @@ export default {
         countOf(level) {
             return this.cards.filter(card => card.level === level).length;
         },
-        // 植物（生産者）かどうか。植物以外は動物として出す
-        isPlant(card) {
-            return card.category === "plant";
+        // ページを送ったら、一覧の上（絞りこみのところ）に戻す
+        goPage(next) {
+            this.page = Math.min(Math.max(1, next), this.pageCount);
+            this.$nextTick(() => {
+                const top = this.$refs.listTop;
+                if (top && top.scrollIntoView) top.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+        },
+        // 作成日時（その人の端末の、日本の表記。例：2026/11/18 14:32）
+        dateOf(card) {
+            const at = card.createdAt;
+            if (!at || typeof at.toDate !== "function") return "不明";
+            return at.toDate().toLocaleString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+        },
+        // 作成者：スキャンで作ったカードは持ち主の名前、管理画面で作ったカードは「owner」の名前
+        creatorOf(card) {
+            return card.ownerName || card.owner || "不明";
         },
         // ■Lvのボタンを押したら、まず確認を出す（すぐには保存しない）
         requestLevel(card, level) {
@@ -237,7 +264,8 @@ export default {
     },
     async mounted() {
         try {
-            this.cards = await fetchCardLibrary();
+            // 植物（生産者）は、生態系レベルの対象にしないので、このページには出さない
+            this.cards = (await fetchCardLibrary()).filter(card => card.category !== "plant");
         } catch (error) {
             console.error("カードの読み込みに失敗しました", error);
             this.loadError = true;
