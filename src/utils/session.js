@@ -52,7 +52,43 @@ function deleteCookie(key) {
     document.cookie = `${key}=; path=/; max-age=0; SameSite=Lax`;
 }
 
+// ■タブごとの値（会員情報）。同じブラウザで、別のタブで別の人がログインしても混ざらないように、
+// まずそのタブ（sessionStorage）の値を使う。タブにまだ値が無いとき（新しいタブ、ホーム画面アプリの起動直後）は、
+// 今までどおり localStorage → Cookie の順で読む
+const TAB_KEYS = COOKIE_KEYS;
+
+function readTab(key) {
+    try {
+        return sessionStorage.getItem(key);
+    } catch (error) {
+        return null;
+    }
+}
+
+function writeTab(key, value) {
+    try {
+        sessionStorage.setItem(key, value);
+    } catch (error) {
+        // 保存できなくても、localStorage / Cookie の値で動く
+    }
+}
+
+function removeTab(key) {
+    try {
+        sessionStorage.removeItem(key);
+    } catch (error) {
+        // 何もしない
+    }
+}
+
 export function getSession(key) {
+    if (TAB_KEYS.includes(key)) {
+        const tab = readTab(key);
+        if (tab !== null) {
+            return tab;
+        }
+    }
+
     const local = localStorage.getItem(key);
     if (local !== null) {
         return local;
@@ -74,9 +110,15 @@ export function setSession(key, value) {
     if (COOKIE_KEYS.includes(key)) {
         writeCookie(key, stored, COOKIE_MAX_AGE_DAYS);
     }
+    if (TAB_KEYS.includes(key)) {
+        writeTab(key, stored);
+    }
 }
 
 export function removeSession(key) {
     localStorage.removeItem(key);
     deleteCookie(key);
+    if (TAB_KEYS.includes(key)) {
+        removeTab(key);
+    }
 }

@@ -72,6 +72,8 @@ flowchart LR
 
 ## 4. セッション管理（localStorage）
 
+> **タブごとの保存（2026-11-19追加）**: 下の5キー（`loginCenId` / `playerUid` / `playerData` / `myTeam` / `loginDate`）は、`sessionStorage`（タブごと）にも書きます。読むときは、まずそのタブの `sessionStorage` を見て、無ければ今までどおり `localStorage` → Cookie の順に読みます。同じブラウザで、別のタブで別の人がログインしても、タブ同士で混ざりません。新しいタブ・ホーム画面アプリの起動直後は、`sessionStorage` が空なので、`localStorage` / Cookie の値（最後にログインした人）を使います。ログアウトは、そのタブの値を消し、他のタブの値は残します。
+
 | キー | 内容 | セット箇所 | クリア箇所 |
 |---|---|---|---|
 | `loginCenId` | ログイン中のcenId。ルーターガードの認証フラグ | LoginPage / IntroView | logout / endGame |
