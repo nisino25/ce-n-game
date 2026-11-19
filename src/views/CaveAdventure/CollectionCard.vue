@@ -8,7 +8,7 @@
             <img v-else-if="card.group === '水'" src="/images/card/チームカラー（水・ブルー）.png" class="team-bg" alt="水">
             <img v-else-if="card.group === '風'" src="/images/card/チームカラー（風・ライトグリーン）.png" class="team-bg" alt="風">
 
-            <img :src="card.level" alt="レベル">
+            <img v-if="!card.plant" :src="card.level" alt="レベル">
             <span>{{ card.plant ? tl("生産者", "Producer") : tl("生態系レベル", "Ecosystem level") }}</span>
         </div>
 

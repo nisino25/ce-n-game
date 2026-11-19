@@ -444,10 +444,14 @@ export default {
                 const option = options.find(item => item.value === value);
                 return option ? t(option.label, option.labelEn) : "";
             };
+            // 植物（生産者）は、生態系レベルの行を出さない
+            const levelRows = this.draftCard.category === "plant"
+                ? []
+                : [{ label: t("生態系レベル", "Level"), value: labelOf(LEVEL_OPTIONS, this.draftCard.level) }];
             return [
                 { label: t("なまえ", "Name"), value: t(this.draftCard.name, this.draftCard.nameEn || this.draftCard.name) },
                 { label: t("レア度", "Rarity"), value: labelOf(RARITY_OPTIONS, this.draftCard.rarity) },
-                { label: t("生態系レベル", "Level"), value: labelOf(LEVEL_OPTIONS, this.draftCard.level) },
+                ...levelRows,
                 { label: t("すみか", "Habitat"), value: labelOf(HABITAT_OPTIONS, this.draftCard.habitat) }
             ];
         },

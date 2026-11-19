@@ -49,9 +49,9 @@ export function habitatFromText(text = "") {
     return rule ? { habitat: rule.habitat, terrain: rule.terrain } : DEFAULT_HABITAT;
 }
 
-// 栄養段階は API が 1〜5、カードの生態系レベルは 1〜4（5 は 4 にまとめる）
+// 栄養段階は API が 1〜5。カードの生態系レベルは、API の値を1つ下げる（最低は1。0にはしない）。5は4にまとめる
 export function levelFromTrophicLevel(trophicLevel) {
-    return Math.min(4, Math.max(1, Number(trophicLevel) || 1));
+    return Math.min(4, Math.max(1, (Number(trophicLevel) || 1) - 1));
 }
 
 // 日本の9地方（API の distribution のキーと同じ。表示名と並び順）
@@ -80,7 +80,8 @@ export function candidateToCardDraft(candidate) {
 
     return {
         name: (candidate.name_ja || "").trim(),
-        level: levelFromTrophicLevel(candidate.trophic_level),
+        // 植物（生産者）は、生態系レベルを持たない
+        level: candidate.category === "plant" ? null : levelFromTrophicLevel(candidate.trophic_level),
         rarity: RARITY_BY_TIER[rarity.tier] || "D",
         habitat: habitatInfo.habitat,
         terrain: habitatInfo.terrain,
