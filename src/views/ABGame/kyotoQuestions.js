@@ -9,6 +9,7 @@ export const KYOTO_QUESTIONS = [
         bComment: "まちの近くの里山が、手入れされずに荒れてしまったよ。",
         imgB: "kyoto/B1.jpg",
         qaImage: "kyoto/QA1.png",
+        qaCredit: "全国森林組合連合会 認証マーク",
         correct: "C",
         showIcons: [11, 12, 13, 15, 17],
         comment:
@@ -31,6 +32,7 @@ export const KYOTO_QUESTIONS = [
         bComment: "海に落ちたプラスチックが、いつまでも残ってしまうよ。",
         imgB: "kyoto/B3.png",
         qaImage: "kyoto/QA3.jpg",
+        qaCredit: "一般社団法人日本バイオプラスチック協会 認証マーク",
         correct: "A",
         showIcons: [6, 9, 11, 12, 14, 17],
         comment:
@@ -42,6 +44,7 @@ export const KYOTO_QUESTIONS = [
         bComment: "まちの中にも、里山の植物やいきものがふえたらいいね。",
         imgB: "kyoto/B4.jpg",
         qaImage: "kyoto/QA4.JPG",
+        qaCredit: "日新電機株式会社 CSR活動より",
         correct: "C",
         showIcons: [6, 11, 13, 15],
         comment:
