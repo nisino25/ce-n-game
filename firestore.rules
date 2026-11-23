@@ -20,9 +20,11 @@ service cloud.firestore {
         && d.name.size() <= 20
         // 画像は cardImages/{id} に入るので、cards 本体に画像が無くてもよい（古い登録で残っていたら、大きさだけ確かめる）
         && d.get('image', '').size() <= 900000
-        && d.level is int
-        && d.level >= 1
-        && d.level <= 4
+        // 生態系レベルは 1〜4。ただし植物（生産者）はレベルを持たない（null）
+        && (
+          (d.level is int && d.level >= 1 && d.level <= 4)
+          || (d.get('category', '') == 'plant' && d.get('level', null) == null)
+        )
         && d.rarity in ['A', 'B', 'C', 'D']
         && d.ownerUid is string
         && d.ownerUid.size() > 0
