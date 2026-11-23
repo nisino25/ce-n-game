@@ -40,7 +40,7 @@
                     >
                 </div>
 
-                <button v-if="phase === 'intro'" class="start-btn" @click="start">
+                <button v-if="phase === 'intro'" v-tick.over class="start-btn" @click="start">
                     スタート
                 </button>
 
@@ -51,7 +51,7 @@
 
                 <div class="swipe-effect" :class="{ show: showSwipeEffect }"></div>
 
-                <button v-if="phase === 'correct'" class="next-btn" @click="next">
+                <button v-if="phase === 'correct'" v-tick.over class="next-btn" @click="next">
                     次へ
                 </button>
 
@@ -75,8 +75,13 @@
 </template>
 
 <script>
+import { haptic, vTick } from "@/lib/haptics.js";
+import { sfx } from "@/utils/sfx.js";
+
 export default {
     name: "ABGame",
+
+    directives: { tick: vTick },
 
     data() {
         return {
@@ -180,6 +185,8 @@ export default {
 
     methods: {
         start() {
+            // 最初のタップで音を出せる状態にする（スマホは、タップのあとでないと音が出ない）
+            sfx.unlock();
             this.qIndex = 0;
             this.phase = "question";
             this.visibleIcons = this.allIconIds();
@@ -242,6 +249,10 @@ export default {
 
             this.phase = "correct";
             this.highlightSide = q.correct;
+
+            // 正解の鈴（効果音）と、ぶるっと一回（触覚）
+            sfx.win();
+            haptic(30);
 
             setTimeout(() => {
                 this.highlightSide = null;
