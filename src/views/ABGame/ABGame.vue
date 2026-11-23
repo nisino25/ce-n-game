@@ -250,8 +250,8 @@ export default {
             this.phase = "correct";
             this.highlightSide = q.correct;
 
-            // 正解の鈴（効果音）と、ぶるっと一回（触覚）
-            sfx.win();
+            // 正解の木の音（効果音）と、ぶるっと一回（触覚）
+            sfx.select();
             haptic(30);
 
             setTimeout(() => {
