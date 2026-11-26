@@ -102,7 +102,7 @@
                         </div>
                         <div class="flex flex-col sm:flex-row gap-4 sm:items-start mb-4">
                             <div class="flex-none w-36 mx-auto sm:mx-0">
-                                <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-36 h-36 object-cover rounded-xl">
+                                <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-36 h-36 object-contain bg-white rounded-xl">
                                 <p v-if="currentQuestion.qaCredit" class="mt-1 text-[10px] leading-tight text-gray-500">提供：{{ currentQuestion.qaCredit }}</p>
                             </div>
                             <!-- 長い説明は、枠を固定して、文字だけスクロールする。枠とスクロールバーを出して、スクロールできることがわかるようにする -->
