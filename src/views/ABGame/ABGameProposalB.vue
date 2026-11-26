@@ -201,7 +201,7 @@ const SIDE_TEXT = {
     },
     kushiro: {
         A: {
-            meter: "⚡ エネルギー", choice: "エネルギー", result: "エネルギー",
+            meter: "⚡ 自然を壊さないエネルギー", choice: "自然を壊さないエネルギー", result: "自然を壊さないエネルギー",
             img: "/images/ABGames/kushiro/env1.jpg",
             help: {
                 title: "【自然を壊さないエネルギー】",
