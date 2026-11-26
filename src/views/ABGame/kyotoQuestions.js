@@ -6,7 +6,7 @@ export const KYOTO_QUESTIONS = [
     {
         location: "kyoto",
         order: 1,
-        bComment: "まちの近くの里山が、手入れされずに荒れてしまったよ。",
+        bComment: "ゆたかな里山にするためには、手入れ（間伐（かんばつ）：木をまびくこと）が必要だよ！",
         imgB: "kyoto/B1.jpg",
         qaImage: "kyoto/QA1.png",
         qaCredit: "全国森林組合連合会 認証マーク",
