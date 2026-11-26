@@ -101,8 +101,8 @@
                             <span class="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">正解！</span>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-4 sm:items-start mb-4">
-                            <div class="flex-none w-44 sm:w-52 mx-auto sm:mx-0">
-                                <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-44 h-44 sm:w-52 sm:h-52 object-contain bg-white rounded-xl">
+                            <div class="flex-none w-52 sm:w-64 mx-auto sm:mx-0">
+                                <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-52 h-52 sm:w-64 sm:h-64 object-contain bg-white rounded-xl">
                                 <p v-if="currentQuestion.qaCredit" class="mt-1 text-[10px] leading-tight text-gray-500">提供：{{ currentQuestion.qaCredit }}</p>
                             </div>
                             <!-- 長い説明は、枠を固定して、文字だけスクロールする。枠とスクロールバーを出して、スクロールできることがわかるようにする -->
