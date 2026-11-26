@@ -55,8 +55,8 @@
             <div v-else-if="phase === 'question' || phase === 'correct'">
 
                 <div class="bg-white rounded-2xl shadow-sm p-4 mb-5 flex gap-4 items-center">
-                    <div class="flex-none w-36">
-                        <img :src="`/images/ABGames/${currentQuestion.imgB}`" class="w-36 h-36 object-cover rounded-xl">
+                    <div class="flex-none w-44 sm:w-52">
+                        <img :src="`/images/ABGames/${currentQuestion.imgB}`" class="w-44 h-44 sm:w-52 sm:h-52 object-cover rounded-xl">
                         <p v-if="currentQuestion.imgBCredit" class="mt-1 text-[10px] leading-tight text-gray-500">提供：{{ currentQuestion.imgBCredit }}</p>
                     </div>
                     <p class="text-gray-800 text-sm leading-relaxed">{{ currentQuestion.bComment }}</p>
@@ -101,12 +101,12 @@
                             <span class="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">正解！</span>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-4 sm:items-start mb-4">
-                            <div class="flex-none w-36 mx-auto sm:mx-0">
-                                <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-36 h-36 object-contain bg-white rounded-xl">
+                            <div class="flex-none w-44 sm:w-52 mx-auto sm:mx-0">
+                                <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-44 h-44 sm:w-52 sm:h-52 object-contain bg-white rounded-xl">
                                 <p v-if="currentQuestion.qaCredit" class="mt-1 text-[10px] leading-tight text-gray-500">提供：{{ currentQuestion.qaCredit }}</p>
                             </div>
                             <!-- 長い説明は、枠を固定して、文字だけスクロールする。枠とスクロールバーを出して、スクロールできることがわかるようにする -->
-                            <div class="explain-scroll w-full sm:flex-1 min-w-0 h-40 overflow-y-scroll border-2 border-gray-300 rounded-xl bg-gray-50 p-3">
+                            <div class="explain-scroll w-full sm:flex-1 min-w-0 h-40 overflow-y-scroll border-2 border-emerald-600 rounded-xl bg-white p-3">
                                 <p class="text-gray-700 text-sm leading-relaxed" v-html="currentQuestion.comment"></p>
                             </div>
                         </div>
@@ -470,15 +470,16 @@ export default {
     scrollbar-gutter: stable;
 }
 .explain-scroll::-webkit-scrollbar {
-    width: 10px;
+    width: 14px;
 }
 .explain-scroll::-webkit-scrollbar-track {
-    background: #e5e7eb;
-    border-radius: 5px;
+    background: #d1fae5;
+    border-left: 1px solid #6ee7b7;
 }
 .explain-scroll::-webkit-scrollbar-thumb {
-    background: #9ca3af;
-    border-radius: 5px;
+    background: #059669;
+    border-radius: 7px;
+    border: 3px solid #d1fae5;
 }
 .help-button{
     position: absolute;
