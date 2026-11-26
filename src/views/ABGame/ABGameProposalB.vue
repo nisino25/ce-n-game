@@ -54,10 +54,10 @@
             <!-- Question / Correct -->
             <div v-else-if="phase === 'question' || phase === 'correct'">
 
-                <div class="bg-white rounded-2xl shadow-sm p-4 mb-5 flex gap-4 items-center">
+                <div class="bg-white rounded-2xl shadow-sm p-4 mb-5 flex flex-col sm:flex-row gap-4 items-center">
                     <div class="flex-none w-44 sm:w-52">
-                        <img :src="`/images/ABGames/${currentQuestion.imgB}`" class="w-44 h-44 sm:w-52 sm:h-52 object-cover rounded-xl">
-                        <p v-if="currentQuestion.imgBCredit" class="mt-1 text-[10px] leading-tight text-gray-500">提供：{{ currentQuestion.imgBCredit }}</p>
+                        <img :src="`/images/ABGames/${currentQuestion.imgB}`" class="w-44 h-44 sm:w-52 sm:h-52 object-cover rounded-xl mx-auto">
+                        <p v-if="currentQuestion.imgBCredit" class="mt-1 text-[10px] leading-tight text-gray-500 text-center sm:text-left">提供：{{ currentQuestion.imgBCredit }}</p>
                     </div>
                     <p class="text-gray-800 text-sm leading-relaxed">{{ currentQuestion.bComment }}</p>
                 </div>
@@ -103,7 +103,7 @@
                         <div class="flex flex-col sm:flex-row gap-4 sm:items-start mb-4">
                             <div class="flex-none w-52 sm:w-64 mx-auto sm:mx-0">
                                 <img :src="`/images/ABGames/${currentQuestion.qaImage}`" class="w-52 h-52 sm:w-64 sm:h-64 object-contain bg-white rounded-xl">
-                                <p v-if="currentQuestion.qaCredit" class="mt-1 text-[10px] leading-tight text-gray-500">提供：{{ currentQuestion.qaCredit }}</p>
+                                <p v-if="currentQuestion.qaCredit" class="mt-1 text-[10px] leading-tight text-gray-500 text-center sm:text-left">提供：{{ currentQuestion.qaCredit }}</p>
                             </div>
                             <!-- 長い説明は、枠を固定して、文字だけスクロールする。枠とスクロールバーを出して、スクロールできることがわかるようにする -->
                             <div class="explain-scroll w-full sm:flex-1 min-w-0 h-40 overflow-y-scroll border-2 border-emerald-600 rounded-xl bg-white p-3">
